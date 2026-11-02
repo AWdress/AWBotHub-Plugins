@@ -163,7 +163,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.7",
+    "version": "2.7.8",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/pt_checkin_v2.svg",
@@ -206,7 +206,7 @@ __plugin__ = {
         "failure_threshold": 3, "recovery_seconds": 120,
     },
 }
-__plugin__["changelog"] = "v2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
+__plugin__["changelog"] = "v2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 SITES = {
     # PT 社区常用的 12 个站点置于第一组；其余已有适配站点置于第二组。
@@ -547,6 +547,10 @@ def _piggo_ensure_login(page, ctx, loop) -> tuple[str, str, object] | None:
     submitted = False
     calendar_navigated = False
     expected = (username, password, _cfg(ctx).get("piggo_token"))
+    # 官网先验证 Token，再异步恢复用户资料；路由可能在 /me 完成前短暂跳到登录页。
+    # 给原生恢复流程一个有限窗口，不额外保存用户资料，也不抢先重复提交账号密码。
+    resume_until = time.monotonic() + 10 if _piggo_login_token(ctx) else 0
+    resumed = bool(resume_until)
     for _ in range(80):
         if getattr(ctx, "_closed", False) or (*_piggo_account(ctx), _cfg(ctx).get("piggo_token")) != expected:
             raise RuntimeError("猪猪配置已变更或插件已停用，本轮跳过")
@@ -588,8 +592,35 @@ def _piggo_ensure_login(page, ctx, loop) -> tuple[str, str, object] | None:
                     raise RuntimeError("猪猪配置已变更，未使用旧账号继续签到，本轮跳过")
                 expected = (username, password, token)
                 _runtime_log(ctx, "自动登录成功，已更新登录凭证", site="猪猪")
+            elif resumed:
+                _runtime_log(ctx, "已复用登录凭证，无需重新登录", site="猪猪")
             return expected
         if path in {"/login", "/login.php", "/takelogin.php"}:
+            if not submitted and resume_until:
+                session = page.evaluate("""() => {
+                    let user;
+                    try { user = JSON.parse(localStorage.getItem('pig_user') || '{}'); }
+                    catch (_) { user = {}; }
+                    return {
+                        tokenPresent: !!localStorage.getItem('pig_token'),
+                        userReady: !!(user && user.id && typeof user.username === 'string' && user.username.trim())
+                    };
+                }""")
+                if session.get("tokenPresent") and session.get("userReady"):
+                    resume_until = 0
+                    resumed = True
+                    page.goto("https://piggo.me/calendar", wait_until="domcontentloaded", timeout=60_000)
+                    continue
+                if session.get("tokenPresent") and time.monotonic() < resume_until:
+                    page.wait_for_timeout(500)
+                    continue
+                _runtime_log(
+                    ctx,
+                    "官网未在 10 秒内恢复登录状态，尝试账号密码登录" if session.get("tokenPresent")
+                    else "官网已清除原登录凭证，尝试账号密码登录",
+                    level="warning", site="猪猪",
+                )
+                resume_until = 0
             if not username or not password:
                 raise RuntimeError("猪猪登录 Token 已失效，请填写用户名和密码以自动重新登录，或更新手动 pig_token")
             captcha = page.locator(".captcha-row, .site-captcha, input[name='otp'], input[name='totp']")
@@ -599,14 +630,16 @@ def _piggo_ensure_login(page, ctx, loop) -> tuple[str, str, object] | None:
             if submitted and any(marker in text for marker in ("用户名或密码错误", "密码错误", "账号不存在", "登录失败", "账户已锁定")):
                 raise RuntimeError("猪猪自动登录失败，请检查账号密码或网站登录限制，本轮跳过")
             if not submitted:
-                form = page.locator('form:has(input#username):has(input#password)')
+                # CloakBrowser humanize 不支持 locator 链产生的 >>，交互使用单一 CSS。
+                form_selector = 'form:has(input#username):has(input#password)'
+                form = page.locator(form_selector)
                 if form.count() == 1:
-                    submit = form.locator("button.btn").first
+                    submit = page.locator(f"{form_selector} button.btn").first
                     if submit.count() and submit.is_visible() and submit.is_enabled() \
                             and submit.inner_text().strip() == "登录":
                         try:
-                            form.locator("input#username").fill(username)
-                            form.locator("input#password").fill(password)
+                            page.locator(f"{form_selector} input#username").fill(username)
+                            page.locator(f"{form_selector} input#password").fill(password)
                             submitted = True
                             submit.click(timeout=10_000)
                         except Exception:
@@ -2076,6 +2109,23 @@ def _site_cloak_checkin(ctx, key: str, site: dict, cookie: str, headless: bool, 
         if piggo:
             _seed_piggo_login(context, piggo_token)
         page = context.new_page()
+        if piggo:
+            def log_session_response(response):
+                # 只记录认证恢复接口的失败分类，不记录响应正文、URL 参数或凭据。
+                try:
+                    parsed = urlparse(response.url)
+                    path = parsed.path.rstrip("/")
+                    if parsed.scheme != "https" or parsed.hostname not in {"piggo.me", "www.piggo.me"} or path not in {
+                        "/auth/sign", "/api/auth/sign", "/v1/web/auth/sign", "/me", "/api/me", "/v1/web/me",
+                    }:
+                        return
+                    status = int(response.status)
+                    if status < 400:
+                        return
+                    _runtime_log(ctx, f"官网会话恢复接口 {path} 返回 HTTP {status}", level="warning", site="猪猪")
+                except Exception:
+                    pass  # 诊断失败不影响原生登录和签到。
+            page.on("response", log_session_response)
         page.set_default_timeout(20_000)
         seed_url = "https://piggo.me/calendar" if piggo else site["url"]
         _seed_browser_cookie_jar(page, cookie, seed_url)
