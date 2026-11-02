@@ -163,7 +163,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.6",
+    "version": "2.7.7",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/pt_checkin_v2.svg",
@@ -190,17 +190,28 @@ __plugin__ = {
     ],
     "default_enabled": False,
     "render_mode": "vue",
+    "config_schema": {
+        "piggo_username": {"type": "string", "default": "", "label": "猪猪用户名"},
+        "piggo_password": {
+            "type": "password", "secret": True, "default": "", "label": "猪猪密码",
+            "help": "填写后通过官网原生登录页获取登录凭证，失效时自动重新登录；遇到验证码或二次验证会停止并提示。",
+        },
+        "piggo_token": {
+            "type": "password", "secret": True, "default": "", "label": "猪猪登录 Token",
+            "help": "可选：已填写用户名和密码时自动获取，无需手动复制。也可登录 piggo.me 后按 F12，在应用程序→本地存储→https://piggo.me 中复制 pig_token 的值。",
+        },
+    },
     "resources": {
         "timeout_seconds": 1800, "max_concurrency": 8, "max_background_tasks": 8,
         "failure_threshold": 3, "recovery_seconds": 120,
     },
 }
-__plugin__["changelog"] = _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
+__plugin__["changelog"] = "v2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 SITES = {
     # PT 社区常用的 12 个站点置于第一组；其余已有适配站点置于第二组。
     "ourbits": {"name": "我堡", "domain": "ourbits.club", "url": "https://ourbits.club/attendance.php", "group": "12大站点"},
-    "piggo": {"name": "猪猪", "domain": "piggo.me", "url": "https://piggo.me/attendance.php", "group": "其他站点"},
+    "piggo": {"name": "猪猪", "domain": "piggo.me", "url": "https://piggo.me/calendar", "group": "其他站点"},
     "hhan": {"name": "憨憨", "domain": "hhanclub.net", "url": "https://hhanclub.net/attendance.php", "group": "12大站点"},
     "tjupt": {"name": "北洋园", "domain": "tjupt.org", "url": "https://www.tjupt.org/attendance.php", "group": "其他站点"},
     "chdbits": {"name": "彩虹岛", "domain": "ptchdbits.co", "url": "https://ptchdbits.co/bakatest.php", "mode": "interactive", "group": "12大站点"},
@@ -234,6 +245,7 @@ DEFAULTS = {
     "retry_count": 2, "retry_interval": 20,
     "tjupt_ai_assist": True, "tjupt_confirm_timeout": 300,
     "selected_sites": list(SITES.keys()), "custom_sites": [],
+    "piggo_username": "", "piggo_password": "", "piggo_token": "",
 }
 
 
@@ -464,6 +476,153 @@ def _cfg(ctx) -> dict:
     return {**DEFAULTS, **dict(ctx.config or {})}
 
 
+def _piggo_account(ctx) -> tuple[str, str]:
+    cfg = _cfg(ctx)
+    username, password = cfg.get("piggo_username"), cfg.get("piggo_password")
+    username = username.strip() if isinstance(username, str) else ""
+    password = password if isinstance(password, str) and password != "********" else ""
+    return username, password
+
+
+def _piggo_login_token(ctx) -> str:
+    value = _cfg(ctx).get("piggo_token")
+    if not isinstance(value, str) or not value.strip() or value.strip() == "********":
+        username, password = _piggo_account(ctx)
+        if username and password:
+            return ""
+        raise RuntimeError("猪猪尚未填写完整的用户名和密码，请在插件配置中填写并保存；也可使用手动 pig_token")
+    token = value.strip()
+    if len(token) > 16_384 or re.search(r"\s|[\x00-\x1f\x7f]", token) \
+            or token.startswith(('"', "'", "pig_token=", "pig_token:")) \
+            or token.lower() in {"null", "undefined", "none"}:
+        if all(_piggo_account(ctx)):
+            return ""
+        raise RuntimeError("猪猪登录 Token 格式不正确，请只复制 pig_token 的值，不要包含字段名、引号或 Bearer 前缀")
+    return token
+
+
+def _seed_piggo_login(context, token: str) -> None:
+    """由官网前端使用真实凭据生成请求，不在插件中仿造登录或 HMAC。"""
+    script = """(() => {
+        if (!['https://piggo.me', 'https://www.piggo.me'].includes(location.origin)) return;
+        if (sessionStorage.getItem('awbn-piggo-seeded') === '1') return;
+        sessionStorage.setItem('awbn-piggo-seeded', '1');
+        const token = TOKEN_VALUE;
+        if (localStorage.getItem('pig_token') !== token) {
+            for (const key of ['pig_user', 'pig_boot', 'pig_ws_token', 'pt_menu', 'pt_torrent_catalog']) {
+                localStorage.removeItem(key);
+            }
+        }
+        if (token) localStorage.setItem('pig_token', token);
+        else localStorage.removeItem('pig_token');
+    })();""".replace("TOKEN_VALUE", json.dumps(token, ensure_ascii=True))
+    try:
+        context.add_init_script(script=script)
+    except Exception:
+        raise RuntimeError("猪猪登录会话初始化失败，请重试；登录 Token 未写入日志") from None
+
+
+async def _save_piggo_login_token(ctx, token: str, expected: tuple[str, str, object]) -> bool:
+    cfg = _cfg(ctx)
+    current = (*_piggo_account(ctx), cfg.get("piggo_token"))
+    if getattr(ctx, "_closed", False) or current != expected:
+        return False  # 管理员已改账号或凭证，不用旧登录结果覆盖新配置。
+    try:
+        ctx.update_config({"piggo_token": token})
+    except Exception:
+        # 平台先改内存再落盘；写盘失败时也恢复内存中的旧凭证。
+        try:
+            ctx.update_config({"piggo_token": expected[2]})
+        except Exception:
+            pass
+        raise RuntimeError("猪猪登录凭证保存失败") from None
+    return True
+
+
+def _piggo_ensure_login(page, ctx, loop) -> tuple[str, str, object] | None:
+    """仅通过官网原生登录表单获取凭证，每轮最多提交一次登录。"""
+    if ctx is None:
+        return
+    username, password = _piggo_account(ctx)
+    submitted = False
+    calendar_navigated = False
+    expected = (username, password, _cfg(ctx).get("piggo_token"))
+    for _ in range(80):
+        if getattr(ctx, "_closed", False) or (*_piggo_account(ctx), _cfg(ctx).get("piggo_token")) != expected:
+            raise RuntimeError("猪猪配置已变更或插件已停用，本轮跳过")
+        parsed = urlparse(page.url)
+        if parsed.scheme != "https" or parsed.hostname not in {"piggo.me", "www.piggo.me"}:
+            raise RuntimeError("猪猪登录跳转到了非预期地址，未发送账号密码，本轮跳过")
+        path = (parsed.path or "/").rstrip("/").lower()
+        if path == "/calendar" and page.locator(".cal-page .cal-att").count():
+            if username:
+                actual = page.evaluate("""() => {
+                    try { return JSON.parse(localStorage.getItem('pig_user') || '{}').username || ''; }
+                    catch (_) { return ''; }
+                }""")
+                if actual and str(actual).casefold() != username.casefold():
+                    if submitted or not password:
+                        raise RuntimeError("猪猪登录凭证与所填用户名不一致，请更新账号密码或 pig_token，本轮跳过")
+                    page.evaluate("""() => {
+                        for (const key of ['pig_token', 'pig_user', 'pig_boot', 'pig_ws_token']) localStorage.removeItem(key);
+                    }""")
+                    page.goto("https://piggo.me/login?redirect=%2Fcalendar", wait_until="domcontentloaded", timeout=60_000)
+                    continue
+            if submitted:
+                token = page.evaluate("() => localStorage.getItem('pig_token') || ''")
+                if not isinstance(token, str) or not token or token == "********":
+                    raise RuntimeError("猪猪登录后未获取到有效 Token，本轮跳过")
+                if loop is None or not loop.is_running():
+                    raise RuntimeError("猪猪登录凭证保存服务不可用，本轮跳过")
+                future = None
+                try:
+                    future = asyncio.run_coroutine_threadsafe(
+                        _save_piggo_login_token(ctx, token, expected), loop,
+                    )
+                    saved = future.result(timeout=10)
+                except Exception:
+                    if future is not None:
+                        future.cancel()
+                    raise RuntimeError("猪猪登录成功，但登录凭证未保存，请稍后重试，本轮跳过") from None
+                if not saved:
+                    raise RuntimeError("猪猪配置已变更，未使用旧账号继续签到，本轮跳过")
+                expected = (username, password, token)
+                _runtime_log(ctx, "自动登录成功，已更新登录凭证", site="猪猪")
+            return expected
+        if path in {"/login", "/login.php", "/takelogin.php"}:
+            if not username or not password:
+                raise RuntimeError("猪猪登录 Token 已失效，请填写用户名和密码以自动重新登录，或更新手动 pig_token")
+            captcha = page.locator(".captcha-row, .site-captcha, input[name='otp'], input[name='totp']")
+            if any(captcha.nth(index).is_visible() for index in range(captcha.count())):
+                raise RuntimeError("猪猪登录需要验证码或二次验证，请在网站完成验证后更新 pig_token，本轮跳过")
+            text = _page_text(page)
+            if submitted and any(marker in text for marker in ("用户名或密码错误", "密码错误", "账号不存在", "登录失败", "账户已锁定")):
+                raise RuntimeError("猪猪自动登录失败，请检查账号密码或网站登录限制，本轮跳过")
+            if not submitted:
+                form = page.locator('form:has(input#username):has(input#password)')
+                if form.count() == 1:
+                    submit = form.locator("button.btn").first
+                    if submit.count() and submit.is_visible() and submit.is_enabled() \
+                            and submit.inner_text().strip() == "登录":
+                        try:
+                            form.locator("input#username").fill(username)
+                            form.locator("input#password").fill(password)
+                            submitted = True
+                            submit.click(timeout=10_000)
+                        except Exception:
+                            # Playwright 的原始 fill 错误可能含凭据值，不能向日志透传。
+                            if not submitted:
+                                raise RuntimeError("猪猪登录表单填写失败，本轮跳过") from None
+        elif path != "/calendar" and not calendar_navigated:
+            # 登录页可能落回首页，而不是遵循 redirect 参数；有凭证后只导航一次。
+            token = page.evaluate("() => localStorage.getItem('pig_token') || ''")
+            if token:
+                calendar_navigated = True
+                page.goto("https://piggo.me/calendar", wait_until="domcontentloaded", timeout=60_000)
+        page.wait_for_timeout(500)
+    raise RuntimeError("猪猪自动登录未完成，请检查账号密码或网站验证，本轮跳过；未重复提交登录")
+
+
 def _custom_sites(cfg: dict | None = None) -> dict[str, dict]:
     """Build stable runtime definitions for user-added generic PT sites."""
     raw = (cfg or {}).get("custom_sites", []) if isinstance(cfg, dict) else []
@@ -617,9 +776,15 @@ def _bounded(value, default: int, low: int, high: int) -> int:
 
 
 async def _site_cookie(ctx, key: str, site: dict) -> tuple[str, str]:
+    piggo = _same_site_domain(site["domain"], "piggo.me")
+    if piggo:
+        try:
+            _piggo_login_token(ctx)
+        except RuntimeError as exc:
+            return "", str(exc)
     cookies = getattr(ctx, "cookies", None)
     if cookies is None or not callable(getattr(cookies, "get", None)):
-        return "", "平台 Cookie 同步未启用"
+        return ("", "") if piggo else ("", "平台 Cookie 同步未启用")
     parsed = urlparse(site["url"])
     path = parsed.path or "/"
     domain = site["domain"].lower()
@@ -629,7 +794,7 @@ async def _site_cookie(ctx, key: str, site: dict) -> tuple[str, str]:
     auth_cookie_missing = False
     for host in hosts:
         try:
-            if key in {"opencd", "ourbits", "piggo"}:
+            if key in {"opencd", "ourbits"}:
                 try:
                     items = await ctx.cookies.get(host, path=path)
                 except TypeError:
@@ -652,6 +817,9 @@ async def _site_cookie(ctx, key: str, site: dict) -> tuple[str, str]:
             continue
         if cookie:
             return cookie, ""
+    if piggo:
+        # 新版登录依赖 Token；Cookie 只用于浏览器安全验证，不要求必须存在。
+        return "", ""
     for host in hosts:
         try:
             await ctx.cookies.request_sync(host)
@@ -895,7 +1063,10 @@ def _ttg_result_state(text: str) -> tuple[str, str] | None:
 
 
 def _site_result_state(text: str, expected_domain: str = "", *, confirmed: bool = False) -> tuple[str, str] | None:
-    if expected_domain.lower() in {"audiences.me", "ourbits.club", "piggo.me", "hhanclub.net"}:
+    if expected_domain.lower() == "piggo.me":
+        # 新日历长期展示累计天数和历史记录，不能使用 NexusPHP 的宽泛文字判定。
+        return None
+    if expected_domain.lower() in {"audiences.me", "ourbits.club", "hhanclub.net"}:
         return _nexus_result_state(text)
     return _result_state(text, confirmed=confirmed)
 
@@ -958,7 +1129,7 @@ def _retryable_error(exc: Exception) -> bool:
         "cookie", "登录页", "人工签到", "人工处理", "验证码", "没有访问权限",
         "非预期域名", "格式不正确", "bot 未连接", "主人 id",
         "等待 telegram", "签到选项", "验证题已变化", "cloakbrowser 等待超过", "本轮跳过",
-        "turnstile",
+        "turnstile", "猪猪登录 token", "pig_token",
     )
     return not any(marker in text for marker in permanent)
 
@@ -1162,7 +1333,6 @@ def _confirm_result(page, *, attempts: int = 3, expected_domain: str = "") -> di
     home_url = {
         "audiences.me": "https://audiences.me/",
         "ourbits.club": "https://ourbits.club/",
-        "piggo.me": "https://piggo.me/",
         "hhanclub.net": "https://hhanclub.net/",
     }.get(expected_domain.lower())
     if home_url:
@@ -1860,6 +2030,8 @@ def _site_cloak_checkin(ctx, key: str, site: dict, cookie: str, headless: bool, 
     """所有 PT 站浏览器降级统一使用真实 CloakBrowser。"""
     if key in {"audiences", "ourbits"}:
         return _turnstile_site_cloak_checkin(ctx, key, site, cookie, headless)
+    piggo = _same_site_domain(site["domain"], "piggo.me")
+    piggo_token = _piggo_login_token(ctx) if piggo else ""
 
     import cloakbrowser
 
@@ -1901,10 +2073,16 @@ def _site_cloak_checkin(ctx, key: str, site: dict, cookie: str, headless: bool, 
             )
             context_options.pop("storage_state", None)
             context = browser.new_context(**context_options)
+        if piggo:
+            _seed_piggo_login(context, piggo_token)
         page = context.new_page()
         page.set_default_timeout(20_000)
-        seed_url = "https://piggo.me/" if key == "piggo" else site["url"]
+        seed_url = "https://piggo.me/calendar" if piggo else site["url"]
         _seed_browser_cookie_jar(page, cookie, seed_url)
+        if piggo:
+            if not cookie:
+                page.goto(seed_url, wait_until="domcontentloaded", timeout=60_000)
+            return _browser_checkin(page, "piggo.me", ctx, loop)
         if site.get("generic"):
             target_url = site["url"]
             parsed = urlparse(target_url)
@@ -1912,18 +2090,19 @@ def _site_cloak_checkin(ctx, key: str, site: dict, cookie: str, headless: bool, 
                 target_url = target_url.rstrip("/") + "/attendance.php"
             page.goto(target_url, wait_until="domcontentloaded", timeout=60_000)
             return _browser_checkin(page, site["domain"], ctx, loop)
-        if key in {"ourbits", "piggo", "hhan", "tjupt"}:
-            result = _browser_checkin(page, site["domain"], ctx, loop)
-            if key == "piggo":
-                refreshed = _refreshed_cookie_header(page, site["domain"])
-                if refreshed:
-                    _browser_cookie_cache[key] = refreshed
-            return result
+        if key in {"ourbits", "hhan", "tjupt"}:
+            return _browser_checkin(page, site["domain"], ctx, loop)
         return _special_checkin(page, key, site, ctx, loop)
     finally:
         if context is not None:
             try:
-                context.storage_state(path=str(state_path))
+                if piggo:
+                    saved_state = context.storage_state()
+                    # Token 只保留在平台敏感配置中；浏览器文件不另存账号和本地存储。
+                    saved_state["origins"] = []
+                    state_path.write_text(json.dumps(saved_state, ensure_ascii=True), encoding="utf-8")
+                else:
+                    context.storage_state(path=str(state_path))
             except Exception as exc:
                 _runtime_log(
                     ctx,
@@ -1939,8 +2118,78 @@ def _site_cloak_checkin(ctx, key: str, site: dict, cookie: str, headless: bool, 
                     pass
 
 
+def _piggo_calendar_guard(page) -> None:
+    parsed = urlparse(page.url)
+    if parsed.scheme != "https" or parsed.hostname not in {"piggo.me", "www.piggo.me"}:
+        raise RuntimeError("猪猪跳转到了非预期域名，未执行签到")
+    if (parsed.path or "/").rstrip("/").lower() in {"/login", "/login.php", "/takelogin.php"}:
+        raise RuntimeError("猪猪登录 Token 无效或已过期，请在网站重新登录，复制最新 pig_token 后保存到插件")
+
+
+def _piggo_calendar_signed(page) -> bool:
+    """只认今天格子的签到徽标，不认历史天数、历史日期和普通提示语。"""
+    badges = page.locator(".cal-page .cal-cell.today .cal-badge.att")
+    for index in range(badges.count()):
+        badge = badges.nth(index)
+        if badge.is_visible() and badge.inner_text().strip() == "签":
+            return True
+    return False
+
+
+def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None) -> dict:
+    """通过站点原生日历按钮提交；不猜签名接口，也不消费补签卡。"""
+    expected = expected_session
+    if expected is None and ctx is not None:
+        expected = (*_piggo_account(ctx), _cfg(ctx).get("piggo_token"))
+
+    def guard() -> None:
+        _piggo_calendar_guard(page)
+        if ctx is not None and (getattr(ctx, "_closed", False) or
+                (*_piggo_account(ctx), _cfg(ctx).get("piggo_token")) != expected):
+            raise RuntimeError("猪猪配置已变更或插件已停用，本轮跳过")
+
+    guard()
+    if (urlparse(page.url).path or "/").rstrip("/") != "/calendar":
+        page.goto("https://piggo.me/calendar", wait_until="domcontentloaded", timeout=60_000)
+    submit = None
+    for _ in range(40):
+        guard()
+        if _piggo_calendar_signed(page):
+            return {"status": "already", "message": "今天已经签到"}
+        buttons = page.locator(".cal-page .cal-att button.cal-att-pill.act")
+        for index in range(buttons.count()):
+            button = buttons.nth(index)
+            if not button.is_visible() or not button.is_enabled():
+                continue
+            label = re.sub(r"\s+", "", button.inner_text())
+            if re.fullmatch(r"签到(?:[·•・]\+\d+(?:\.\d+)?)?", label):
+                submit = button
+                break
+        if submit is not None:
+            break
+        page.wait_for_timeout(500)
+    if submit is None:
+        raise RuntimeError("猪猪日历未找到当天签到按钮或签到记录，本轮跳过（不会点击补签）")
+
+    # click 超时可能发生在请求已经发出后，只回查状态，绝不点击第二次。
+    guard()
+    try:
+        submit.click(timeout=10_000)
+    except Exception:
+        pass
+    for attempt in range(2):
+        for _ in range(40):
+            guard()
+            if _piggo_calendar_signed(page):
+                return {"status": "success", "message": "签到成功"}
+            page.wait_for_timeout(500)
+        if attempt == 0:
+            page.reload(wait_until="domcontentloaded", timeout=60_000)
+    raise RuntimeError("猪猪提交后未确认当天已签到，本轮跳过，未重复点击签到按钮")
+
+
 def _browser_checkin(page, expected_domain: str, ctx=None, loop=None, *,
-                     piggo_submitted: bool = False, deadline: float | None = None) -> dict:
+                     deadline: float | None = None) -> dict:
     """在平台托管的同步 Playwright 页面内完成单站签到。"""
     page.set_default_timeout(20_000)
     challenge_reload_done = False
@@ -1985,7 +2234,7 @@ def _browser_checkin(page, expected_domain: str, ctx=None, loop=None, *,
         # PigGo 雷池完成验证时可能停在只含 Cloudflare / Privacy 的空壳根页。
         # 给脚本时间写入通行 Cookie，再受控重进签到页，避免把空壳当业务页面。
         if piggo_security_shell and challenge_round in {3, 10, 25}:
-            page.goto("https://piggo.me/attendance.php", wait_until="domcontentloaded", timeout=60_000)
+            page.goto("https://piggo.me/calendar", wait_until="domcontentloaded", timeout=60_000)
             piggo_reentries += 1
             continue
         # 雷池偶尔已下发通行 Cookie 但前端未完成跳转，受控重载可恢复。
@@ -2009,6 +2258,9 @@ def _browser_checkin(page, expected_domain: str, ctx=None, loop=None, *,
     current_domain = (urlparse(page.url).hostname or "").lower()
     if not _same_site_domain(current_domain, expected_domain):
         raise RuntimeError(f"站点跳转到了非预期域名：{current_domain or '未知'}")
+    if expected_domain.lower() == "piggo.me":
+        session = _piggo_ensure_login(page, ctx, loop)
+        return _piggo_calendar_checkin(page, ctx, expected_session=session)
     text = _page_text(page)
     low = text.lower()
     html = page.content().lower()
@@ -2032,16 +2284,6 @@ def _browser_checkin(page, expected_domain: str, ctx=None, loop=None, *,
         if state:
             return {"status": state[0], "message": state[1]}
         raise RuntimeError("HHanClub 页面未找到当天签到记录，未计为成功")
-    if expected_domain.lower() == "piggo.me":
-        signed_badge = bool(re.search(r"签到\s*已得\s*[\d,.]+", text))
-        if signed_badge:
-            return {
-                "status": "success" if piggo_submitted else "already",
-                "message": "签到成功" if piggo_submitted else "今天已经签到",
-            }
-        if not path.lower().endswith("/attendance.php"):
-            page.goto("https://piggo.me/attendance.php", wait_until="domcontentloaded", timeout=60_000)
-            return _browser_checkin(page, expected_domain, ctx, loop, piggo_submitted=True)
     initial_state = _site_result_state(text, expected_domain)
     if initial_state:
         status, message = initial_state
@@ -2166,6 +2408,8 @@ def _soup_value(soup: BeautifulSoup, name: str) -> str:
 
 async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
     """轻量签到；只有安全挑战或必须执行动态脚本时才请求浏览器降级。"""
+    if key == "piggo" or _same_site_domain(site["domain"], "piggo.me"):
+        raise _NeedsBrowser("猪猪新版日历需要浏览器原生签到，切换 CloakBrowser")
     headers = {
         "Cookie": cookie,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36",
@@ -2182,7 +2426,7 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
             return response, _http_guard(response)
 
         mode = site.get("mode")
-        request_url = "https://piggo.me/" if key == "piggo" else site["url"]
+        request_url = site["url"]
         if site.get("generic"):
             parsed = urlparse(request_url)
             if parsed.path in {"", "/"}:
@@ -2198,12 +2442,7 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
             soup = BeautifulSoup(text, "html.parser")
             if soup.select_one("#attendance-form .cf-turnstile"):
                 raise _NeedsBrowser("Audiences 需要 Turnstile 人机验证，切换 CloakBrowser 等待自动验证")
-        if key == "piggo":
-            if re.search(r"签到\s*已得\s*[\d,.]+", visible_text):
-                return {"status": "already", "message": "今天已经签到", "engine": "http"}
-            response, text = await get(site["url"])
-            visible_text = _html_visible_text(text)
-        if key in {"audiences", "ourbits", "piggo", "hhan"}:
+        if key in {"audiences", "ourbits", "hhan"}:
             # 标准 attendance.php 通常 GET 即完成；未知页面交给浏览器识别动态按钮。
             state = _site_result_state(visible_text, site["domain"], confirmed=True)
             if state and state[0] != "failed":
@@ -2507,8 +2746,10 @@ async def _run(
         interval = _bounded(cfg.get("retry_interval"), 20, 5, 300)
         loop = asyncio.get_running_loop()
         for key, site in enabled:
-            _state.update({"current": site["name"], "phase": "读取 Cookie", "message": f"正在读取 {site['name']} 平台 Cookie"})
-            _runtime_log(ctx, "读取平台 Cookie", site=site["name"])
+            piggo = _same_site_domain(site["domain"], "piggo.me")
+            credential_label = "读取登录凭证与平台 Cookie" if piggo else "读取平台 Cookie"
+            _state.update({"current": site["name"], "phase": "读取凭证" if piggo else "读取 Cookie", "message": f"{site['name']}：{credential_label}"})
+            _runtime_log(ctx, credential_label, site=site["name"])
             cookie, error = await _site_cookie(ctx, key, site)
             if error:
                 _runtime_log(ctx, error, level="error", site=site["name"])
@@ -2758,7 +2999,10 @@ async def setup(ctx):
         rows = []
         for key in selected:
             cookie, error = await _site_cookie(ctx, key, configured[key])
-            rows.append({"key": key, "ok": bool(cookie), "message": "平台 Cookie 可用" if cookie else error})
+            piggo = _same_site_domain(configured[key]["domain"], "piggo.me")
+            ok = not error if piggo else bool(cookie)
+            message = "猪猪登录凭证已填写，实际有效性将在签到时验证" if piggo and ok else ("平台 Cookie 可用" if cookie else error)
+            rows.append({"key": key, "ok": ok, "message": message})
         return {"ok": all(row["ok"] for row in rows), "items": rows}
 
     @ctx.on_callback(pattern=rb"^pttj:")

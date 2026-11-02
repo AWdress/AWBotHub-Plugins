@@ -8,7 +8,7 @@ const _export_sfc = (sfc, props) => {
   return target;
 };
 
-const {createCommentVNode:_createCommentVNode,createElementVNode:_createElementVNode,toDisplayString:_toDisplayString,createTextVNode:_createTextVNode,vModelCheckbox:_vModelCheckbox,withDirectives:_withDirectives,vModelText:_vModelText,normalizeClass:_normalizeClass,normalizeStyle:_normalizeStyle,openBlock:_openBlock,createElementBlock:_createElementBlock,renderList:_renderList,Fragment:_Fragment} = await importShared('vue');
+const {createCommentVNode:_createCommentVNode,createElementVNode:_createElementVNode,toDisplayString:_toDisplayString,createTextVNode:_createTextVNode,vModelCheckbox:_vModelCheckbox,withDirectives:_withDirectives,vModelText:_vModelText,normalizeClass:_normalizeClass,normalizeStyle:_normalizeStyle,openBlock:_openBlock,createElementBlock:_createElementBlock,renderList:_renderList,Fragment:_Fragment,isRef:_isRef} = await importShared('vue');
 
 
 const _hoisted_1 = {
@@ -50,47 +50,60 @@ const _hoisted_26 = { class: "site-copy" };
 const _hoisted_27 = { class: "site-name" };
 const _hoisted_28 = { key: 0 };
 const _hoisted_29 = ["title"];
-const _hoisted_30 = { class: "custom-sites" };
-const _hoisted_31 = {
+const _hoisted_30 = {
+  key: 0,
+  class: "piggo-login",
+  "aria-labelledby": "piggo-login-title"
+};
+const _hoisted_31 = { class: "piggo-fields" };
+const _hoisted_32 = { for: "piggo-username" };
+const _hoisted_33 = ["disabled"];
+const _hoisted_34 = { for: "piggo-password" };
+const _hoisted_35 = ["disabled", "placeholder"];
+const _hoisted_36 = { class: "piggo-token-help" };
+const _hoisted_37 = { for: "piggo-token" };
+const _hoisted_38 = ["disabled"];
+const _hoisted_39 = { class: "custom-sites" };
+const _hoisted_40 = {
   key: 0,
   class: "custom-list"
 };
-const _hoisted_32 = ["onUpdate:modelValue"];
-const _hoisted_33 = ["onUpdate:modelValue"];
-const _hoisted_34 = ["onClick"];
-const _hoisted_35 = {
+const _hoisted_41 = ["onUpdate:modelValue"];
+const _hoisted_42 = ["onUpdate:modelValue"];
+const _hoisted_43 = ["onClick"];
+const _hoisted_44 = {
   key: 1,
   class: "custom-empty"
 };
-const _hoisted_36 = { class: "save-bar" };
-const _hoisted_37 = ["disabled"];
-const _hoisted_38 = { class: "history-panel" };
-const _hoisted_39 = { class: "section-head" };
-const _hoisted_40 = ["disabled"];
-const _hoisted_41 = {
+const _hoisted_45 = { class: "save-bar" };
+const _hoisted_46 = ["disabled"];
+const _hoisted_47 = { class: "history-panel" };
+const _hoisted_48 = { class: "section-head" };
+const _hoisted_49 = ["disabled"];
+const _hoisted_50 = {
   key: 0,
   class: "history"
 };
-const _hoisted_42 = {
+const _hoisted_51 = {
   key: 1,
   class: "empty"
 };
-const _hoisted_43 = { class: "history-panel log-panel" };
-const _hoisted_44 = { class: "section-head" };
-const _hoisted_45 = ["disabled"];
-const _hoisted_46 = {
+const _hoisted_52 = { class: "history-panel log-panel" };
+const _hoisted_53 = { class: "section-head" };
+const _hoisted_54 = ["disabled"];
+const _hoisted_55 = {
   key: 0,
   class: "runtime-logs"
 };
-const _hoisted_47 = {
+const _hoisted_56 = {
   key: 1,
   class: "empty"
 };
-const _hoisted_48 = {
+const _hoisted_57 = {
   key: 1,
   class: "loading"
 };
-const _hoisted_49 = {
+const _hoisted_58 = {
   key: 2,
   class: "load-error"
 };
@@ -105,13 +118,31 @@ const _sfc_main = {
   setup(__props) {
 
 const props = __props;
-const config = reactive({ auto_checkin: true, notify_result: true, headless: true, checkin_hour: 8, checkin_minute: 10, u2_checkin_hour: 9, u2_checkin_minute: 0, retry_count: 2, retry_interval: 20, tjupt_ai_assist: true, tjupt_confirm_timeout: 300, selected_sites: [], custom_sites: [] });
+const config = reactive({ auto_checkin: true, notify_result: true, headless: true, checkin_hour: 8, checkin_minute: 10, u2_checkin_hour: 9, u2_checkin_minute: 0, retry_count: 2, retry_interval: 20, tjupt_ai_assist: true, tjupt_confirm_timeout: 300, selected_sites: [], custom_sites: [], piggo_username: '', piggo_password: '', piggo_token: '' });
 const sites = ref([]), history = ref([]), logs = ref([]), cookieState = reactive({});
 const status = reactive({ running: false, current: '', phase: '', message: '', completed: 0, total: 0, finished_at: '' });
 const loading = ref(true), loadingError = ref(''), saving = ref(false), checking = ref(false);
 let timer;
+let piggoTokenDirty = false;
 const groups = computed(() => Object.entries(sites.value.reduce((all, site) => ((all[site.group] ||= []).push(site), all), {})));
 const progress = computed(() => status.total ? Math.round(status.completed / status.total * 100) : 0);
+const piggoSelected = computed(() => sites.value.some(site => config.selected_sites.includes(site.key) && ['piggo.me', 'www.piggo.me'].includes(site.domain)));
+
+async function saveValues(values) {
+  const payload = { ...values };
+  if (!piggoTokenDirty) {
+    // 平台整体替换配置；用掩码保留保存当时的凭证，避免旧空输入覆盖后台刚续期的 Token。
+    const current = await props.host.getConfig();
+    payload.piggo_token = Object.hasOwn(current || {}, 'piggo_token') ? '********' : '';
+  }
+  const result = await props.host.saveConfig(payload);
+  if (result?.ok === false) throw new Error(result.message || '配置未保存，请重试')
+  for (const key of ['piggo_password', 'piggo_token']) {
+    config[key] = result?.values?.[key] ?? (payload[key] ? '********' : '');
+  }
+  piggoTokenDirty = false;
+}
+function changePiggoAccount() { config.piggo_token = ''; piggoTokenDirty = true; }
 
 function withTimeout(promise, label, timeout = 12000) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error(`${label}超时，请确认插件已启用并重新加载`)), timeout))])
@@ -147,7 +178,7 @@ async function load() {
 async function save() {
   saving.value = true;
   try {
-    await props.host.saveConfig({ ...config, selected_sites: [...config.selected_sites] });
+    await saveValues({ ...config, piggo_username: config.piggo_username.trim(), piggo_token: config.piggo_token.trim(), selected_sites: [...config.selected_sites] });
     // 保存后重新取一次元数据，拿到后端为通用站点生成的稳定 key，并持久化选择状态。
     const meta = await props.host.callApi('/meta');
     sites.value = meta.sites || sites.value;
@@ -155,7 +186,7 @@ async function save() {
     const merged = [...new Set([...config.selected_sites, ...customKeys])];
     if (merged.length !== config.selected_sites.length) {
       config.selected_sites = merged;
-      await props.host.saveConfig({ ...config, selected_sites: merged });
+      await saveValues({ ...config, selected_sites: merged });
     }
     props.host.toast.success('配置已保存');
   }
@@ -173,7 +204,7 @@ async function checkCookies() {
     Object.keys(cookieState).forEach(key => delete cookieState[key]);
     const data = await props.host.callApi('/cookies/check', { method: 'POST', body: { selected_sites: [...config.selected_sites] } })
     ;(data.items || []).forEach(item => { cookieState[item.key] = item; });
-    props.host.toast[data.ok ? 'success' : 'warning'](data.ok ? '所选站点 Cookie 均可用' : (data.message || '部分所选站点 Cookie 不可用'));
+    props.host.toast[data.ok ? 'success' : 'warning'](data.ok ? '所选站点凭证已填写，实际有效性将在签到时验证' : (data.message || '部分站点缺少登录凭证，请查看站点提示'));
   }
   catch (error) { props.host.toast.error(`检查失败：${error.message || error}`); }
   finally { checking.value = false; }
@@ -200,14 +231,14 @@ return (_ctx, _cache) => {
       ? (_openBlock(), _createElementBlock("main", _hoisted_1, [
           _createElementVNode("header", _hoisted_2, [
             _createElementVNode("div", _hoisted_3, [
-              _cache[14] || (_cache[14] = _createElementVNode("span", {
+              _cache[18] || (_cache[18] = _createElementVNode("span", {
                 class: "brand-mark",
                 "aria-hidden": "true"
               }, "PT", -1)),
               _createElementVNode("div", null, [
-                _cache[13] || (_cache[13] = _createElementVNode("h2", null, "多站签到", -1)),
+                _cache[17] || (_cache[17] = _createElementVNode("h2", null, "多站签到", -1)),
                 _createElementVNode("p", null, [
-                  _cache[12] || (_cache[12] = _createTextVNode("平台 Cookie 自动同步 · 已选择 ", -1)),
+                  _cache[16] || (_cache[16] = _createTextVNode("平台 Cookie 自动同步 · 猪猪支持账号登录 · 已选择 ", -1)),
                   _createElementVNode("b", null, _toDisplayString(config.selected_sites.length), 1),
                   _createTextVNode(" / " + _toDisplayString(sites.value.length) + " 个站点", 1)
                 ])
@@ -219,18 +250,18 @@ return (_ctx, _cache) => {
                 disabled: checking.value || !config.selected_sites.length,
                 onClick: checkCookies
               }, [
-                _cache[15] || (_cache[15] = _createElementVNode("span", {
+                _cache[19] || (_cache[19] = _createElementVNode("span", {
                   class: "button-icon",
                   "aria-hidden": "true"
                 }, null, -1)),
-                _createTextVNode(_toDisplayString(checking.value ? '正在检查' : '检查 Cookie'), 1)
+                _createTextVNode(_toDisplayString(checking.value ? '正在检查' : '检查凭证'), 1)
               ], 8, _hoisted_5),
               _createElementVNode("button", {
                 class: "button primary",
                 disabled: status.running || !config.selected_sites.length,
                 onClick: run
               }, [
-                _cache[16] || (_cache[16] = _createElementVNode("span", {
+                _cache[20] || (_cache[20] = _createElementVNode("span", {
                   class: "play",
                   "aria-hidden": "true"
                 }, null, -1)),
@@ -247,8 +278,8 @@ return (_ctx, _cache) => {
                 }, null, 512), [
                   [_vModelCheckbox, config.auto_checkin]
                 ]),
-                _cache[17] || (_cache[17] = _createElementVNode("i", null, null, -1)),
-                _cache[18] || (_cache[18] = _createElementVNode("span", null, "自动签到", -1))
+                _cache[21] || (_cache[21] = _createElementVNode("i", null, null, -1)),
+                _cache[22] || (_cache[22] = _createElementVNode("span", null, "自动签到", -1))
               ]),
               _createElementVNode("label", _hoisted_10, [
                 _withDirectives(_createElementVNode("input", {
@@ -257,8 +288,8 @@ return (_ctx, _cache) => {
                 }, null, 512), [
                   [_vModelCheckbox, config.notify_result]
                 ]),
-                _cache[19] || (_cache[19] = _createElementVNode("i", null, null, -1)),
-                _cache[20] || (_cache[20] = _createElementVNode("span", null, "结果推送", -1))
+                _cache[23] || (_cache[23] = _createElementVNode("i", null, null, -1)),
+                _cache[24] || (_cache[24] = _createElementVNode("span", null, "结果推送", -1))
               ]),
               _createElementVNode("label", _hoisted_11, [
                 _withDirectives(_createElementVNode("input", {
@@ -267,13 +298,13 @@ return (_ctx, _cache) => {
                 }, null, 512), [
                   [_vModelCheckbox, config.headless]
                 ]),
-                _cache[21] || (_cache[21] = _createElementVNode("i", null, null, -1)),
-                _cache[22] || (_cache[22] = _createElementVNode("span", null, "浏览器静默运行", -1))
+                _cache[25] || (_cache[25] = _createElementVNode("i", null, null, -1)),
+                _cache[26] || (_cache[26] = _createElementVNode("span", null, "浏览器静默运行", -1))
               ])
             ]),
             _createElementVNode("div", _hoisted_12, [
               _createElementVNode("label", null, [
-                _cache[24] || (_cache[24] = _createElementVNode("span", null, "其他站点执行", -1)),
+                _cache[28] || (_cache[28] = _createElementVNode("span", null, "其他站点执行", -1)),
                 _createElementVNode("span", _hoisted_13, [
                   _withDirectives(_createElementVNode("input", {
                     "onUpdate:modelValue": _cache[3] || (_cache[3] = $event => ((config.checkin_hour) = $event)),
@@ -289,7 +320,7 @@ return (_ctx, _cache) => {
                       { number: true }
                     ]
                   ]),
-                  _cache[23] || (_cache[23] = _createElementVNode("b", null, ":", -1)),
+                  _cache[27] || (_cache[27] = _createElementVNode("b", null, ":", -1)),
                   _withDirectives(_createElementVNode("input", {
                     "onUpdate:modelValue": _cache[4] || (_cache[4] = $event => ((config.checkin_minute) = $event)),
                     "aria-label": "其他站点执行分钟",
@@ -307,7 +338,7 @@ return (_ctx, _cache) => {
                 ])
               ]),
               _createElementVNode("label", null, [
-                _cache[26] || (_cache[26] = _createElementVNode("span", null, "U2 执行（≥09:00）", -1)),
+                _cache[30] || (_cache[30] = _createElementVNode("span", null, "U2 执行（≥09:00）", -1)),
                 _createElementVNode("span", _hoisted_14, [
                   _withDirectives(_createElementVNode("input", {
                     "onUpdate:modelValue": _cache[5] || (_cache[5] = $event => ((config.u2_checkin_hour) = $event)),
@@ -323,7 +354,7 @@ return (_ctx, _cache) => {
                       { number: true }
                     ]
                   ]),
-                  _cache[25] || (_cache[25] = _createElementVNode("b", null, ":", -1)),
+                  _cache[29] || (_cache[29] = _createElementVNode("b", null, ":", -1)),
                   _withDirectives(_createElementVNode("input", {
                     "onUpdate:modelValue": _cache[6] || (_cache[6] = $event => ((config.u2_checkin_minute) = $event)),
                     "aria-label": "U2 执行分钟",
@@ -341,7 +372,7 @@ return (_ctx, _cache) => {
                 ])
               ]),
               _createElementVNode("label", null, [
-                _cache[27] || (_cache[27] = _createElementVNode("span", null, "重试次数", -1)),
+                _cache[31] || (_cache[31] = _createElementVNode("span", null, "重试次数", -1)),
                 _withDirectives(_createElementVNode("input", {
                   "onUpdate:modelValue": _cache[7] || (_cache[7] = $event => ((config.retry_count) = $event)),
                   type: "number",
@@ -357,7 +388,7 @@ return (_ctx, _cache) => {
                 ])
               ]),
               _createElementVNode("label", null, [
-                _cache[29] || (_cache[29] = _createElementVNode("span", null, "重试间隔", -1)),
+                _cache[33] || (_cache[33] = _createElementVNode("span", null, "重试间隔", -1)),
                 _createElementVNode("span", _hoisted_15, [
                   _withDirectives(_createElementVNode("input", {
                     "onUpdate:modelValue": _cache[8] || (_cache[8] = $event => ((config.retry_interval) = $event)),
@@ -372,7 +403,7 @@ return (_ctx, _cache) => {
                       { number: true }
                     ]
                   ]),
-                  _cache[28] || (_cache[28] = _createElementVNode("i", null, "秒", -1))
+                  _cache[32] || (_cache[32] = _createElementVNode("i", null, "秒", -1))
                 ])
               ])
             ])
@@ -396,16 +427,16 @@ return (_ctx, _cache) => {
             : _createCommentVNode("", true),
           _createElementVNode("section", _hoisted_18, [
             _createElementVNode("div", _hoisted_19, [
-              _cache[31] || (_cache[31] = _createElementVNode("div", null, [
+              _cache[35] || (_cache[35] = _createElementVNode("div", null, [
                 _createElementVNode("h3", null, "选择签到站点"),
-                _createElementVNode("p", null, "点击标签即可勾选。Cookie 由平台按站点域名自动读取。")
+                _createElementVNode("p", null, "点击标签即可勾选。Cookie 由平台读取，猪猪需在下方填写登录凭证。")
               ], -1)),
               _createElementVNode("div", _hoisted_20, [
                 _createElementVNode("button", {
                   class: "link-button",
                   onClick: _cache[9] || (_cache[9] = $event => (toggleGroup(sites.value, true)))
                 }, "全选"),
-                _cache[30] || (_cache[30] = _createElementVNode("span", null, null, -1)),
+                _cache[34] || (_cache[34] = _createElementVNode("span", null, null, -1)),
                 _createElementVNode("button", {
                   class: "link-button",
                   onClick: _cache[10] || (_cache[10] = $event => (toggleGroup(sites.value, false)))
@@ -437,7 +468,7 @@ return (_ctx, _cache) => {
                       }, null, 8, _hoisted_24), [
                         [_vModelCheckbox, config.selected_sites]
                       ]),
-                      _cache[32] || (_cache[32] = _createElementVNode("span", { class: "checkmark" }, [
+                      _cache[36] || (_cache[36] = _createElementVNode("span", { class: "checkmark" }, [
                         _createElementVNode("i")
                       ], -1)),
                       _createElementVNode("span", _hoisted_25, _toDisplayString(site.name.slice(0, 2).toUpperCase()), 1),
@@ -462,9 +493,85 @@ return (_ctx, _cache) => {
                 ])
               ]))
             }), 128)),
-            _createElementVNode("div", _hoisted_30, [
+            (piggoSelected.value)
+              ? (_openBlock(), _createElementBlock("section", _hoisted_30, [
+                  _cache[44] || (_cache[44] = _createElementVNode("h3", { id: "piggo-login-title" }, "猪猪登录", -1)),
+                  _cache[45] || (_cache[45] = _createElementVNode("p", { id: "piggo-login-help" }, "填写网站用户名和密码，插件自动获取登录凭证；失效后自动重新登录。不用手动复制 Token，也不要求平台必须有猪猪 Cookie。", -1)),
+                  _createElementVNode("div", _hoisted_31, [
+                    _createElementVNode("label", _hoisted_32, [
+                      _cache[37] || (_cache[37] = _createTextVNode("猪猪用户名", -1)),
+                      _withDirectives(_createElementVNode("input", {
+                        id: "piggo-username",
+                        "onUpdate:modelValue": _cache[12] || (_cache[12] = $event => ((config.piggo_username) = $event)),
+                        disabled: saving.value,
+                        autocomplete: "off",
+                        spellcheck: "false",
+                        "aria-describedby": "piggo-login-help",
+                        placeholder: "填写猪猪网站的用户名",
+                        onInput: changePiggoAccount
+                      }, null, 40, _hoisted_33), [
+                        [_vModelText, config.piggo_username]
+                      ])
+                    ]),
+                    _createElementVNode("label", _hoisted_34, [
+                      _cache[38] || (_cache[38] = _createTextVNode("猪猪密码", -1)),
+                      _withDirectives(_createElementVNode("input", {
+                        id: "piggo-password",
+                        "onUpdate:modelValue": _cache[13] || (_cache[13] = $event => ((config.piggo_password) = $event)),
+                        disabled: saving.value,
+                        type: "password",
+                        autocomplete: "new-password",
+                        "aria-describedby": "piggo-password-help",
+                        placeholder: config.piggo_password === '********' ? '已保存，直接输入可替换' : '填写网站登录密码',
+                        onInput: changePiggoAccount
+                      }, null, 40, _hoisted_35), [
+                        [_vModelText, config.piggo_password]
+                      ])
+                    ])
+                  ]),
+                  _cache[46] || (_cache[46] = _createElementVNode("p", {
+                    id: "piggo-password-help",
+                    class: "piggo-note"
+                  }, "密码默认遮蔽，保存后不回显明文。遇到验证码或二次验证时会提示，不会反复尝试登录。修改账号或密码会清除旧 Token，下一次签到重新登录。", -1)),
+                  _createElementVNode("details", _hoisted_36, [
+                    _cache[40] || (_cache[40] = _createElementVNode("summary", null, "高级选项：手动填写 Token（可选）", -1)),
+                    _createElementVNode("label", _hoisted_37, [
+                      _cache[39] || (_cache[39] = _createTextVNode("猪猪登录 Token", -1)),
+                      _withDirectives(_createElementVNode("input", {
+                        id: "piggo-token",
+                        "onUpdate:modelValue": _cache[14] || (_cache[14] = $event => ((config.piggo_token) = $event)),
+                        disabled: saving.value,
+                        type: "password",
+                        autocomplete: "new-password",
+                        spellcheck: "false",
+                        "aria-describedby": "piggo-token-help",
+                        placeholder: "自动登录时无需填写；只复制 pig_token 的值",
+                        onInput: _cache[15] || (_cache[15] = $event => (_isRef(piggoTokenDirty) ? piggoTokenDirty.value = true : piggoTokenDirty = true))
+                      }, null, 40, _hoisted_38), [
+                        [_vModelText, config.piggo_token]
+                      ])
+                    ]),
+                    _cache[41] || (_cache[41] = _createElementVNode("p", { id: "piggo-token-help" }, "自动登录成功后会保存 Token。只填 Token、不填账号密码时，失效后需要手动更新。清空输入框并保存会删除已保存的 Token。", -1)),
+                    _cache[42] || (_cache[42] = _createElementVNode("ol", null, [
+                      _createElementVNode("li", null, [
+                        _createTextVNode("用电脑浏览器登录 "),
+                        _createElementVNode("a", {
+                          href: "https://piggo.me/calendar",
+                          target: "_blank",
+                          rel: "noopener noreferrer"
+                        }, "猪猪网站"),
+                        _createTextVNode("，按 F12 打开开发者工具。")
+                      ]),
+                      _createElementVNode("li", null, "选择“应用程序（Application）”，展开“本地存储（Local Storage）”，点击 https://piggo.me。"),
+                      _createElementVNode("li", null, "找到名称 pig_token，复制对应“值（Value）”，粘贴到上面的输入框并保存。不要复制字段名或引号。")
+                    ], -1)),
+                    _cache[43] || (_cache[43] = _createElementVNode("p", { class: "piggo-note" }, "Token 相当于登录凭证，请勿发到群聊或截图公开。", -1))
+                  ])
+                ]))
+              : _createCommentVNode("", true),
+            _createElementVNode("div", _hoisted_39, [
               _createElementVNode("div", { class: "custom-head" }, [
-                _cache[33] || (_cache[33] = _createElementVNode("div", null, [
+                _cache[47] || (_cache[47] = _createElementVNode("div", null, [
                   _createElementVNode("h3", null, "任意站点通用签到"),
                   _createElementVNode("p", null, "填写站点名称和地址，插件会优先访问 /attendance.php；Cookie 仍由平台按域名同步。")
                 ], -1)),
@@ -474,7 +581,7 @@ return (_ctx, _cache) => {
                 }, "＋ 添加站点")
               ]),
               (config.custom_sites?.length)
-                ? (_openBlock(), _createElementBlock("div", _hoisted_31, [
+                ? (_openBlock(), _createElementBlock("div", _hoisted_40, [
                     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(config.custom_sites, (item, index) => {
                       return (_openBlock(), _createElementBlock("div", {
                         key: index,
@@ -484,27 +591,27 @@ return (_ctx, _cache) => {
                           "onUpdate:modelValue": $event => ((item.name) = $event),
                           "aria-label": "站点名称或账号",
                           placeholder: "站点名称 / 账号"
-                        }, null, 8, _hoisted_32), [
+                        }, null, 8, _hoisted_41), [
                           [_vModelText, item.name]
                         ]),
                         _withDirectives(_createElementVNode("input", {
                           "onUpdate:modelValue": $event => ((item.url) = $event),
                           "aria-label": "PT站点地址",
                           placeholder: "https://example.com"
-                        }, null, 8, _hoisted_33), [
+                        }, null, 8, _hoisted_42), [
                           [_vModelText, item.url]
                         ]),
                         _createElementVNode("button", {
                           class: "link-button danger",
                           onClick: $event => (removeCustomSite(index))
-                        }, "删除", 8, _hoisted_34)
+                        }, "删除", 8, _hoisted_43)
                       ]))
                     }), 128))
                   ]))
-                : (_openBlock(), _createElementBlock("div", _hoisted_35, "尚未添加通用站点"))
+                : (_openBlock(), _createElementBlock("div", _hoisted_44, "尚未添加通用站点"))
             ]),
-            _createElementVNode("footer", _hoisted_36, [
-              _cache[34] || (_cache[34] = _createElementVNode("p", null, [
+            _createElementVNode("footer", _hoisted_45, [
+              _cache[48] || (_cache[48] = _createElementVNode("p", null, [
                 _createElementVNode("span", {
                   class: "shield",
                   "aria-hidden": "true"
@@ -515,12 +622,12 @@ return (_ctx, _cache) => {
                 class: "button primary",
                 disabled: saving.value,
                 onClick: save
-              }, _toDisplayString(saving.value ? '正在保存…' : '保存并应用'), 9, _hoisted_37)
+              }, _toDisplayString(saving.value ? '正在保存…' : '保存并应用'), 9, _hoisted_46)
             ])
           ]),
-          _createElementVNode("section", _hoisted_38, [
-            _createElementVNode("div", _hoisted_39, [
-              _cache[35] || (_cache[35] = _createElementVNode("div", null, [
+          _createElementVNode("section", _hoisted_47, [
+            _createElementVNode("div", _hoisted_48, [
+              _cache[49] || (_cache[49] = _createElementVNode("div", null, [
                 _createElementVNode("h3", null, "最近运行"),
                 _createElementVNode("p", null, "保留最近 30 次签到结果。")
               ], -1)),
@@ -528,10 +635,10 @@ return (_ctx, _cache) => {
                 class: "link-button danger",
                 disabled: !history.value.length,
                 onClick: clearHistory
-              }, "清空记录", 8, _hoisted_40)
+              }, "清空记录", 8, _hoisted_49)
             ]),
             (history.value.length)
-              ? (_openBlock(), _createElementBlock("div", _hoisted_41, [
+              ? (_openBlock(), _createElementBlock("div", _hoisted_50, [
                   (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(history.value, (item) => {
                     return (_openBlock(), _createElementBlock("details", {
                       key: item.time
@@ -542,7 +649,7 @@ return (_ctx, _cache) => {
                         }, null, 2),
                         _createElementVNode("b", null, _toDisplayString(item.summary), 1),
                         _createElementVNode("time", null, _toDisplayString(item.time), 1),
-                        _cache[36] || (_cache[36] = _createElementVNode("span", { class: "chevron" }, null, -1))
+                        _cache[50] || (_cache[50] = _createElementVNode("span", { class: "chevron" }, null, -1))
                       ]),
                       _createElementVNode("ul", null, [
                         (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(item.sites, (site) => {
@@ -559,15 +666,15 @@ return (_ctx, _cache) => {
                     ]))
                   }), 128))
                 ]))
-              : (_openBlock(), _createElementBlock("div", _hoisted_42, [...(_cache[37] || (_cache[37] = [
+              : (_openBlock(), _createElementBlock("div", _hoisted_51, [...(_cache[51] || (_cache[51] = [
                   _createElementVNode("span", { class: "empty-mark" }, null, -1),
                   _createElementVNode("b", null, "等待第一次签到", -1),
                   _createElementVNode("p", null, "运行完成后，站点结果会显示在这里。", -1)
                 ]))]))
           ]),
-          _createElementVNode("section", _hoisted_43, [
-            _createElementVNode("div", _hoisted_44, [
-              _cache[38] || (_cache[38] = _createElementVNode("div", null, [
+          _createElementVNode("section", _hoisted_52, [
+            _createElementVNode("div", _hoisted_53, [
+              _cache[52] || (_cache[52] = _createElementVNode("div", null, [
                 _createElementVNode("h3", null, "运行日志"),
                 _createElementVNode("p", null, "实时显示本次签到过程，最多保留 200 条。")
               ], -1)),
@@ -575,10 +682,10 @@ return (_ctx, _cache) => {
                 class: "link-button danger",
                 disabled: !logs.value.length,
                 onClick: clearLogs
-              }, "清空日志", 8, _hoisted_45)
+              }, "清空日志", 8, _hoisted_54)
             ]),
             (logs.value.length)
-              ? (_openBlock(), _createElementBlock("div", _hoisted_46, [
+              ? (_openBlock(), _createElementBlock("div", _hoisted_55, [
                   (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(logs.value, (item, index) => {
                     return (_openBlock(), _createElementBlock("div", {
                       key: `${item.time}-${index}`,
@@ -590,16 +697,16 @@ return (_ctx, _cache) => {
                     ], 2))
                   }), 128))
                 ]))
-              : (_openBlock(), _createElementBlock("div", _hoisted_47, [...(_cache[39] || (_cache[39] = [
+              : (_openBlock(), _createElementBlock("div", _hoisted_56, [...(_cache[53] || (_cache[53] = [
                   _createElementVNode("b", null, "暂无运行日志", -1),
                   _createElementVNode("p", null, "启动签到后，执行过程会实时显示在这里。", -1)
                 ]))]))
           ])
         ]))
       : (loading.value)
-        ? (_openBlock(), _createElementBlock("div", _hoisted_48, "正在读取签到配置…"))
-        : (_openBlock(), _createElementBlock("div", _hoisted_49, [
-            _cache[40] || (_cache[40] = _createElementVNode("b", null, "签到配置读取失败", -1)),
+        ? (_openBlock(), _createElementBlock("div", _hoisted_57, "正在读取签到配置…"))
+        : (_openBlock(), _createElementBlock("div", _hoisted_58, [
+            _cache[54] || (_cache[54] = _createElementVNode("b", null, "签到配置读取失败", -1)),
             _createElementVNode("p", null, _toDisplayString(loadingError.value), 1),
             _createElementVNode("button", {
               class: "button primary",
@@ -611,6 +718,6 @@ return (_ctx, _cache) => {
 }
 
 };
-const Config = /*#__PURE__*/_export_sfc(_sfc_main, [['__scopeId',"data-v-573e4f53"]]);
+const Config = /*#__PURE__*/_export_sfc(_sfc_main, [['__scopeId',"data-v-27a5b6f9"]]);
 
 export { Config as default };
