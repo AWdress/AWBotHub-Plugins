@@ -23,7 +23,7 @@ MAX_PAGES = 64
 MAX_PAGE_BYTES = 96 * 1024
 MAX_TOTAL_BYTES = 1024 * 1024
 MAX_REPLY_UNITS = 700
-_QUESTION = re.compile(r"[?？]|怎么|怎样|如何|咋|为啥|为什么|能否|能不能|是否|有没有|会不会|要不要|在哪|支持|求助|请问|哪里|区别|干什么|不懂|不回|没反应|没跑|没执行|没运行|不跑|不执行|不生效|失败|错误|报错|无效|收不到|打不开|timeout|invalid|error|\bis required\b|\brequired for\b", re.I)
+_QUESTION = re.compile(r"[?？]|怎么|怎样|如何|咋|为啥|为什么|能否|能不能|是否|有没有|会不会|要不要|在哪|是什么|有什么|哪个|多少|不能|没有通知|支持|求助|请问|哪里|区别|干什么|不懂|不回|没反应|没响应|不响应|没跑|没执行|没运行|不跑|不执行|不生效|失败|错误|报错|无效|收不到|打不开|timeout|invalid|error|\bis required\b|\brequired for\b", re.I)
 _TOPICS = ("awbotnest", "cookie", "cookiecloud", "telegram", "bot", "docker", "compose", "arm", "ai", "api", "cron", "cloakbrowser", "geoip", "oom",
            "插件", "企微", "企业微信", "机器人", "账号", "定时", "备份", "日志", "管理员", "浏览器", "代理", "通知", "验证码", "模型", "密钥")
 
@@ -67,9 +67,48 @@ _NATURAL_FAQS = tuple((key, re.compile(topic, re.I), re.compile(intent, re.I), s
      r"每天.{0,10}(?:[零一二三四五六七八九十0-9].{0,2}(?:点|时)|早上|晚上)|每周|时间怎么设|执行周期", 200),
     ("api", r"(?<![a-z0-9_])api(?![a-z0-9_])|开放接口",
      r"鉴权|认证|请求头|密钥|文档", 205),
+    ("api-boundaries", r"(?<![a-z0-9_])api(?![a-z0-9_])|开放接口",
+     r"发.{0,6}文件|企微.{0,6}文件|助手.{0,8}配对", 230),
+    ("appearance-local", r"主题|背景|界面偏好|插件分组",
+     r"(?:换|更换|清除|清空).{0,8}(?:浏览器|域名|数据)|(?:没了|丢了|丢失|不见|不保存)", 220),
     ("ai-setup", r"(?<![a-z0-9_])ai(?![a-z0-9_])|模型|服务商",
      r"模型列表.{0,12}(?:没有|找不到|不全)|(?:添加|接入|配).{0,8}(?:ai|服务商)|ai.{0,8}(?:添加|接入|配)", 200),
     ("wecom", r"企业微信|企微", r"配置|设置|接入|连不上|不通|通知", 180),
+))
+
+# The platform assistant is a distinct feature, not the Telegram/NextFind or
+# developer-assistant plugins. Route its questions before generic Bot/AI help.
+_ASSISTANT_TOPIC = re.compile(r"系统助手|助手模式|(?:^|[，。！？、：；])\s*(?:这个|那个)?助手|(?:企微|企业微信|微工作台)助手", re.I)
+_OTHER_ASSISTANT_TOPIC = re.compile(r"(?:telegram|nextfind|开发者|憨憨|(?<![a-z0-9_])(?:ai|tg|nf))\s*助手", re.I)
+
+
+def _other_assistant(text):
+    return "系统助手" not in text and bool(_OTHER_ASSISTANT_TOPIC.search(text))
+
+
+_ASSISTANT_FAQS = tuple((key, re.compile(intent, re.I)) for key, intent in (
+    ("api-boundaries", r"开放\s*api|api.{0,8}key.{0,8}(?:配对|鉴权|登录|会话|接口)|(?:配对|鉴权|登录|会话|接口).{0,8}api.{0,8}key"),
+    ("assistant-voice", r"语音|转写|录音|音频|\bogg\b|\bamr\b"),
+    ("assistant-sandbox", r"沙箱|broker|runner"),
+    ("assistant-mcp", r"(?<![a-z0-9_])mcp(?![a-z0-9_])|外部工具|stdio"),
+    ("assistant-issue", r"(?<![a-z0-9_])issue(?![a-z0-9_])|提交.{0,8}(?:github|问题|反馈)"),
+    ("assistant-docker-source", r"编译|可信.{0,4}清单|(?:docker|容器).{0,10}(?:核心|源码|代码)|(?:核心|源码|代码).{0,10}(?:docker|容器)"),
+    ("assistant-source", r"源码|代码|补丁"),
+    ("assistant-notifications", r"预约.{0,8}通知|(?:暂停|删除).{0,4}预约|预约.{0,4}(?:暂停|删除)|结果.{0,4}通知|重启.{0,6}任务"),
+    ("assistant-attachments", r"当前任务尚未结束|停止|关闭.{0,4}窗口|关掉.{0,4}窗口|附件.{0,8}(?:不能|没反应|失败)|(?:不能|无法).{0,6}发附件"),
+    ("assistant-wecom-confirm", r"微工作台|普通微信|交互卡片|(?:企微|企业微信).{0,8}(?:确认|按钮)"),
+    ("assistant-memory", r"记忆|偏好|记住|不记得"),
+    ("assistant-skills", r"技能"),
+    ("assistant-reservations", r"预约|定时|(?<![a-z0-9_])cron(?![a-z0-9_])|每天|每周|明天.{0,6}(?:点|时)"),
+    ("assistant-queue", r"排队|超时|名额|一直等待|次数|轮数|token.{0,8}(?:限制|上限|额度)|(?:限制|上限|额度).{0,8}token"),
+    ("assistant-images", r"图片|截图|识图|视觉|文本附件|附件.{0,8}(?:限制|大小|格式)"),
+    ("dev-actions", r"插件.{0,8}(?:按钮|动作)|(?:按钮|动作).{0,8}插件|ctx\.action|agent_exposed"),
+    ("assistant-tg-mode", r"退出|新会话|助手模式"),
+    ("assistant-wecom-pair", r"(?:企微|企业微信).{0,24}(?:配对|接入|回调|通知|响应|反应|聊天|白名单)|(?:配对|接入|回调).{0,16}(?:企微|企业微信)"),
+    ("assistant-tg-pair", r"配对|(?<![a-z0-9_])(?:bot|tg)(?![a-z0-9_])|telegram|群里|群聊|私聊|白名单"),
+    ("assistant-confirm", r"确认|拒绝|权限|只读|改.{0,6}(?:配置|设置|代理)|密钥|密码|cookie|token|api.{0,8}key|shell|任意.{0,4}(?:文件|执行)|运行.{0,6}(?:命令|python)"),
+    ("assistant-web", r"联网|网页|搜索资料|浏览器"),
+    ("assistant-start", r"模型|启用|开启|查询|工具|配置|设置|怎么用|入口|安装"),
 ))
 _SPOKEN_QUESTION = re.compile(
     r"哪儿|上哪|何处|请教|求教|求.{0,8}(?:教程|步骤|方法|文档)|"
@@ -514,6 +553,12 @@ class WikiLibrary:
         spoken = re.sub(r"为什么|怎么|怎样|如何|为啥|请问|一直|突然|已经|还是|我的|这个|那个|咋|啊|呢|呀", "", compact)
         found = []
         entries = {entry["id"]: entry for entry in self.faqs}
+        other_assistant = _other_assistant(text)
+        if not other_assistant and _ASSISTANT_TOPIC.search(text):
+            for key, intent in _ASSISTANT_FAQS:
+                if key in entries and intent.search(text):
+                    found.append((240, False, entries[key]))
+                    break
         for key, topic, intent, score in _NATURAL_FAQS:
             if key not in entries or not topic.search(text) or not intent.search(text):
                 continue
@@ -530,6 +575,8 @@ class WikiLibrary:
                 continue
             found.append((score, False, entries[key]))
         for entry in self.faqs:
+            if other_assistant and entry["page"] == "System-Assistant":
+                continue
             # A plugin's lifecycle is not an instruction to redeploy the platform.
             if "插件" in compact and entry["id"] in {"install", "update"}:
                 continue
@@ -573,6 +620,8 @@ class WikiLibrary:
         results = self.search(question)
         if not results:
             return []
+        if _other_assistant(question):
+            results = [item for item in results if item["slug"] != "System-Assistant"]
         if re.search(r"图片|文件|打印", question) and not re.search(r"企微|企业微信|微工作台|微信", question):
             results = [item for item in results if "企业微信" not in item["heading"]]
         # "这个插件支持图片吗" is not evidence that the question concerns the

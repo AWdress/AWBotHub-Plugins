@@ -1,6 +1,6 @@
 # 更新、备份与日常维护
 
-本文的 Docker 命令默认：安装目录 `/opt/AWBotNest`、服务名 `awbotnest`、容器名 `AWBotNest_V2`。如果你安装时改过，请换成自己的值。
+本页按 **v2.0.2.7** 核对。Docker 命令默认：安装目录 `/opt/AWBotNest`、服务名 `awbotnest`、容器名 `AWBotNest_V2`。如果你安装时改过，请换成自己的值。
 
 ## 1. 先记住三个目录
 
@@ -71,9 +71,9 @@ docker inspect AWBotNest_V2 --format '{{json .Mounts}}'
 
 ```bash
 docker compose stop awbotnest
-sudo tar -czf /opt/AWBotNest-full-backup-20261017.tar.gz \
+sudo tar -czf /opt/AWBotNest-full-backup-20261103.tar.gz \
   data sessions plugins docker-compose.yml
-sudo chmod 600 /opt/AWBotNest-full-backup-20261017.tar.gz
+sudo chmod 600 /opt/AWBotNest-full-backup-20261103.tar.gz
 docker compose start awbotnest
 ```
 
@@ -95,7 +95,7 @@ docker compose start awbotnest
 
 ```bash
 sudo mkdir -p /opt/AWBotNest-restored
-sudo tar -xzf /opt/AWBotNest-full-backup-20261017.tar.gz -C /opt/AWBotNest-restored
+sudo tar -xzf /opt/AWBotNest-full-backup-20261103.tar.gz -C /opt/AWBotNest-restored
 cd /opt/AWBotNest-restored
 docker compose config -q
 docker compose up -d awbotnest
@@ -149,7 +149,7 @@ docker compose -f docker-compose.yml -f docker-compose.awbotnest-runtime.yml up 
 Compose 中 `image: awdress/awbotnest_v2:latest` 表示拉取 `latest` 标签。需要固定发布版本，可换成确实存在的标签，例如：
 
 ```yaml
-image: awdress/awbotnest_v2:v2.0.1.6
+image: awdress/awbotnest_v2:v2.0.2.7
 ```
 
 改完后再执行 `pull` 和 `up -d`。不要凭空填写不存在的版本号。回退镜像前，也要确认该旧版能够读取现有配置和数据；镜像回退不能代替数据备份。
@@ -157,7 +157,7 @@ image: awdress/awbotnest_v2:v2.0.1.6
 ## 5. 新版本检查与通知
 
 - 系统启动时检查更新，之后后台每小时检查一次。
-- 网页也会获取更新状态，不必只在“关于”页才发现新版本。
+- 打开或切回网页时也会获取更新状态，沿用系统的更新入口和气泡，不必只在“关于”页才发现新版本。
 - “系统设置 → 通知渠道”的“系统更新通知”默认开启；配置好默认 Bot 通知后，检测到新版本会发送更新内容。
 - 检查更新只是发现新版本，不会在后台自动替你更新 Docker 镜像。
 
@@ -263,5 +263,28 @@ docker inspect AWBotNest_V2 --format 'StartedAt={{.State.StartedAt}} RestartCoun
 系统的浏览器公共服务会对执行名额排队，等待名额不消耗系统自有的插件执行时限；轮到任务后仍受实际执行时限约束。插件自己启动的独立浏览器、自己设置的超时和外部网站行为，不会自动被改写。不要因此认为所有第三方插件都能无限期等待，或已经杜绝 OOM。
 
 内存较高时，系统会低频记录内存诊断。它只用于定位，不会自动终止插件或浏览器。向开发者反馈时，请附“占用高的时刻、正在运行的插件、上述命令输出及对应日志”，并先脱敏。
+
+### 任务结束后，内存会自动回收吗
+
+会。自 v2.0.2.0 起，系统托管的插件任务、后台回调、浏览器和 OCR 工作结束后，会安排空闲回收：释放不再引用的对象，并在 Linux 支持时尝试归还分配器中的空闲内存。回收在后台进行，不会为了回收取消任务或改变定时任务的排队顺序。
+
+这不表示结束任务的下一秒就一定回到启动时的数字：
+
+- 正在运行的任务、仍被插件引用的对象和模块不会强行释放。
+- 多个短任务连续运行时会合并回收请求，避免每次调用都做一遍全量回收。
+- 系统公共 OCR 使用可回收的独立工作进程，空闲约 60 秒后退出；插件自己常驻的模型不一定走这个服务。
+- Docker 用量还包含文件缓存，不能只凭总数未立刻下降判断泄漏。
+
+如果所有任务结束几分钟后，Python 或浏览器进程仍持续增长，请记录多次采样和当时插件。不要定时重启容器或清空文件缓存来掩盖问题。
+
+## 9. 累计安装量与匿名统计
+
+“关于”显示的是累计安装事件，**不是实时在线人数或去重用户数**。首次安装、覆盖版本的系统文件变化、更新镜像，以及保留 `data` 重新创建容器都可增加；普通停止再启动、重启同一个容器、重复上报不增加。源码部署根据系统发布文件的变化识别，不按每次打开页面计数。
+
+默认开启匿名统计。进入“系统设置 → 维护 → 匿名安装统计”，关闭后点击“保存设置”，系统就停止后续同步；重新开启沿用已有标识，不因为开关切换就把同一部署重复登记。关闭不代表删除统计服务中已经累计的数字。
+
+登记只提交随机安装标识和格式版本，不提交账号、密钥、配置、插件内容或本地源码。与任何网络请求一样，接收服务仍可能看到来源网络 IP；匿名标识不等于请求完全没有网络信息。
+
+统计在后台运行，页面只读缓存。服务暂时不可达时，总数可能尚未取得或不是最新，不影响账号、插件和系统启动。不要通过删除 `data/system_installation.json` 来“修数字”；它用于避免重复登记，随完整数据备份保留即可。
 
 [安装与部署](Installation) · [插件管理](Plugins) · [Cookie 与浏览器](Cookies-and-Browser) · [常见问题](Troubleshooting) · [返回首页](Home)

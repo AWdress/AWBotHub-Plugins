@@ -1,6 +1,6 @@
 # 插件开发入门
 
-这一页面向会一点 Python、想写第一个 V2 插件的人。先完成一个不需要 Telegram、网络或额外依赖的小例子，再按需求接入其他能力。
+这一页面向会一点 Python、想写第一个 V2 插件的人，接口按 **v2.0.2.7** 核对。先完成一个不需要 Telegram、网络或额外依赖的小例子，再按需求接入其他能力。
 
 完整规范与详细接口放在源码文档中，本文不重复所有参数：
 
@@ -9,7 +9,7 @@
 - [开放 API 说明](https://github.com/AWdress/AWBotNest/blob/v2/docs/API.md)
 - [单文件模板](https://github.com/AWdress/AWBotNest/blob/v2/plugins/_TEMPLATE.py)
 
-相关使用说明：[插件管理](Plugins) · [开放 API](Open-API) · [AI 服务](AI-Service) · [Cookie 与浏览器](Cookies-and-Browser)
+相关使用说明：[插件管理](Plugins) · [开放 API](Open-API) · [系统助手](System-Assistant) · [AI 服务](AI-Service) · [Cookie 与浏览器](Cookies-and-Browser)
 
 ## 1. 最小可用插件
 
@@ -118,6 +118,10 @@ V2 使用 Telethon。V1 插件中的客户端、调度器或内部模块可能�
 
 动作不是 Telegram 命令。企业微信也可调用已启用、关联到该渠道的插件动作；不要期待任意 Telegram 文本处理器自动变成企业微信指令。
 
+系统助手能查询并调用已有的 Schema 动作按钮，原来已通过 `ctx.action()` 注册的按钮不需要再写一份“助手专用接口”。助手看不到任意 Python 函数，也不会直接操作 Vue 中只有前端逻辑的按钮。
+
+新动作可以通过 `description`、`parameters`、`read_only`、`agent_exposed` 描述用途、参数和权限，便于助手正确使用。真实会改变数据的操作不要标成只读，也不要为了省一次确认把危险动作暴露出去。非敏感配置修改、动作确认与源码排查的边界见 [系统助手](System-Assistant)。
+
 ### 自定义 Vue 页面
 
 复杂列表、图表或专门的交互才需要 Vue。目录插件设置 `render_mode: "vue"`，发布已构建的 `frontend/dist` 模块联邦产物，暴露 `./Config`。
@@ -168,6 +172,8 @@ ctx.schedule_cron("daily", daily, hour=9, minute=0)
 | 需求 | 优先使用 | 需要注意 |
 | --- | --- | --- |
 | 发通知 | `await ctx.notify(...)`、`ctx.notify_table(...)` | 跟随管理员通知路由；内容避免泄露敏感值。 |
+| 回复企业微信文件 | `await message.reply_file(content, filename)` | 仅回复当前回调的原发送成员，不能任意指定收件人。 |
+| 回复 Telegram 文件 | `await event.reply(file=...)`、`client.send_file(...)` | 使用当前可用的 Telethon 客户端，先检查发送对象和权限。 |
 | HTTP 请求 | `ctx.http` | 继承系统代理；外部请求设置超时并处理失败。 |
 | AI 文字、识图、生图 | `ctx.ai.chat/vision/generate_image` | 使用管理员分配的能力与模型，不在插件里重复保存 AI Key。 |
 | 网站 Cookie | `ctx.cookies` | 元数据声明 `cookie_domains`，按域名读取，不能读取任意站点。 |
@@ -180,7 +186,105 @@ ctx.schedule_cron("daily", daily, hour=9, minute=0)
 
 企业微信文字、图片、文件和按钮事件通过 `ctx.on_wecom_message()` 接入统一回调；消息类型、成员隔离、媒体大小限制、回复方法见[企业微信统一消息回调](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#企业微信统一消息回调)。不要为同一个应用另搭一套不必要的回调入口。
 
-## 7. 第三方依赖怎么声明
+### CloakBrowser 的 Key 与资源释放
+
+使用 `ctx.browser` 时跟随系统的浏览器设置。直接使用 CloakBrowser 的插件应正常声明自己的 `cloakbrowser` 依赖，但不要重复保存或分发系统 Key。
+
+系统 Key 是唯一来源：插件传入的 `license_key`、`env` 中的 Key、容器环境变量和缓存授权文件都不能覆盖它。免费 Key 模式关闭或 Key 被删除后使用无 Key 免费内核；无 Key 模式不支持 `CLOAKBROWSER_BINARY_PATH` 自定义内核。
+
+有 Key 时系统按单会话排队。插件必须在 `finally` 中关闭浏览器，异步启动对应 `await browser.close()`；持久化上下文则关闭其 `context`。只关闭 Page 不会释放会话。不要在插件里轮换其他免费 Key，也不要用强杀代替正常关闭。
+
+### 存储和 SQL 计算
+
+`ctx.storage` 提供异步 `get()`、`set()`、`delete()`、`items()`，是插件自己的键值存储，**没有公开的 `execute()` 或任意 SQL 接口**。不能直接打开系统内部数据库执行建表或查询。
+
+需要账目汇总等 SQL 功能时，插件可在自己的 `ctx.data_dir` 下管理独立 SQLite 数据库，用参数绑定传入业务值；连接与表结构由插件维护。使用异步数据库库，或把同步 SQLite 操作放进 `asyncio.to_thread()`，不要阻塞系统事件循环。并发写入、事务、迁移、用户数据隔离和备份要由插件设计；不要把消息文字直接拼成 SQL。
+
+## 7. 企业微信与 Telegram 文件回传
+
+### 企业微信：复用系统回调
+
+管理员先完成 [账号与通知](Accounts-and-Notifications) 中的自建应用回调配置，允许具体成员，并把此通知渠道关联给插件。插件启用后才会收到消息；仅注册函数或只设置 `scope: "wecom"` 都不能替代这些授权。
+
+系统先验签、解密并检查成员与插件绑定，然后把统一消息对象交给 `ctx.on_wecom_message()`。常用接口：
+
+| 内容 | 接口或属性 |
+| --- | --- |
+| 成员和渠道 | `message.user_id`、`message.channel_id` |
+| 文字 | `message.message_type == "text"`、`message.text` |
+| 图片和文件 | `message.message_type` 为 `image` 或 `file`，再主动调用 `await message.download_media(max_bytes=...)` |
+| 菜单和模板卡片按钮 | `message.message_type == "event"`，读取 `message.event`、`message.event_key`、`message.fields` |
+| 回复文字 | `await message.reply("内容")` |
+| 回复文件 | `await message.reply_file(file_bytes, "文件名.csv", content_type="text/csv")` |
+
+`message_types` 默认包含 `text`、`image`、`file`、`event`，也可只订阅自己需要的类型。`events=("click", "template_card_event")` 只过滤事件，不过滤同时订阅的图片或文件。每个插件只有一个企业微信处理器，后注册的会替换前一个，不要为每种类型各注册一次。
+
+下面是可单独上传的最小文件回传插件。它只返回示例 CSV，不读取你的真实数据，也不需要额外依赖：
+
+```python
+import csv
+from io import StringIO
+
+__plugin__ = {
+    "id": "wecom_export_demo",
+    "name": "企业微信导出示例",
+    "version": "1.0.0",
+    "scope": "wecom",
+    "instance_mode": "shared",
+    "plugin_api_version": 2,
+    "min_platform_version": "2.0.2.6",
+    "description": "发送“导出示例”，接收一个示例 CSV 文件。",
+    "requirements": [],
+}
+
+
+async def setup(ctx):
+    @ctx.on_wecom_message(message_types=("text",))
+    async def receive(message):
+        if message.text.strip() != "导出示例":
+            return
+        with StringIO(newline="") as output:
+            writer = csv.writer(output)
+            writer.writerow(["项目", "金额（元）"])
+            writer.writerow(["示例支出", "12.50"])
+            content = output.getvalue().encode("utf-8-sig")
+        await message.reply_file(content, "示例.csv", content_type="text/csv")
+```
+
+保存为 `wecom_export_demo.py`，上传、关联企业微信渠道并启用后，用允许的成员向应用发送 `导出示例`。应收到 `示例.csv`，不要用系统保留的 `/运行` 等命令作为业务命令。
+
+实际记账或打印插件还要做这些处理：
+
+- 按 `channel_id` 和 `user_id` 隔离数据，确认当前成员可以查看或导出对应账本；渠道允许成员不等于该成员可以读取所有业务数据。
+- 图片、文件不会自动下载。下载后得到 `content`、`filename`、`content_type`，仍需校验实际格式，不能直接执行附件或信任扩展名。
+- 下载默认及最大限制为 20 MiB，可以设置更小值。回传只接受 6 字节至 20 MiB 的 `bytes` 或 `bytearray`，不接受路径、URL 或文件对象。
+- 文件名必须是单个文件名，不能含目录和控制字符，UTF-8 不超过 200 字节；MIME 类型不能带 `charset` 等参数。
+- `reply_file()` 只发送给原成员，不广播，不回退到其他渠道，不支持群机器人 Webhook。它复用系统凭据，插件不用保存 Secret 或 access token。
+- 停用、解绑或重载后旧消息对象失效，下载和回传都会复查权限。最终投递无法确认时可能抛出 `DeliveryUncertain`；不要立即盲目重发，否则可能重复发送。
+- 导出大型 Excel 放到工作线程，直接使用 `.xlsx` 需要声明 `openpyxl` 等实际依赖。用户输入写入表格前按文本处理，防止公式注入。
+
+系统会对回调重试去重，但队列不持久化。需要可靠执行的业务要将任务保存到插件自己的存储，再记录处理状态；不能把“HTTP 回调已接收”等同于“业务已完成”。
+
+### Telegram：使用当前 Telethon 客户端
+
+Telegram 已支持文件回复，无需再给插件保存一份 Bot Token。以下函数放在已注册的 `ctx.on_message()` 回调里使用，`excel_bytes` 由插件自己的导出逻辑生成：
+
+```python
+from io import BytesIO
+
+async def reply_export(event, excel_bytes: bytes):
+    with BytesIO(excel_bytes) as file:
+        file.name = "账本.xlsx"
+        await event.reply("导出完成", file=file, force_document=True)
+```
+
+指定目标时也可使用当前可用的 `event.client`、`ctx.bot` 或 `ctx.user`，调用 `await client.send_file(chat_id, file, force_document=True)`；发送结束前不要关闭文件对象。不要缓存跨重连的旧客户端。
+
+`event.reply()` 会发回原会话，群里的请求也会回到群里。私人账单应限制为已授权用户的私聊，先核对发送者，再查询或导出。大小、发言权限和限流遵循 Telegram 的规则，不使用企业微信的 20 MiB 限制。
+
+系统助手的 Telegram／企业微信配对、图片识别和按钮确认见 [系统助手](System-Assistant)，不用在插件中重复实现助手回调。
+
+## 8. 第三方依赖怎么声明
 
 在元数据中列出插件直接使用的发行包，例如：
 
@@ -194,7 +298,7 @@ ctx.schedule_cron("daily", daily, hour=9, minute=0)
 
 包在 x86_64 可用，不代表 ARM64 和当前 Python 版本也有可用 wheel；有原生扩展的包要分别验证。详见[依赖声明与安装](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#python-依赖声明与安装)。
 
-## 8. 发布到插件市场
+## 9. 发布到插件市场
 
 当前仓库界面接受名为 `AWBotNest-Plugins` 的公开 GitHub 仓库，V2 清单放在仓库根目录的 `manifest_v2.json`。
 
@@ -219,7 +323,7 @@ ctx.schedule_cron("daily", daily, hour=9, minute=0)
 
 目录插件和 Vue 资源的发布方式，请按[市场发布规范](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#发布到插件市场)组织。测试文件、真实 Key、Cookie、Session、日志和个人配置不要放入插件发布包。
 
-## 9. 发布前最低检查清单
+## 10. 发布前最低检查清单
 
 - 在干净环境首次安装、配置、启用成功，已有依赖时不会重复无意义安装。
 - 停用再启用、重载后，没有重复消息处理器、任务或未关闭浏览器。
