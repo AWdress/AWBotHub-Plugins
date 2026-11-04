@@ -2,31 +2,27 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 const props = defineProps({ pluginId: { type: String, required: true }, host: { type: Object, required: true } })
-const config = reactive({ auto_checkin: true, notify_result: true, headless: true, checkin_hour: 8, checkin_minute: 10, u2_checkin_hour: 9, u2_checkin_minute: 0, retry_count: 2, retry_interval: 20, tjupt_ai_assist: true, tjupt_confirm_timeout: 300, selected_sites: [], custom_sites: [], piggo_username: '', piggo_password: '', piggo_token: '' })
+const config = reactive({ auto_checkin: true, notify_result: true, headless: true, checkin_hour: 8, checkin_minute: 10, u2_checkin_hour: 9, u2_checkin_minute: 0, retry_count: 2, retry_interval: 20, tjupt_ai_assist: true, tjupt_confirm_timeout: 300, selected_sites: [], custom_sites: [], piggo_username: '', piggo_password: '' })
 const sites = ref([]), history = ref([]), logs = ref([]), cookieState = reactive({})
 const status = reactive({ running: false, current: '', phase: '', message: '', completed: 0, total: 0, finished_at: '' })
 const loading = ref(true), loadingError = ref(''), saving = ref(false), checking = ref(false)
 let timer
-let piggoTokenDirty = false
 const groups = computed(() => Object.entries(sites.value.reduce((all, site) => ((all[site.group] ||= []).push(site), all), {})))
 const progress = computed(() => status.total ? Math.round(status.completed / status.total * 100) : 0)
 const piggoSelected = computed(() => sites.value.some(site => config.selected_sites.includes(site.key) && ['piggo.me', 'www.piggo.me'].includes(site.domain)))
 
+function withoutLegacyPiggoToken(values) {
+  const cleaned = { ...values }
+  delete cleaned.piggo_token
+  return cleaned
+}
 async function saveValues(values) {
-  const payload = { ...values }
-  if (!piggoTokenDirty) {
-    // 平台整体替换配置；用掩码保留保存当时的凭证，避免旧空输入覆盖后台刚续期的 Token。
-    const current = await props.host.getConfig()
-    payload.piggo_token = Object.hasOwn(current || {}, 'piggo_token') ? '********' : ''
-  }
+  const payload = withoutLegacyPiggoToken(values)
   const result = await props.host.saveConfig(payload)
   if (result?.ok === false) throw new Error(result.message || '配置未保存，请重试')
-  for (const key of ['piggo_password', 'piggo_token']) {
-    config[key] = result?.values?.[key] ?? (payload[key] ? '********' : '')
-  }
-  piggoTokenDirty = false
+  // 已保存掩码照常提交以保留原密码；保存成功后不在页面状态中留存明文。
+  config.piggo_password = (result?.values?.piggo_password ?? payload.piggo_password) ? '********' : ''
 }
-function changePiggoAccount() { config.piggo_token = ''; piggoTokenDirty = true }
 
 function withTimeout(promise, label, timeout = 12000) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error(`${label}超时，请确认插件已启用并重新加载`)), timeout))])
@@ -50,7 +46,7 @@ async function load() {
       withTimeout(props.host.getConfig(), '读取插件配置'),
       withTimeout(props.host.callApi('/meta'), '读取签到站点'),
     ])
-    Object.assign(config, meta.defaults || {}, saved || {})
+    Object.assign(config, withoutLegacyPiggoToken(meta.defaults), withoutLegacyPiggoToken(saved))
     sites.value = meta.sites || []
     if (!Array.isArray(config.selected_sites)) config.selected_sites = sites.value.map(site => site.key)
     const customKeys = sites.value.filter(site => site.group === '通用签到').map(site => site.key)
@@ -62,7 +58,7 @@ async function load() {
 async function save() {
   saving.value = true
   try {
-    await saveValues({ ...config, piggo_username: config.piggo_username.trim(), piggo_token: config.piggo_token.trim(), selected_sites: [...config.selected_sites] })
+    await saveValues({ ...config, piggo_username: config.piggo_username.trim(), selected_sites: [...config.selected_sites] })
     // 保存后重新取一次元数据，拿到后端为通用站点生成的稳定 key，并持久化选择状态。
     const meta = await props.host.callApi('/meta')
     sites.value = meta.sites || sites.value
@@ -151,23 +147,12 @@ onMounted(load); onBeforeUnmount(() => timer && clearInterval(timer))
       </div>
       <section v-if="piggoSelected" class="piggo-login" aria-labelledby="piggo-login-title">
         <h3 id="piggo-login-title">猪猪登录</h3>
-        <p id="piggo-login-help">填写网站用户名和密码，插件自动获取登录凭证；失效后自动重新登录。不用手动复制 Token，也不要求平台必须有猪猪 Cookie。</p>
+        <p id="piggo-login-help">仅填写猪猪网站的用户名和密码。每轮签到使用新的浏览器会话，通过官网登录页面登录，不复用历史登录凭证。</p>
         <div class="piggo-fields">
-          <label for="piggo-username">猪猪用户名<input id="piggo-username" v-model="config.piggo_username" :disabled="saving" autocomplete="off" spellcheck="false" aria-describedby="piggo-login-help" placeholder="填写猪猪网站的用户名" @input="changePiggoAccount"></label>
-          <label for="piggo-password">猪猪密码<input id="piggo-password" v-model="config.piggo_password" :disabled="saving" type="password" autocomplete="new-password" aria-describedby="piggo-password-help" :placeholder="config.piggo_password === '********' ? '已保存，直接输入可替换' : '填写网站登录密码'" @input="changePiggoAccount"></label>
+          <label for="piggo-username">猪猪用户名<input id="piggo-username" v-model="config.piggo_username" :disabled="saving" autocomplete="off" spellcheck="false" aria-describedby="piggo-login-help" placeholder="填写猪猪网站的用户名"></label>
+          <label for="piggo-password">猪猪密码<input id="piggo-password" v-model="config.piggo_password" :disabled="saving" type="password" autocomplete="new-password" aria-describedby="piggo-password-help" :placeholder="config.piggo_password === '********' ? '已保存，直接输入可替换' : '填写网站登录密码'"></label>
         </div>
-        <p id="piggo-password-help" class="piggo-note">密码默认遮蔽，保存后不回显明文。遇到验证码或二次验证时会提示，不会反复尝试登录。修改账号或密码会清除旧 Token，下一次签到重新登录。</p>
-        <details class="piggo-token-help">
-          <summary>高级选项：手动填写 Token（可选）</summary>
-          <label for="piggo-token">猪猪登录 Token<input id="piggo-token" v-model="config.piggo_token" :disabled="saving" type="password" autocomplete="new-password" spellcheck="false" aria-describedby="piggo-token-help" placeholder="自动登录时无需填写；只复制 pig_token 的值" @input="piggoTokenDirty = true"></label>
-          <p id="piggo-token-help">自动登录成功后会保存 Token。只填 Token、不填账号密码时，失效后需要手动更新。清空输入框并保存会删除已保存的 Token。</p>
-          <ol>
-            <li>用电脑浏览器登录 <a href="https://piggo.me/calendar" target="_blank" rel="noopener noreferrer">猪猪网站</a>，按 F12 打开开发者工具。</li>
-            <li>选择“应用程序（Application）”，展开“本地存储（Local Storage）”，点击 https://piggo.me。</li>
-            <li>找到名称 pig_token，复制对应“值（Value）”，粘贴到上面的输入框并保存。不要复制字段名或引号。</li>
-          </ol>
-          <p class="piggo-note">Token 相当于登录凭证，请勿发到群聊或截图公开。</p>
-        </details>
+        <p id="piggo-password-help" class="piggo-note">密码保存后仅显示掩码。遇到验证码或二次验证时按日志提示处理，插件不会反复提交账号密码。登录与签到结果以官网确认为准。</p>
       </section>
       <div class="custom-sites">
         <div class="custom-head"><div><h3>任意站点通用签到</h3><p>填写站点名称和地址，插件会优先访问 /attendance.php；Cookie 仍由平台按域名同步。</p></div><button class="link-button" @click="addCustomSite">＋ 添加站点</button></div>
@@ -219,6 +204,6 @@ onMounted(load); onBeforeUnmount(() => timer && clearInterval(timer))
 /* 数字参数保留完整可读宽度，单位独立占位，避免宿主数字步进按钮遮挡数值。 */
 .schedule-fields>label{flex:0 0 auto;min-width:max-content}.schedule-fields input{flex:0 0 64px;width:64px;min-width:64px}.time-field,.unit-field{flex:0 0 auto;min-width:max-content}.time-field input{flex-basis:50px;width:50px;min-width:50px}.unit-field{position:static;gap:7px}.unit-field input{flex-basis:68px;width:68px;min-width:68px;padding-right:7px}.unit-field i{position:static;flex:0 0 auto;white-space:nowrap}
 @media(max-width:620px){.custom-head{align-items:flex-start;flex-direction:column}.custom-row{grid-template-columns:1fr}.custom-row .link-button{justify-self:start}}
-.piggo-login{padding:18px;border-top:1px solid var(--line-soft);color:var(--text);overflow-wrap:anywhere}.piggo-login h3{margin:0;font-size:15px}.piggo-login p,.piggo-login ol{max-width:75ch;margin:8px 0 0;color:#aebdd0;font-size:13px;line-height:1.7}.piggo-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.piggo-login label{display:grid;gap:7px;min-width:0;color:var(--text);font-size:13px}.piggo-login input{box-sizing:border-box;width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid #354c68;border-radius:7px;background:#0d1725;color:var(--text);caret-color:#79b7ff;font:inherit}.piggo-login input::placeholder{color:#9aadc4}.piggo-login input:disabled{opacity:.65;cursor:wait}.piggo-login input:focus-visible,.piggo-token-help summary:focus-visible,.piggo-login a:focus-visible{outline:2px solid #79b7ff;outline-offset:3px}.piggo-token-help{margin-top:16px}.piggo-token-help summary{width:fit-content;max-width:100%;color:#9fcfff;font-size:13px;line-height:1.7;cursor:pointer}.piggo-token-help[open]>label{margin-top:12px}.piggo-token-help ol{padding-left:21px}.piggo-login a{color:#9fcfff;text-underline-offset:3px}.piggo-login ::selection{color:#fff;background:#285a91}
+.piggo-login{padding:18px;border-top:1px solid var(--line-soft);color:var(--text);overflow-wrap:anywhere}.piggo-login h3{margin:0;font-size:15px}.piggo-login p{max-width:75ch;margin:8px 0 0;color:#aebdd0;font-size:13px;line-height:1.7}.piggo-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.piggo-login label{display:grid;gap:7px;min-width:0;color:var(--text);font-size:13px}.piggo-login input{box-sizing:border-box;width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid #354c68;border-radius:7px;background:#0d1725;color:var(--text);caret-color:#79b7ff;font:inherit}.piggo-login input::placeholder{color:#9aadc4}.piggo-login input:disabled{opacity:.65;cursor:wait}.piggo-login input:focus-visible{outline:2px solid #79b7ff;outline-offset:3px}.piggo-login ::selection{color:#fff;background:#285a91}
 @media(max-width:620px){.piggo-fields{grid-template-columns:1fr}.piggo-login{padding:16px 12px}}
 </style>
