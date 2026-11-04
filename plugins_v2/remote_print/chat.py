@@ -7,6 +7,7 @@ import re
 SIDE_LABELS = {"default": "打印机默认", "one-sided": "单面",
                "two-sided-auto": "双面（自动识别横竖方向）",
                "two-sided-long-edge": "双面（长边翻页）", "two-sided-short-edge": "双面（短边翻页）"}
+COLOR_LABELS = {"auto": "打印机默认", "monochrome": "黑白", "color": "彩色"}
 
 
 def normalize_sides(value):
@@ -99,12 +100,38 @@ def action_buttons(job, max_copies):
     return actions
 
 
+def wecom_action_buttons(job, max_copies):
+    """Keep native WeCom cards within six buttons, each bound to this job.
+
+    Two-copy duplex remains available through text; do not drop cancellation,
+    progress or the batch-specific action to squeeze in a seventh button.
+    """
+    actions = []
+    if job["status"] == "pending":
+        actions.append({"text": "打印一份", "key": action_key("print", job["id"], 1)})
+        if max_copies >= 2:
+            actions.append({"text": "打印两份", "key": action_key("print", job["id"], 2)})
+        actions.append({"text": "双面一份", "key": action_key("duplex", job["id"], 1)})
+        if type(job.get("number_batch")) is int and job["number_batch"] > 0:
+            actions.append({"text": "本批双面打印", "key": action_key("batch_duplex", job["id"], 1)})
+    if job["status"] in {"receiving", "pending", "queued", "leased"}:
+        actions.append({"text": "取消打印", "key": action_key("cancel", job["id"]), "style": 4})
+    actions.append({"text": "查看进度", "key": action_key("status", job["id"]), "style": 2})
+    return actions
+
+
+def color_label(job):
+    """Old persisted jobs without a color setting use the printer's default."""
+    return COLOR_LABELS.get(job.get("color_mode", "auto"), "未知")
+
+
 def received_text(job):
     if job["status"] != "pending":
         return status_text(job)
     reference = file_reference(job)
     label = file_heading(job) + " · "
-    return (f"文件已收到\n{label}{display_filename(job)} · 共 {job['pages']} 页\n\n"
+    return (f"文件已收到\n{label}{display_filename(job)} · 共 {job['pages']} 页\n"
+            f"打印颜色：{color_label(job)}\n\n"
             "只打这份：点“打印一份”或“双面打印”。\n"
             "同批文件都收齐后，点“本批双面打印”；两张图片会正反面打印。\n"
             "不想打印可点“取消打印”。\n"
@@ -120,6 +147,7 @@ def wecom_received_text(job, max_copies):
     label = file_heading(job) + " · "
     copies = f"\n打印两份：打印{reference}两份" if max_copies >= 2 else ""
     return (f"文件已收到\n{label}{display_filename(job)} · 共 {job['pages']} 页\n"
+            f"打印颜色：{color_label(job)}\n"
             "等待确认，还没开始打印。\n\n"
             f"打印一份：打印{reference}\n"
             f"取消这份：取消{reference}\n查看状态：查看{reference}\n"
@@ -169,7 +197,7 @@ def status_text(job):
     bundle = bundle_description(job)
     if bundle and job["status"] == "cancelled":
         phrases["cancelled"] = "已取消整组合并任务，这些图片都不会继续提交打印。"
-    return f"{file_heading(job)}：{display_filename(job)}\n打印方式：{mode}\n" + (bundle + "\n" if bundle else "") + "\n" + phrases.get(job["status"], "请查看打印机，或联系家人帮忙检查。")
+    return f"{file_heading(job)}：{display_filename(job)}\n打印方式：{mode}\n打印颜色：{color_label(job)}\n" + (bundle + "\n" if bundle else "") + "\n" + phrases.get(job["status"], "请查看打印机，或联系家人帮忙检查。")
 
 
 def bundle_description(job):
@@ -183,6 +211,7 @@ def bundle_description(job):
 def welcome_text():
     return ("把照片或 PDF 文件发给我。\n"
             "收到提示后回复“打印”即可；Telegram 也可点“打印一份”或“双面打印”。\n"
+            "企业微信可在设置中选择按钮卡片；微信插件/微工作台请用文字提示和回复口令。\n"
             "不想打印回复“取消”，想看进度回复“进度”。\n"
             "多文件都收齐后回复“全部打印”；需要双面可回复“双面打印”或“全部双面打印”。\n"
             "全部不要可回复“全部取消”；已开始提交的任务不能保证远程取消。\n"

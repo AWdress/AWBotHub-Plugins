@@ -87,6 +87,7 @@ function tabKey(event, index) {
 
 const shortLabels = {
   print_mode: '连接方式', ipp_url: '打印机访问地址', device_id: '电脑端设备名称',
+  print_color_mode: '打印颜色', wecom_reply_mode: '企微／微信确认方式',
   printer_name: 'Windows 打印机名称', telegram_users: 'Telegram 用户 ID',
   wecom_users: '企业微信成员账号', public_base_url: '平台访问地址',
   auto_print: '收到文件直接打印', ipp_printer_uri: '打印机内部地址',
@@ -96,6 +97,8 @@ const shortLabels = {
 }
 const shortHints = {
   print_mode: '支持 IPP 的网络打印机选直连；USB 打印机等通过 Windows 电脑打印。',
+  print_color_mode: '默认跟随打印机。选黑白后，新文件按黑白打印；已收到的文件不变。设备不支持时会提示。',
+  wecom_reply_mode: '默认文字指令。企微 App 可切换按钮卡片；微信插件／微工作台请保留文字，避免看不到按钮。',
   ipp_url: '填写平台能够访问的 IPP 地址。同一局域网不需要 FRP。',
   device_id: '与电脑端 device_id 一致。', device_token: '留空时先生成密钥，再点眼睛查看，复制到电脑端。',
   printer_name: '留空使用电脑端默认打印机。', telegram_users: '数字 ID，每行一个；留空不允许任何人。',
@@ -421,8 +424,8 @@ onMounted(load)
                 <textarea v-else-if="spec.type === 'text'" :id="`rp-${key}`" rows="3" :value="values[key] ?? ''"
                   :disabled="busy" :aria-label="spec.label" :aria-describedby="`rp-help-${key}`" @input="update(key, $event.target.value)" />
                 <select v-else-if="spec.type === 'select'" :id="`rp-${key}`" :value="values[key]" :disabled="busy"
-                  :aria-label="spec.label" :aria-describedby="`rp-help-${key}`" @change="selectChange(key, spec, $event)">
-                  <option v-if="emptySelect(key, spec)" :value="values[key]" disabled>请选择连接方式</option>
+                  :aria-label="spec.label" :aria-describedby="`rp-help-${key}`" :aria-invalid="!!errors[key]" @change="selectChange(key, spec, $event)">
+                  <option v-if="emptySelect(key, spec)" :value="values[key]" disabled>请选择{{ fieldLabel(key, spec) }}</option>
                   <option v-for="option in options(spec)" :key="String(option.value)" :value="option.value">{{ option.label }}</option>
                 </select>
                 <input v-else-if="spec.type === 'number'" :id="`rp-${key}`" type="number" :min="spec.min" :max="spec.max"

@@ -12,6 +12,8 @@ from collections.abc import Callable, Mapping
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from .chat import color_label, display_filename, wecom_action_buttons
+
 
 _EXPIRED_TOKEN_CODES = {40001, 40014, 42001}
 
@@ -204,7 +206,7 @@ class WeCom:
             label = button.get("text")
             style = button.get("style", 1)
             if (not isinstance(key, str) or key in keys
-                    or not re.fullmatch(rf"rp:(?:print:{job_id}:[1-9][0-9]?|(?:cancel|status):{job_id})", key)
+                    or not re.fullmatch(rf"rp:(?:(?:print|duplex|batch_duplex):{job_id}:[1-5]|(?:cancel|status):{job_id})", key)
                     or not isinstance(label, str) or not label or len(label) > 10
                     or button.get("type", 0) != 0 or isinstance(style, bool)
                     or not isinstance(style, int) or not 1 <= style <= 4):
@@ -233,22 +235,18 @@ class WeCom:
             "enable_id_trans": 0, "enable_duplicate_check": 1, "duplicate_check_interval": 600,
         }, permission_check=permission_check)
 
-    async def send_print_card(self, user: str, job: Mapping[str, Any], actions=None, *, permission_check=None) -> None:
+    async def send_print_card(self, user: str, job: Mapping[str, Any], actions=None, *, max_copies=3, permission_check=None) -> None:
         """One file, one confirmation card; callers should not resend its task ID."""
         if not isinstance(job, Mapping) or not re.fullmatch(r"[a-f0-9]{16}", str(job.get("id", ""))):
             raise ValueError("企业微信打印卡片任务无效")
         job_id = job["id"]
         if actions is None:
-            actions = [
-                {"text": "打印1份", "key": f"rp:print:{job_id}:1", "style": 1},
-                {"text": "打印2份", "key": f"rp:print:{job_id}:2", "style": 1},
-                {"text": "取消", "key": f"rp:cancel:{job_id}", "style": 4},
-                {"text": "查看进度", "key": f"rp:status:{job_id}", "style": 2},
-            ]
-        filename = str(job.get("filename") or "收到的文件")
+            actions = wecom_action_buttons(job, max_copies)
+        filename = display_filename(job)
         description = filename.encode("utf-8")[:128].decode("utf-8", errors="ignore")[:44]
         page_hint = f"共 {job['pages']} 页。" if job.get("pages") else ""
-        card_text = str(job.get("card_text") or f"{page_hint}点击按钮开始打印。照片会完整缩放，不会裁切。")[:160]
+        instructions = str(job.get("card_text") or f"{page_hint}点击按钮开始打印。照片会完整缩放，不会裁切。")
+        card_text = (f"打印颜色：{color_label(job)}\n" + instructions)[:160]
         await self.send_card(user, {
             "card_type": "button_interaction", "task_id": f"rp-{job_id}",
             "main_title": {"title": "文件已收到", "desc": description},

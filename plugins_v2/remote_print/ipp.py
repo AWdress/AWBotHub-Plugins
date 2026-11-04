@@ -37,6 +37,9 @@ _ORIENTATIONS = {"portrait": 3, "landscape": 4}
 # explicit automatic jobs still request only portrait=3 or landscape=4.
 _ORIENTATION_ENUMS = {3, 4, 5, 6, 7}
 _ORIENTATION_CAPABILITIES = {"orientation-requested-supported", "orientation-requested-default"}
+_COLOR_CAPABILITIES = {"print-color-mode-supported", "print-color-mode-default"}
+_OPTIONAL_CAPABILITIES = _ORIENTATION_CAPABILITIES | _COLOR_CAPABILITIES
+_COLOR_MODES = {"auto", "monochrome", "color"}
 _INVALID_ORIENTATION_CAPABILITY = object()
 _EXPECTED_TAGS = {
     "attributes-charset": {0x47}, "attributes-natural-language": {0x48},
@@ -51,6 +54,8 @@ _EXPECTED_TAGS = {
     "media": {0x44, 0x42, 0x36},
     "orientation-requested-supported": {0x23}, "orientation-requested-default": {0x23, 0x13},
     "orientation-requested": {0x23},
+    "print-color-mode-supported": {0x44}, "print-color-mode-default": {0x44},
+    "print-color-mode": {0x44},
 }
 
 
@@ -277,11 +282,11 @@ def parse_response(data, request_id):
             previous, previous_tag = name, tag
         else:
             if previous is None or (previous_tag != tag and not (
-                    current_group == 0x04 and previous in _ORIENTATION_CAPABILITIES)):
+                    current_group == 0x04 and previous in _OPTIONAL_CAPABILITIES)):
                 raise ValueError("IPP 响应的多值属性无效")
             name = previous
         if current_group != 0x05 and name in _EXPECTED_TAGS and tag not in _EXPECTED_TAGS[name]:
-            if current_group == 0x04 and name in _ORIENTATION_CAPABILITIES:
+            if current_group == 0x04 and name in _OPTIONAL_CAPABILITIES:
                 # Corrupt optional capability data rejects automatic direction,
                 # not unchanged legacy/manual jobs. Collections still need to
                 # be consumed so subsequent attributes remain correctly parsed.
@@ -290,7 +295,7 @@ def parse_response(data, request_id):
                 current[name].append(_INVALID_ORIENTATION_CAPABILITY)
                 continue
             raise ValueError("IPP 响应属性类型无效")
-        if current_group == 0x04 and name in _ORIENTATION_CAPABILITIES:
+        if current_group == 0x04 and name in _OPTIONAL_CAPABILITIES:
             try:
                 value = parser.value(tag, raw)
             except ValueError:
@@ -428,6 +433,31 @@ def _validate_orientation(orientation, capabilities):
         raise ValueError("打印机未声明支持请求的打印方向，未提交自动双面任务")
 
 
+def _color_capabilities(supported, default):
+    if (not isinstance(supported, list)
+            or any(not isinstance(item, str) or not _NAME.fullmatch(item) for item in supported)
+            or (default is not None and (not isinstance(default, str) or not _NAME.fullmatch(default)
+                or (supported and default not in supported)))):
+        raise ValueError("打印机黑白/彩色能力无效，请重新检查打印机连接")
+    return sorted(set(supported))
+
+
+def _validate_color_mode(color_mode, capabilities):
+    if not isinstance(color_mode, str) or color_mode not in _COLOR_MODES:
+        raise ValueError("打印颜色无效，请选择跟随打印机、黑白或彩色")
+    # 'auto' is our compatibility sentinel: omit the IPP attribute rather than
+    # request IPP 'auto', which some monochrome devices do not advertise.
+    if color_mode == "auto":
+        return
+    if not isinstance(capabilities, dict) or capabilities.get("color_mode_error"):
+        raise ValueError("打印机黑白/彩色能力不可用，未提交打印，请重新检测连接")
+    supported = _color_capabilities(capabilities.get("color_mode_supported", []),
+                                    capabilities.get("color_mode_default"))
+    if color_mode not in supported:
+        label = "黑白" if color_mode == "monochrome" else "彩色"
+        raise ValueError(f"打印机未声明支持{label}打印，未提交打印；不会自动改用其他颜色")
+
+
 class IPPPrinter:
     def __init__(self, ctx, config_getter):
         self.ctx, self.config_getter = ctx, config_getter
@@ -492,6 +522,7 @@ class IPPPrinter:
                      "print-scaling-supported", "print-scaling-default", "sides-supported", "sides-default",
                      "media-default", "media-supported",
                      "orientation-requested-supported", "orientation-requested-default",
+                     "print-color-mode-supported", "print-color-mode-default",
                      *_JPEG_LIMITS]
         message = encode_request(GET_PRINTER_ATTRIBUTES, request_id,
                                  self._base_attributes(initial_uri) + [(0x44, "requested-attributes", requested)])
@@ -546,6 +577,14 @@ class IPPPrinter:
                                                               orientation_default)
         except ValueError:
             orientation_supported, orientation_default, orientation_error = [], None, True
+        color_mode_supported, color_mode_default, color_mode_error = [], None, False
+        try:
+            color_mode_default = _single(attrs, "print-color-mode-default")
+            color_mode_supported = _color_capabilities(attrs.get("print-color-mode-supported", []), color_mode_default)
+        except ValueError:
+            # A malformed optional color capability must not break legacy jobs
+            # that keep the device default. Explicit choices still fail closed.
+            color_mode_supported, color_mode_default, color_mode_error = [], None, True
         jpeg_limits = {key: None for key in _JPEG_LIMITS.values()}
         jpeg_limits_error = False
         for name, key in _JPEG_LIMITS.items():
@@ -570,6 +609,8 @@ class IPPPrinter:
                 "media_supported": media_supported, "media_default": media_default, "media_error": media_error,
                 "orientation_supported": orientation_supported, "orientation_default": orientation_default,
                 "orientation_error": orientation_error,
+                "color_mode_supported": color_mode_supported, "color_mode_default": color_mode_default,
+                "color_mode_error": color_mode_error,
                 **jpeg_limits, "jpeg_limits_error": jpeg_limits_error}
 
     @staticmethod
@@ -581,6 +622,11 @@ class IPPPrinter:
     def validate_orientation(orientation, capabilities):
         """Require an explicitly advertised direction only for automatic jobs."""
         _validate_orientation(orientation, capabilities)
+
+    @staticmethod
+    def validate_color_mode(color_mode, capabilities):
+        """Never silently substitute the user's explicit black/white choice."""
+        _validate_color_mode(color_mode, capabilities)
 
     @staticmethod
     def validate_document(format, copies, capabilities, sides="default"):
@@ -725,11 +771,12 @@ class IPPPrinter:
             raise ValueError("IPP 文件为空或超过 25 MiB 上限")
         return data
 
-    async def print_job(self, path, mime, title, copies, capabilities, sides="default", orientation=None):
+    async def print_job(self, path, mime, title, copies, capabilities, sides="default", orientation=None, color_mode="auto"):
         if mime not in ("application/pdf", "image/jpeg"):
             raise ValueError("IPP 提交格式不支持")
         self.validate_document("pdf" if mime == "application/pdf" else "jpg", copies, capabilities, sides)
         self.validate_orientation(orientation, capabilities)
+        self.validate_color_mode(color_mode, capabilities)
         if not isinstance(title, str) or not _JOB_ID.fullmatch(title):
             raise ValueError("IPP 任务名称必须使用安全的任务 ID")
         url = _validated_url(capabilities.get("transport_url"), {"http", "https"}, "IPP HTTP 地址")
@@ -756,6 +803,8 @@ class IPPPrinter:
             job_attributes.append((0x44, "media", media))
         if orientation is not None:
             job_attributes.append((0x23, "orientation-requested", _ORIENTATIONS[orientation]))
+        if color_mode != "auto":
+            job_attributes.append((0x44, "print-color-mode", color_mode))
         if mime == "image/jpeg":
             # IPP fit preserves the whole image and its aspect ratio within the
             # printable area; a device default such as auto/fill may crop it.
@@ -782,6 +831,7 @@ class IPPPrinter:
                     or (media is not None and _single(job_attrs, "media", media) != media)
                     or (orientation is not None
                         and _single(job_attrs, "orientation-requested", _ORIENTATIONS[orientation]) != _ORIENTATIONS[orientation])
+                    or (color_mode != "auto" and _single(job_attrs, "print-color-mode", color_mode) != color_mode)
                     or (mime == "image/jpeg" and _single(job_attrs, "print-scaling", "fit") != "fit")):
                 raise ValueError
             spool_id = _single(job_attrs, "job-id")

@@ -37,6 +37,10 @@ export function validateConfig(schema, values) {
     const value = values[key]
     const empty = value === undefined || value === null || value === ''
     if (spec.required && empty) errors[key] = '请填写此项。'
+    else if (spec.type === 'select' && !(spec.options || []).some((option) =>
+      (option !== null && typeof option === 'object' ? option.value : option) === value)) {
+      errors[key] = '请选择列表中的选项。'
+    }
     else if (spec.type === 'number' && !empty) {
       if (typeof value !== 'number' || !Number.isFinite(value)) errors[key] = '请填写有效数字。'
       else if (!Number.isInteger(value)) errors[key] = '请填写整数。'

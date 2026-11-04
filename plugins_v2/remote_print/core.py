@@ -16,7 +16,7 @@ from starlette.responses import FileResponse, JSONResponse
 from . import __plugin__
 from .channels import PlatformChannels
 from .bundle import build_image_bundle, validate_bundle_paper
-from .chat import SIDE_LABELS, action_buttons, batch_cancel_command, bundle_description, display_filename, failure_reason, file_heading, file_number, file_reference, is_mutating_text, normalize_sides, parse_action, print_command, received_text, short_command, simple_command, status_text, wecom_received_text, welcome_text
+from .chat import COLOR_LABELS, SIDE_LABELS, action_buttons, batch_cancel_command, bundle_description, display_filename, failure_reason, file_heading, file_number, file_reference, is_mutating_text, normalize_sides, parse_action, print_command, received_text, short_command, simple_command, status_text, wecom_received_text, welcome_text
 from .files import inspect_file, safe_name
 from .ipp import IPPPrinter, IPPRejected, IPPSubmissionUnknown
 from .queue import LABELS, PrintQueue
@@ -76,6 +76,10 @@ class RemotePrint:
             cfg[key] = str(cfg[key] or "").strip()
         if cfg["print_mode"] not in {"ipp", "agent"}:
             cfg["print_mode"] = "ipp"
+        if not isinstance(cfg["print_color_mode"], str) or cfg["print_color_mode"] not in {"auto", "monochrome", "color"}:
+            cfg["print_color_mode"] = "auto"
+        if not isinstance(cfg["wecom_reply_mode"], str) or cfg["wecom_reply_mode"] not in {"text", "card"}:
+            cfg["wecom_reply_mode"] = "text"
         return cfg
 
     def remove_obsolete_channel_config(self):
@@ -315,12 +319,16 @@ class RemotePrint:
                 user = self.wecom_owner_allowed(owner, source_channel)
                 permission_check = lambda: self.wecom_owner_allowed(owner, source_channel)
                 if job and job["status"] == "pending":
-                    # The callback cannot reliably distinguish WeChat from
-                    # WeCom. A single usable text avoids duplicate receipts.
-                    instructions = wecom_received_text(job, self.config()["max_copies"])
-                    # Recheck both the SDK handler generation and this plugin's
-                    # file-reception switch after waiting for an access token.
-                    await self.wecom.send(user, instructions, permission_check=permission_check)
+                    # Client type is not available in authenticated callbacks.
+                    # Use the chosen mode, once only: no second receipt after
+                    # an ambiguous send, and recheck permissions after token IO.
+                    cfg = self.config()
+                    if cfg["wecom_reply_mode"] == "card":
+                        await self.wecom.send_print_card(user, job, max_copies=cfg["max_copies"],
+                                                         permission_check=permission_check)
+                    else:
+                        await self.wecom.send(user, wecom_received_text(job, cfg["max_copies"]),
+                                              permission_check=permission_check)
                 else:
                     await self.wecom.send(user, text, permission_check=permission_check)
         except asyncio.CancelledError:
@@ -462,6 +470,7 @@ class RemotePrint:
     def automatic_option_validator(self, caps):
         def check(job):
             self.ipp.validate_sides(job["sides"], caps)
+            self.ipp.validate_color_mode(job.get("color_mode", "auto"), caps)
             if job.get("auto_sides"):
                 self.ipp.validate_orientation(job.get("print_orientation"), caps)
         return check
@@ -499,6 +508,7 @@ class RemotePrint:
                 caps = await self.refresh_ipp()
                 for options in plan["resolved_options"].values():
                     self.ipp.validate_sides(options["sides"], caps)
+                    self.ipp.validate_color_mode(options.get("color_mode", "auto"), caps)
                     self.ipp.validate_orientation(options.get("orientation"), caps)
                 option_check = self.automatic_option_validator(caps)
                 if plan["groups"] and "application/pdf" not in caps.get("formats", []):
@@ -531,6 +541,8 @@ class RemotePrint:
         total_pages = (sum(job["bundle_pages"] for job in groups)
                        + sum(job.get("pages", 0) * (copies if groups else 1) for job in independent))
         lines = [f"已确认 {len(jobs)} 个文件 · {SIDE_LABELS[sides]}"]
+        colors = list(dict.fromkeys(COLOR_LABELS.get(job.get("color_mode", "auto"), "未知") for job in jobs))
+        lines.append("颜色：" + "、".join(colors))
         for job in groups:
             count = job["bundle_image_count"]
             lines.append(f"第{job['number_batch']}批：{count} 张图片合并为一个双面任务 · {copies} 份")
@@ -666,7 +678,8 @@ class RemotePrint:
             number = file_number(job)
             reference = file_reference(job)
             entry = (f"{file_heading(job)} · {display_filename(job)} · {LABELS[job['status']]} · {job['copies']} 份\n"
-                     f"打印方式：{SIDE_LABELS.get(job.get('sides', 'default'), '未知')}")
+                     f"打印方式：{SIDE_LABELS.get(job.get('sides', 'default'), '未知')}\n"
+                     f"颜色：{COLOR_LABELS.get(job.get('color_mode', 'auto'), '未知')}")
             if bundle_description(job):
                 entry += "\n" + bundle_description(job)
             if job.get("auto_sides"):
@@ -802,7 +815,7 @@ class RemotePrint:
                     action, job_id, _ = parse_action(message.event_key)
                     if message.fields.get("CardType") != "button_interaction" or message.fields.get("TaskId") != "rp-" + job_id:
                         raise ValueError("企业微信打印按钮与文件不匹配")
-                    if action in {"print", "cancel"}:
+                    if action in {"print", "duplex", "batch_duplex", "cancel"}:
                         key = f"wx-button:{identity}:{user.casefold()}:{message.fields['TaskId']}:{message.event_key}:{message.create_time}"
                         if not await self.queue.claim_message(key):
                             return "这条操作已经处理，不会重复打印。回复“进度”查看。"
@@ -829,7 +842,7 @@ class RemotePrint:
         try:
             self.wecom_owner_allowed(owner, channel)
             job = await self.button_action(owner, channel, value)
-            text = status_text(job)
+            text = job.get("button_message") or status_text(job)
         except ValueError as exc:
             text = str(exc)
         self.wecom_owner_allowed(owner, channel)
@@ -860,7 +873,7 @@ class RemotePrint:
                 capabilities = payload.get("capabilities", [])
                 if not isinstance(capabilities, list) or len(capabilities) > 10 or any(not isinstance(item, str) for item in capabilities):
                     raise ValueError("电脑端能力无效")
-                capabilities = [item for item in capabilities if item in {"sides-v1", "orientation-v1"}]
+                capabilities = [item for item in capabilities if item in {"sides-v1", "orientation-v1", "color-mode-v1"}]
                 if "printers" in payload:
                     await self.queue.hello(payload)
                 else:
@@ -873,7 +886,8 @@ class RemotePrint:
                         self.spawn(self.notify_job(rejected), "print_result_notice")
                     except Exception:
                         self.ctx.log.warning("打印回执未发送，任务状态已保存")
-                    result["message"] = ("自动方向任务未提交，请更新电脑端至 1.0.0。" if rejected.get("auto_sides")
+                    result["message"] = ("指定黑白／彩色任务未提交，请更新电脑端至 1.0.2。" if rejected.get("color_mode", "auto") != "auto"
+                                         else "自动方向任务未提交，请更新电脑端至 1.0.0。" if rejected.get("auto_sides")
                                          else "指定单双面任务未提交，请更新电脑端至 0.0.15 或更新版本。")
                 return result
             if op == "start":
@@ -946,6 +960,7 @@ class RemotePrint:
                 + f"\n接受任务：{'是' if caps.get('accepting_jobs') else '否'}"
                 + "\n支持格式：" + "、".join(caps.get("formats", []))
                 + "\n单双面：" + ("、".join(SIDE_LABELS[mode] for mode in caps.get("sides_supported", []) if mode in SIDE_LABELS) or "设备未声明，不能指定单双面")
+                + "\n颜色：" + ("、".join(COLOR_LABELS[mode] for mode in caps.get("color_mode_supported", []) if mode in COLOR_LABELS) or "设备未声明，不能指定黑白或彩色")
                 + ("\n图片排版：完整等比缩放，不裁切" if "fit" in caps.get("print_scaling_supported", [])
                    else "\n图片排版：设备未声明完整缩放能力，图片任务不会提交"))
 
@@ -1074,6 +1089,10 @@ class RemotePrint:
                 raise ValueError("打印份数超过当前安全上限，请重新发送并确认")
             sides = grant.get("sides", "default")
             options = {"sides": sides} if sides != "default" else {}
+            color_mode = grant.get("color_mode", "auto")
+            self.ipp.validate_color_mode(color_mode, caps)
+            if color_mode != "auto":
+                options["color_mode"] = color_mode
             if "orientation" in grant:
                 self.ipp.validate_orientation(grant["orientation"], caps)
                 options["orientation"] = grant["orientation"]

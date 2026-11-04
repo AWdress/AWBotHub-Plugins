@@ -23,9 +23,16 @@ MAX_NUMBER = 999_999_999
 NUMBER_BATCH_IDLE = 300
 IMAGE_FORMATS = {"jpg", "jpeg", "png", "webp", "bmp"}
 ORIENTATION_SIDES = {"portrait": "two-sided-long-edge", "landscape": "two-sided-short-edge"}
+COLOR_MODES = {"auto", "monochrome", "color"}
 LABELS = {"receiving": "正在收文件", "pending": "等待确认", "queued": "等待打印",
           "leased": "正在准备打印", "started": "正在提交打印", "submitted": "已提交打印队列",
           "failed": "失败", "unknown": "结果待核查（不会自动重打）", "cancelled": "已取消", "archived": "已核查归档（未重打）"}
+
+
+def normalize_color_mode(value):
+    if not isinstance(value, str) or value not in COLOR_MODES:
+        raise ValueError("打印颜色无效，请选择跟随打印机、黑白或彩色")
+    return value
 
 
 def instance_lock(path: Path):
@@ -244,6 +251,7 @@ class PrintQueue:
                         or member.get("number_batch") != leader["number_batch"]
                         or member.get("format") not in IMAGE_FORMATS or member.get("pages") != 1
                         or member["number"] <= previous_number
+                        or member.get("color_mode", "auto") != leader.get("color_mode", "auto")
                         or any(member.get(key) != leader.get(key) for key in
                                ("status", "copies", "printer", "sides", "backend", "device_id", "ipp_target", "auto_sides", "print_orientation"))):
                     raise RuntimeError("合并打印成员数据损坏，未自动重打，请先备份并检查")
@@ -507,7 +515,9 @@ class PrintQueue:
                 raise ValueError("打印任务标识冲突，请稍后重新发送文件")
             snapshot["jobs"][job_id] = {"id": job_id, "number": number, "number_batch": session["batch"], "owner": owner, "source": source, "source_channel": str(source_channel),
                 "filename": filename, "status": "receiving", "created": now, "updated": now,
-                "copies": min(cfg["default_copies"], cfg["max_copies"]), "sides": "default", "printer": "IPP" if cfg.get("print_mode") == "ipp" else cfg["printer_name"],
+                "copies": min(cfg["default_copies"], cfg["max_copies"]), "sides": "default",
+                "color_mode": normalize_color_mode(cfg.get("print_color_mode", "auto")),
+                "printer": "IPP" if cfg.get("print_mode") == "ipp" else cfg["printer_name"],
                 "device_id": cfg["device_id"], "size": allocation, "file_present": True,
                 "claim_token": "", "message": "", "backend": cfg.get("print_mode", "agent"),
                 "ipp_target": self.target_key(cfg) if cfg.get("print_mode") == "ipp" else ""}
@@ -571,7 +581,7 @@ class PrintQueue:
             self.faulted = True
             raise
 
-    def _confirm(self, job, copies=None, printer=None, *, sides=None):
+    def _confirm(self, job, copies=None, printer=None, *, sides=None, color_mode=None):
         if job.get("bundle_leader"):
             raise ValueError("该文件已合并为双面打印任务，不会单独重复打印")
         if job["status"] != "pending":
@@ -592,6 +602,10 @@ class PrintQueue:
         if job.get("backend", "agent") == "agent" and target and self.device and target not in self.device.get("printers", []):
             raise ValueError("该打印机不在电脑端允许列表内，请先发送 /printers 查看")
         mode = normalize_sides(job.get("sides", "default") if sides is None else sides)
+        color = normalize_color_mode(job.get("color_mode", "auto") if color_mode is None else color_mode)
+        if (job.get("backend", "agent") == "agent" and color != "auto"
+                and "color-mode-v1" not in self.device.get("capabilities", [])):
+            raise ValueError("打印电脑端尚未支持指定黑白/彩色，请先更新并连接新版电脑端。")
         auto = mode == "two-sided-auto"
         if auto:
             orientation = job.get("orientation")
@@ -608,20 +622,20 @@ class PrintQueue:
             job.pop("print_orientation", None)
         if job.get("backend", "agent") == "agent" and mode != "default" and "sides-v1" not in self.device.get("capabilities", []):
             raise ValueError("打印电脑端尚未支持指定单双面，请先更新并连接 0.0.15 或更新版本的电脑端。")
-        job.update(status="queued", copies=value, printer=target, sides=mode, auto_sides=auto, updated=time.time())
+        job.update(status="queued", copies=value, printer=target, sides=mode, color_mode=color, auto_sides=auto, updated=time.time())
 
-    async def confirm(self, job_id, owner, copies=None, printer=None, *, sides=None, source_channel=None, number_batch=None, permission_check=None, option_check=None):
+    async def confirm(self, job_id, owner, copies=None, printer=None, *, sides=None, color_mode=None, source_channel=None, number_batch=None, permission_check=None, option_check=None):
         async with self.lock:
             self._permission(permission_check)
             self._check()
             snapshot = copy.deepcopy(self.state)
             job = self._find(snapshot, job_id, owner, source_channel=source_channel, number_batch=number_batch)
-            self._confirm(job, copies, printer, sides=sides)
+            self._confirm(job, copies, printer, sides=sides, color_mode=color_mode)
             self._option_check(job, option_check)
             await self._commit(snapshot)
             return self._copy_job(job)
 
-    async def confirm_single(self, owner, source_channel, copies=None, printer=None, *, sides=None, permission_check=None, option_check=None):
+    async def confirm_single(self, owner, source_channel, copies=None, printer=None, *, sides=None, color_mode=None, permission_check=None, option_check=None):
         async with self.lock:
             self._permission(permission_check)
             self._check()
@@ -637,12 +651,12 @@ class PrintQueue:
                 raise ValueError("文件还在接收，请等收到文件的提示后再打印。")
             if job["status"] != "pending":
                 return self._copy_job(job)
-            self._confirm(job, copies, printer, sides=sides)
+            self._confirm(job, copies, printer, sides=sides, color_mode=color_mode)
             self._option_check(job, option_check)
             await self._commit(snapshot)
             return self._copy_job(job)
 
-    async def confirm_all(self, owner, source_channel, copies=None, printer=None, *, sides=None, permission_check=None, option_check=None):
+    async def confirm_all(self, owner, source_channel, copies=None, printer=None, *, sides=None, color_mode=None, permission_check=None, option_check=None):
         async with self.lock:
             self._permission(permission_check)
             self._check()
@@ -655,13 +669,13 @@ class PrintQueue:
             if not pending:
                 raise ValueError("没有待确认的文件，已排队或已打印的文件不会重复打印。")
             for job in pending:
-                self._confirm(job, copies, printer, sides=sides)
+                self._confirm(job, copies, printer, sides=sides, color_mode=color_mode)
                 self._option_check(job, option_check)
             self._permission(permission_check)
             await self._commit(snapshot)
             return [self._copy_job(job) for job in pending]
 
-    async def prepare_bundle(self, owner, source_channel, *, copies=None, printer=None, sides,
+    async def prepare_bundle(self, owner, source_channel, *, copies=None, printer=None, sides, color_mode=None,
                              permission_check=None, batch_anchor=None):
         """Plan all pending files; bundle images only within each receive batch.
 
@@ -697,17 +711,17 @@ class PrintQueue:
             batch_targets = {}
             for job in pending:
                 proposed = copy.deepcopy(job)
-                self._confirm(proposed, copies, printer, sides=mode)
+                self._confirm(proposed, copies, printer, sides=mode, color_mode=color_mode)
                 confirmed[job["id"]] = proposed
                 if job.get("format") in IMAGE_FORMATS and job.get("pages") == 1:
                     # Original per-file choices remain authoritative unless the
                     # command explicitly overrides them. Never mix copy counts
                     # or printer destinations into one physical document.
-                    key = (job["number_batch"], proposed["copies"], proposed["printer"])
+                    key = (job["number_batch"], proposed["copies"], proposed["printer"], proposed["color_mode"])
                     candidates.setdefault(key, []).append(job)
-                    batch_targets.setdefault(job["number_batch"], []).append((proposed["copies"], proposed["printer"]))
+                    batch_targets.setdefault(job["number_batch"], []).append((proposed["copies"], proposed["printer"], proposed["color_mode"]))
             if any(len(targets) >= 2 and len(set(targets)) > 1 for targets in batch_targets.values()):
-                raise ValueError("同一批图片的打印份数或打印机不同，未提交任何文件；请指定统一份数和打印机后再全部双面打印。")
+                raise ValueError("同一批图片的打印份数、打印机或颜色不同，未提交任何文件；请统一份数和打印机。颜色不同请先取消这些文件，设好统一颜色后重新发送。")
             groups = []
             for images in candidates.values():
                 if len(images) < 2:
@@ -750,14 +764,14 @@ class PrintQueue:
             plan = {"token": token, "job_ids": [job["id"] for job in pending], "groups": groups,
                     "independent_ids": [job["id"] for job in pending if job["id"] not in grouped],
                     "remaining_storage_bytes": max(0, remaining_storage),
-                    "resolved_options": {identity: {"sides": job["sides"],
+                    "resolved_options": {identity: {"sides": job["sides"], "color_mode": job["color_mode"],
                                                     **({"orientation": job["print_orientation"]} if job.get("auto_sides") else {})}
                                          for identity, job in confirmed.items()}}
             self._permission(permission_check)
             if self.config() != cfg:
                 raise ValueError("打印设置已更改，请重新确认打印。")
             self.bundle_plans[token] = {"plan": copy.deepcopy(plan), "jobs": copy.deepcopy(pending),
-                                        "config": cfg, "copies": copies, "printer": printer, "sides": mode}
+                                        "config": cfg, "copies": copies, "printer": printer, "sides": mode, "color_mode": color_mode}
             return copy.deepcopy(plan)
 
     def _prepared_bundle(self, plan):
@@ -826,7 +840,7 @@ class PrintQueue:
                 raise ValueError("打印设置已更改，未提交任何文件，请重新确认。")
             for original in prepared["jobs"]:
                 self._confirm(snapshot["jobs"][original["id"]], prepared["copies"],
-                              prepared["printer"], sides=prepared["sides"])
+                              prepared["printer"], sides=prepared["sides"], color_mode=prepared["color_mode"])
             for group in plan["groups"]:
                 if group["auto_sides"]:
                     for identity in group["job_ids"]:
@@ -958,6 +972,7 @@ class PrintQueue:
                                                   "bundle_leader", "bundle_members", "bundle_image_count", "bundle_input_pages", "bundle_pages")}
         result["backend"] = job.get("backend", "agent")
         result["sides"] = job.get("sides", "default")
+        result["color_mode"] = job.get("color_mode", "auto")
         return result
 
     async def hello(self, payload):
@@ -971,7 +986,7 @@ class PrintQueue:
         printers = [value for value in printers if isinstance(value, str) and 0 < len(value) <= 200 and not any(ord(c) < 32 for c in value)]
         self.device = {"printers": list(dict.fromkeys(printers)), "formats": [f for f in formats if isinstance(f, str) and f in {"pdf", "png", "jpg", "jpeg", "webp", "bmp"}],
                        "default_printer": str(payload.get("default_printer", ""))[:200], "last_seen": time.time(),
-                       "capabilities": [value for value in capabilities if value in {"sides-v1", "orientation-v1"}]}
+                       "capabilities": [value for value in capabilities if value in {"sides-v1", "orientation-v1", "color-mode-v1"}]}
         return {"ok": True}
 
     async def poll(self, backend="agent", *, agent_capabilities=None):
@@ -995,6 +1010,12 @@ class PrintQueue:
                 if now - job["created"] > cfg["retention_hours"] * 3600:
                     continue  # Slow cleanup must not make expired files printable.
                 printable = job.get("bundle_metadata", job)
+                color_mode = job.get("color_mode", "auto")
+                if not isinstance(color_mode, str) or color_mode not in COLOR_MODES:
+                    self._group_update(snapshot, job, status="failed", updated=now,
+                                       message="打印任务颜色信息无效，未提交打印；请重新发送文件。")
+                    await self._commit(snapshot)
+                    return {"ok": True, "job": None, "rejected": self._copy_job(job)}
                 orientation = job.get("print_orientation")
                 if (job.get("sides") == "two-sided-auto"
                         or (job.get("auto_sides") is True
@@ -1008,6 +1029,11 @@ class PrintQueue:
                 # Bind this grant to the requesting receiver, not another poll's
                 # shared inventory while this call was waiting for the lock.
                 capabilities = self.device.get("capabilities", []) if agent_capabilities is None else agent_capabilities
+                if backend == "agent" and color_mode != "auto" and "color-mode-v1" not in capabilities:
+                    self._group_update(snapshot, job, status="failed", updated=now,
+                                       message="打印电脑端未支持所选黑白/彩色，未提交打印；请更新电脑端后重新发送文件。")
+                    await self._commit(snapshot)
+                    return {"ok": True, "job": None, "rejected": self._copy_job(job)}
                 if backend == "agent" and ((job.get("sides", "default") != "default" and "sides-v1" not in capabilities)
                                           or (job.get("auto_sides") is True and "orientation-v1" not in capabilities)):
                     self._group_update(snapshot, job, status="failed", updated=now,
@@ -1022,6 +1048,7 @@ class PrintQueue:
                     result["pages"] = printable["pages"]
                 result["max_pages"] = cfg["max_pages"]
                 result["sides"] = job.get("sides", "default")
+                result["color_mode"] = color_mode
                 if job.get("auto_sides") is True:
                     result["orientation"] = job["print_orientation"]
                 if job.get("bundle_metadata"):
