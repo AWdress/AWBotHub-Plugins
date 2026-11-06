@@ -163,7 +163,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.9",
+    "version": "2.7.10",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/pt_checkin_v2.svg",
@@ -207,7 +207,7 @@ __plugin__ = {
         "failure_threshold": 3, "recovery_seconds": 120,
     },
 }
-__plugin__["changelog"] = "v2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
+__plugin__["changelog"] = "v2.7.10 增加猪猪服务器登录超时诊断\n- 超时时自动记录页面类别、表单/日历可见性、会话和账号匹配状态，无需查看浏览器窗口\n- 汇总关键请求的固定网络错误分类，不记录网址、响应正文、密码或 Token\n- 仅增强排查信息，不增加登录/签到点击，不改变成功判定与等待时限\n\nv2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 SITES = {
     # PT 社区常用的 12 个站点置于第一组；其余已有适配站点置于第二组。
@@ -495,9 +495,12 @@ class _PiggoLoginObservation:
         self.finished_at = 0.0
         self.closed = False
         self.failure = ""
+        self.network_issues = set()
         try:
             page.on("request", self.requested)
             page.on("requestfinished", self.completed)
+            page.on("requestfailed", self.network_failed)
+            page.on("response", self.network_response)
         except Exception:
             self.close()
 
@@ -524,6 +527,41 @@ class _PiggoLoginObservation:
         if not self.closed and request is self.latest and self.trusted(request):
             self.finished = request
             self.finished_at = time.monotonic()
+
+    def network_issue(self, request, code):
+        if self.closed or len(self.network_issues) >= 6:
+            return
+        parsed = urlparse(request.url)
+        if parsed.scheme != "https" or parsed.hostname not in {"piggo.me", "www.piggo.me"} \
+                or parsed.port not in {None, 443} or parsed.username is not None or parsed.password is not None:
+            return
+        kind = {"document": "网页", "script": "脚本", "stylesheet": "样式",
+                "xhr": "站点接口", "fetch": "站点接口"}.get(request.resource_type)
+        if kind:
+            self.network_issues.add(f"{kind}:{code}")
+
+    def network_failed(self, request):
+        try:
+            code = {
+                "net::ERR_ABORTED": "请求中止", "net::ERR_TIMED_OUT": "请求超时",
+                "net::ERR_CONNECTION_TIMED_OUT": "连接超时", "net::ERR_NAME_NOT_RESOLVED": "DNS失败",
+                "net::ERR_PROXY_CONNECTION_FAILED": "代理连接失败",
+                "net::ERR_TUNNEL_CONNECTION_FAILED": "代理隧道失败",
+                "net::ERR_CONNECTION_RESET": "连接重置", "net::ERR_CONNECTION_REFUSED": "连接拒绝",
+                "net::ERR_CERT_AUTHORITY_INVALID": "证书异常", "net::ERR_CERT_DATE_INVALID": "证书异常",
+                "net::ERR_SSL_PROTOCOL_ERROR": "TLS异常",
+            }.get(request.failure, "网络请求失败")
+            self.network_issue(request, code)
+        except Exception:
+            pass  # 不记录 URL、请求正文、网络错误原文或异常原文。
+
+    def network_response(self, response):
+        try:
+            status = response.status
+            if type(status) is int and 400 <= status <= 599:
+                self.network_issue(response.request, f"HTTP {status}")
+        except Exception:
+            pass
 
     def poll(self):
         request, self.finished = self.finished, None
@@ -609,11 +647,84 @@ class _PiggoLoginObservation:
     def close(self):
         self.closed = True
         self.latest = self.finished = None
-        for event, callback in (("request", self.requested), ("requestfinished", self.completed)):
+        for event, callback in (("request", self.requested), ("requestfinished", self.completed),
+                                ("requestfailed", self.network_failed), ("response", self.network_response)):
             try:
                 self.page.remove_listener(event, callback)
             except Exception:
                 pass
+
+
+def _piggo_log_login_timeout(page, ctx, username, observation) -> None:
+    """超时只记录固定分类与布尔值，不保存页面、截图或凭据，不参与成功判定。"""
+    try:
+        parsed = urlparse(page.url)
+        if parsed.scheme != "https" or parsed.hostname not in {"piggo.me", "www.piggo.me"} \
+                or parsed.port not in {None, 443} or parsed.username is not None or parsed.password is not None:
+            raise ValueError("untrusted page")
+        path = (parsed.path or "/").rstrip("/").lower()
+        route = "日历页" if path == "/calendar" else (
+            "登录页" if path in {"/login", "/login.php", "/takelogin.php"} else "其他站内页")
+        data = page.evaluate("""() => {
+            // 只读取当前状态，不调用站点内部函数，不修改存储或发起请求。
+            if (location.protocol !== 'https:' || !['piggo.me', 'www.piggo.me'].includes(location.hostname) ||
+                !['', '443'].includes(location.port) || location.username || location.password) return null;
+            const visible = selector => Array.from(document.querySelectorAll(selector)).some(el => {
+                const style = getComputedStyle(el);
+                return style.display !== 'none' && style.visibility !== 'hidden' &&
+                    style.visibility !== 'collapse' &&
+                    Array.from(el.getClientRects()).some(rect => rect.width > 0 && rect.height > 0);
+            });
+            let user = null, session = null, userReadable = false;
+            try {
+                user = JSON.parse(localStorage.getItem('pig_user') || 'null');
+                userReadable = user === null || typeof user === 'object' && !Array.isArray(user);
+            } catch (_) {}
+            try {
+                const token = localStorage.getItem('pig_token');
+                session = typeof token === 'string' && !!token.trim() && token !== '********';
+            } catch (_) {}
+            const text = document.body?.innerText || '';
+            return {
+                ready: document.readyState,
+                loginForm: !!document.querySelector('form input#username'),
+                loginVisible: visible('form input#username'),
+                calendar: !!document.querySelector('.cal-page .cal-att'),
+                calendarVisible: visible('.cal-page .cal-att'),
+                dialogVisible: visible('[role="dialog"], dialog[open]'),
+                captchaVisible: visible('.site-cap[role="dialog"][aria-label="人机验证"], .captcha-row, .site-captcha, input[name="otp"], input[name="totp"]'),
+                locked: text.includes('页面已锁定') && text.includes('空闲过久'),
+                hasSession: session,
+                userReadable: userReadable,
+                userPresent: !!(user && typeof user === 'object' && user.id),
+                username: user && typeof user.username === 'string' ? user.username : null
+            };
+        }""")
+        current = urlparse(page.url)
+        if (current.scheme, current.hostname, current.port, current.username, current.password, current.path) != \
+                (parsed.scheme, parsed.hostname, parsed.port, parsed.username, parsed.password, parsed.path):
+            raise ValueError("page changed during snapshot")
+        if not isinstance(data, dict):
+            raise ValueError("unavailable snapshot")
+        ready = {"loading": "加载中", "interactive": "DOM就绪", "complete": "加载完成"}.get(data.get("ready"), "未知")
+
+        def flag(key):
+            value = data.get(key)
+            return "是" if value is True else ("否" if value is False else "未知")
+
+        actual = data.get("username")
+        match = "未知" if not isinstance(actual, str) else ("是" if actual.casefold() == username.casefold() else "否")
+        _runtime_log(ctx, f"登录超时页面诊断：页面={route}，加载={ready}，登录表单={flag('loginForm')}/可见={flag('loginVisible')}，"
+                     f"日历={flag('calendar')}/可见={flag('calendarVisible')}，弹窗={flag('dialogVisible')}，"
+                     f"人机验证={flag('captchaVisible')}，空闲锁定={flag('locked')}", level="warning", site="猪猪")
+        _runtime_log(ctx, f"登录超时会话诊断：会话字段={flag('hasSession')}，资料可读={flag('userReadable')}，用户资料={flag('userPresent')}，"
+                     f"账号匹配={match}；仅用于排查，不代表已登录或已签到", level="warning", site="猪猪")
+    except Exception:
+        _runtime_log(ctx, "登录超时页面诊断：页面状态读取失败（可能正在跳转或窗口已关闭），不推断登录结果",
+                     level="warning", site="猪猪")
+    issues = sorted(observation.network_issues)
+    _runtime_log(ctx, "登录期间网络诊断：" + ("；".join(issues) if issues else "未捕获关键请求失败") +
+                 "（仅作排查，不代表失败根因）", level="warning", site="猪猪")
 
 
 def _piggo_ensure_login(page, ctx, loop) -> tuple[str, str] | None:
@@ -738,6 +849,8 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
             page.wait_for_timeout(500)
     # 日历可能被强制阅读公告或未完成的数据加载阻塞。只改进失败诊断，
     # 不放宽上面的登录确认门槛，更不把会话字段当作签到成功凭据。
+    parsed = guard()
+    _piggo_log_login_timeout(page, ctx, username, observation)
     parsed = guard()
     if (parsed.path or "/").rstrip("/").lower() == "/calendar":
         try:
