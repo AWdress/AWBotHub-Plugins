@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：AWPulse 色花堂助手（awpulse）· Vue 模式
+# AWBotHub 插件：AWPulse 色花堂助手（awpulse）· Vue 模式
 #
 # 迁移自独立项目 AWPulse（Playwright/CloakBrowser 浏览器自动化）。功能：账号登录、
 # 每日签到、智能回复（模板/规则/特征）、AI 回复、AI 帖子类型识别/过滤、自动发帖、
@@ -35,7 +35,7 @@ __plugin__ = {
     "scope": "standalone",
     "default_enabled": False,
     "render_mode": "vue",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/awpulse/logo.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/awpulse/logo.png",
     # 平台自带 playwright/ddddocr/opencv/numpy/pillow/bs4/lxml/httpx/apscheduler；
     # 这里只补声明浏览器指纹内核与解析/验证码所需的额外库。
     "requirements": [

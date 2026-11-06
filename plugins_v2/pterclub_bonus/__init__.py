@@ -1,4 +1,4 @@
-"""AWBotNest 2 entry; generated from the maintained V1 plugin."""
+"""AWBotHub native plugin entry."""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -43,9 +43,9 @@ __plugin__ = {'name': '猫站赠粮',
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
               '- 启用时预载数据，按顺序托管写入并在停用时等待完成\n'
               '\n'
-              'v1.0.8 修复数值配置显示\n- 将滑块字段改为精确数值输入，确保当前值始终可见\n- 保留原有默认值、范围和步长校验\n\nv1.0.7 修复 V1 默认配置恢复\n- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n\nv1.0.6 适配平台原生富文本通知\n- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n- 原生富文本不可用时保留可读的文本降级\n\nv1.0.4 AWBotNest 2 规范复核\n- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n- 通过全量元数据、语法和发布清单检查\n\nAWBotNest 2 兼容发布\n'
+              'v1.0.8 修复数值配置显示\n- 将滑块字段改为精确数值输入，确保当前值始终可见\n- 保留原有默认值、范围和步长校验\n\nv1.0.7 修复旧版默认配置恢复\n- 插件启用时恢复被旧版表单错误保存为空的默认值\n- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n\nv1.0.6 适配平台原生富文本通知\n- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n- 原生富文本不可用时保留可读的文本降级\n\nv1.0.4 AWBotHub 规范复核\n- 修复平台实体、生命周期、配置安全和依赖兼容问题\n- 通过全量元数据、语法和发布清单检查\n\nAWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.0.0 初始版本\n'
               '- 支持 .pm 单人赠粮与 .pms 批量赠粮\n'

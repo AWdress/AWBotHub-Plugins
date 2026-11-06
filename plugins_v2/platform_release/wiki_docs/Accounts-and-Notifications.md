@@ -8,7 +8,7 @@
 
 | 名称 | 是什么 | 在哪里使用 |
 | --- | --- | --- |
-| 管理员账号 | 登录 AWBotNest 网页的用户名和密码 | 系统登录页面，与 Telegram 无关 |
+| 管理员账号 | 登录 AWBotHub 网页的用户名和密码 | 系统登录页面，与 Telegram 无关 |
 | Telegram 用户账号 | 你平时在 Telegram 手机 App 中使用的账号，也常被叫作“人形账号” | 「账号管理」登录；供需要用户身份的插件使用 |
 | Telegram Bot | 通过 BotFather 创建的机器人，不是手机号账号 | 「系统设置 → 通知渠道」添加；用于 Bot 插件、发送通知 |
 | API_ID / API_HASH | Telegram 应用凭据，一组必须配套 | 「系统设置 → 账号与凭据 → Telegram 凭据」 |
@@ -23,7 +23,7 @@ API_ID 不是你的 Telegram 用户 ID；API_HASH 不是 Bot Token；管理员�
 
 1. 用自己的 Telegram 账号登录 [my.telegram.org](https://my.telegram.org)。
 2. 进入 **API development tools**，创建应用并取得同一应用下的 `api_id` 和 `api_hash`。Telegram 页面字段以实际显示为准。
-3. 打开 AWBotNest「系统设置 → 账号与凭据」，找到「Telegram 凭据」。
+3. 打开 AWBotHub「系统设置 → 账号与凭据」，找到「Telegram 凭据」。
 4. 在 `API_ID` 填数字，在 `API_HASH` 填对应字符串。不要带多余空格或引号。
 5. 点击「保存 Telegram 凭据」，按页面提示重启系统。
 6. 重启后进入「账号管理」，开始登录。
@@ -34,7 +34,7 @@ API_ID 不是你的 Telegram 用户 ID；API_HASH 不是 Bot Token；管理员�
 
 ## 3. 登录 Telegram 用户账号
 
-![账号管理演示界面](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/accounts.jpg)
+![账号管理演示界面](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/accounts.jpg)
 
 1. 打开「账号管理」，点击「+ 登录新账号」。
 2. 填写「本地账号名称（英文，自定义）」，例如 `personal_account`。只使用英文字母、数字和下划线；这是系统保存会话时使用的名称，不是 Telegram 昵称。
@@ -46,7 +46,7 @@ API_ID 不是你的 Telegram 用户 ID；API_HASH 不是 Bot Token；管理员�
 
 登录步骤需要在 10 分钟内完成。流程过期时重新发送验证码，不要一直提交旧验证码。
 
-![登录账号表单，手机号为界面内置格式示例](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/account-login.jpg)
+![登录账号表单，手机号为界面内置格式示例](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/account-login.jpg)
 
 账号卡片会显示头像、名称、用户 ID 和在线状态。已启用且适用该账号的插件会随账号上线恢复运行；插件自身仍需要正确配置。
 
@@ -56,7 +56,7 @@ API_ID 不是你的 Telegram 用户 ID；API_HASH 不是 Bot Token；管理员�
 - **上线：** 使用已保存的登录状态恢复连接；会话失效时仍需重新登录。
 - **删除：** 断开连接、删除该账号保存的登录信息并从配置移除。操作不可恢复，下次需要重新登录。
 
-Telegram 登录状态保存在部署目录映射的 `sessions/` 中。不要公开、发给陌生人或提交到 Git。迁移时参照 [备份与维护](Maintenance)。
+Telegram 登录状态保存在部署目录映射的 `sessions/` 中。不要公开、发给陌生人或提交到 Git。迁移时参照 [备份与维护](Maintenance.md)。
 
 ### 网络断了，账号会怎样？
 
@@ -85,14 +85,14 @@ socks5://用户名:密码@代理主机:端口
 
 特别注意：
 
-- Docker **bridge 模式**中，容器里的 `127.0.0.1` 指容器自己，不等于宿主机；host 模式共用宿主机网络。代理装在宿主机时，地址必须按你的网络模式设置，见 [安装部署](Installation)。
+- Docker **bridge 模式**中，容器里的 `127.0.0.1` 指容器自己，不等于宿主机；host 模式共用宿主机网络。代理装在宿主机时，地址必须按你的网络模式设置，见 [安装部署](Installation.md)。
 - 系统代理会供 Telegram、系统 HTTP 请求、浏览器服务以及依赖下载使用。插件如果自己写了独立网络代码或显式指定代理，仍由插件决定。
 - 企业微信渠道里的「代理地址（可选）」是企业微信 API **转发服务根地址**，不是上面这种 SOCKS 代理，不要混填。
 - 不要在含代理用户名和密码的报错截图中保留完整地址。
 
 ## 5. 添加 Telegram 通知 Bot
 
-![通知渠道演示界面](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/notifications.jpg)
+![通知渠道演示界面](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/notifications.jpg)
 
 已有渠道需要编辑时，点击卡片下半部分的类型名称或图标；右上角的 × 是删除，不是编辑。
 
@@ -126,7 +126,7 @@ Chat ID 留空时，系统先使用全局默认 Chat ID；仍未设置时尝试�
 
 ### 系统更新通知
 
-「通知渠道」页的「系统更新通知」默认打开。发现系统新版本时，会把版本及更新内容发送到**默认 Telegram Bot**，不是任意默认企业微信或 Bark 渠道。确保默认 Bot 和接收人已配置。系统更新方法见 [备份与维护](Maintenance)。
+「通知渠道」页的「系统更新通知」默认打开。发现系统新版本时，会把版本及更新内容发送到**默认 Telegram Bot**，不是任意默认企业微信或 Bark 渠道。确保默认 Bot 和接收人已配置。系统更新方法见 [备份与维护](Maintenance.md)。
 
 ## 7. 企业微信：只收通知的配置
 
@@ -143,7 +143,7 @@ Chat ID 留空时，系统先使用全局默认 Chat ID；仍未设置时尝试�
 
 **正常现象：** 插件产生通知后，指定成员可在企业微信应用中收到消息。
 
-![企业微信自建应用配置（演示数据）](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/wecom-channel.jpg)
+![企业微信自建应用配置（演示数据）](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/wecom-channel.jpg)
 
 群机器人 Webhook 和自建应用不是同一种接入方式。后端兼容已有群机器人通知配置，但当前新增渠道表单是自建应用字段；群机器人地址也不能用来开启自建应用消息回调。
 
@@ -177,7 +177,7 @@ https://你的系统域名/api/wecom/callback/渠道ID
 
 `EncodingAESKey` 必须为企业微信要求的 **43 位** Base64 字符。应用 Secret、回调 Token、EncodingAESKey、开放 API Key 和 Webhook Secret 是不同凭据，不要互相代替。
 
-![企业微信回调参数（演示数据）](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/wecom-callback.jpg)
+![企业微信回调参数（演示数据）](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/wecom-callback.jpg)
 
 *截图中的本地地址仅作演示，不能拿去填写企业微信回调；请使用自己可公网访问的 HTTPS 域名。*
 
@@ -199,7 +199,7 @@ https://你的系统域名/api/wecom/callback/渠道ID
 
 有参数的动作可在后面附 JSON 对象，具体名称和参数以插件说明为准。系统不会把 Telegram 专用命令自动变成企业微信命令。
 
-图片、文件、菜单按钮事件等可经统一回调交给已适配的插件。需要同时满足：插件已启用、已关联此通知渠道，并且开发者注册了对应消息处理器。仅仅开启回调，不会让所有插件自动支持打印或图片识别。开发接口见 [插件开发](Plugin-Development)。
+图片、文件、菜单按钮事件等可经统一回调交给已适配的插件。需要同时满足：插件已启用、已关联此通知渠道，并且开发者注册了对应消息处理器。仅仅开启回调，不会让所有插件自动支持打印或图片识别。开发接口见 [插件开发](Plugin-Development.md)。
 
 插件也可以把导出的 Excel、CSV、PDF 等文件发回给原发送成员，不需要你再提供一套应用 Secret。是否支持导出、导出哪些数据，仍由具体插件实现；系统不会把文字通知自动变成文件。
 
@@ -209,7 +209,7 @@ https://你的系统域名/api/wecom/callback/渠道ID
 
 系统助手与插件指令是两套入口。助手需要先在网页中开启、完成管理员配对，再在对应私聊或应用中进入助手模式。进入后可发文字和图片，确认和选择使用按钮；退出助手模式后，消息再按原来的插件规则处理。
 
-配对步骤、图片与文件处理、权限和按钮操作见 [系统助手](System-Assistant)。不要把通知渠道配置好了，就当作所有聊天成员都已获得助手权限。
+配对步骤、图片与文件处理、权限和按钮操作见 [系统助手](System-Assistant.md)。不要把通知渠道配置好了，就当作所有聊天成员都已获得助手权限。
 
 ## 9. Bark 通知
 
@@ -223,10 +223,10 @@ Bark 只是通知接收渠道，不会替代 Telegram 用户账号，也不会�
 
 ## 10. Webhook 入站和出站不要混淆
 
-- **入站：外部程序 → AWBotNest。** 在「系统设置 → 开放接口 → Webhook 入站」设置独立密钥，复制地址。该接口把外部文字交给系统通知服务，再发往通知渠道。
-- **出站：AWBotNest → 外部程序。** 后端支持 Webhook 通知渠道，但当前网页的新增菜单仅有 Telegram、企业微信和 Bark，没有通用 Webhook 新增表单。不要在网页中寻找并不存在的按钮。
+- **入站：外部程序 → AWBotHub。** 在「系统设置 → 开放接口 → Webhook 入站」设置独立密钥，复制地址。该接口把外部文字交给系统通知服务，再发往通知渠道。
+- **出站：AWBotHub → 外部程序。** 后端支持 Webhook 通知渠道，但当前网页的新增菜单仅有 Telegram、企业微信和 Bark，没有通用 Webhook 新增表单。不要在网页中寻找并不存在的按钮。
 
-入站地址形式为 `/api/v1/webhook?apikey=你的Webhook密钥`。密钥在 URL 中，不能公开截图或直接贴到公共 issue。它与开放 API Key 不同。请求格式及插件 Webhook 的区别见 [开放 API](Open-API)。
+入站地址形式为 `/api/v1/webhook?apikey=你的Webhook密钥`。密钥在 URL 中，不能公开截图或直接贴到公共 issue。它与开放 API Key 不同。请求格式及插件 Webhook 的区别见 [开放 API](Open-API.md)。
 
 ## 11. 常见问题速查
 
@@ -241,8 +241,8 @@ Bark 只是通知接收渠道，不会替代 Telegram 用户账号，也不会�
 | 企业微信能收到通知但指令无回复 | 消息回调是否开启；成员 UserID 是否在允许列表；插件是否关联并提供对应动作/处理器 |
 | 一直显示 `********` | 这是已保存敏感值的掩码，不是实际密码；不要手动把八个星号当作密钥复制到别处 |
 
-遇到问题请先看 [故障排查](Troubleshooting)，提供版本、部署方式、问题时间和脱敏日志。不要提供密钥或登录会话。
+遇到问题请先看 [故障排查](Troubleshooting.md)，提供版本、部署方式、问题时间和脱敏日志。不要提供密钥或登录会话。
 
 ---
 
-[返回首页](Home) · [首次使用](First-Run) · [插件使用](Plugins) · [系统助手](System-Assistant) · [AI 服务](AI-Service) · [Cookie 与浏览器](Cookies-and-Browser)
+[返回首页](Home.md) · [首次使用](First-Run.md) · [插件使用](Plugins.md) · [系统助手](System-Assistant.md) · [AI 服务](AI-Service.md) · [Cookie 与浏览器](Cookies-and-Browser.md)

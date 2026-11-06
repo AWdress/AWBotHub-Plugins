@@ -1,4 +1,4 @@
-"""AWBotNest 2 entry; generated from the maintained V1 plugin."""
+"""AWBotHub native plugin entry."""
 from __future__ import annotations
 
 from .core import setup as _native_setup, teardown as _native_teardown
@@ -10,8 +10,8 @@ __plugin__ = {'name': '影巢答题红包',
  'author': 'AWdress',
  'scope': 'user',
  'description': '自动回答影巢机器人发的答题红包：从社区题库查答案回复，题库没有时可选大模型兜底作答。发包bot/群组可配。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/hdhive_lottery.jpg',
- 'changelog': 'v2.0.4 清理插件自带 AI 依赖\n- 题库外答案继续只调用 AWBotNest 平台统一 AI 接口\n- 移除未使用的 OpenAI 依赖和遗留密钥配置\n\n'
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/hdhive_lottery.jpg',
+ 'changelog': 'v2.0.4 清理插件自带 AI 依赖\n- 题库外答案继续只调用 AWBotHub 平台统一 AI 接口\n- 移除未使用的 OpenAI 依赖和遗留密钥配置\n\n'
               'v2.0.3 修复多行通知显示\n- 答题结果按状态、详情拆分为独立表格行\n- 避免完整正文挤入单个单元格导致裁切或显示不全\n\n'
               'v2.0.2 统一富文本表格通知\n- 答题结果改为平台结构化表格\n\n'
               'v2.0.1 修复 Telethon 会话实体与媒体文本解析\n'
@@ -25,21 +25,21 @@ __plugin__ = {'name': '影巢答题红包',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.0.15 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.0.15 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.0.14 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.0.12 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.0.12 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.0.9 适配平台后台任务治理\n'
               '- 启动时题库同步改由 ctx.create_task 托管\n'

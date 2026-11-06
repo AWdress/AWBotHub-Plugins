@@ -4,7 +4,7 @@
 
 本页按 **v2.0.2.7** 核对，先给能直接照着操作的示例。每个字段、参数和响应的完整说明，以**自己部署的系统**中的 API 文档为准。
 
-相关页面：[首次使用](First-Run) · [插件管理](Plugins) · [账号与通知](Accounts-and-Notifications) · [安全与维护](Maintenance)
+相关页面：[首次使用](First-Run.md) · [插件管理](Plugins.md) · [账号与通知](Accounts-and-Notifications.md) · [安全与维护](Maintenance.md)
 
 ## 1. 在哪里看文档
 
@@ -24,7 +24,7 @@ https://你的域名/docs
 
 也可从「系统设置 → 开放接口 → 查看 API 文档」进入。
 
-![API 文档界面](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/api-docs.jpg)
+![API 文档界面](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/api-docs.jpg)
 
 *文档按系统、Telegram、插件管理、插件配置、插件数据、账号与日志分类。展开接口即可查看参数、响应和调试入口。*
 
@@ -37,7 +37,7 @@ https://你的域名/docs
 
 **关闭方式：清空 API Key 并保存。** 当前没有另一个独立的 API 开关。关闭后，开放 API 返回未配置提示；系统网页仍可正常使用。
 
-![开放接口设置，Webhook 密钥与 REST API Key 分开配置](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/open-api.jpg)
+![开放接口设置，Webhook 密钥与 REST API Key 分开配置](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/open-api.jpg)
 
 重新生成并保存会使旧密钥失效，记得同时更新自己的自动化脚本。不要把 Key 发给陌生人、写进公开仓库、贴到 issue 或保存在截图中。
 
@@ -73,22 +73,22 @@ https://你的域名/docs
 
 成功返回 `{"ok": true}`。未开启返回 `404`，密钥错误返回 `401`，超出体积返回 `413`；通知服务不可用或投递失败也会返回错误，不能只看 HTTP 请求已发出就认定通知送达。
 
-**插件兼容入口不同：** `/api/v1/plugin/{plugin_id}/webhook` 使用同一个 Webhook 密钥和查询参数，支持 GET/POST、同样限制 1 MB，但把请求交给该插件已注册的第一个 Webhook（没有注册项时尝试 `receive`）。插件必须已启用且存在处理器；正文格式与实际副作用由插件决定，不会自动套用上面的通知格式。开发者应按[插件开发规范](Plugin-Development)处理鉴权及参数校验，管理员只按可信作者提供的说明调用。
+**插件兼容入口不同：** `/api/v1/plugin/{plugin_id}/webhook` 使用同一个 Webhook 密钥和查询参数，支持 GET/POST、同样限制 1 MB，但把请求交给该插件已注册的第一个 Webhook（没有注册项时尝试 `receive`）。插件必须已启用且存在处理器；正文格式与实际副作用由插件决定，不会自动套用上面的通知格式。开发者应按[插件开发规范](Plugin-Development.md)处理鉴权及参数校验，管理员只按可信作者提供的说明调用。
 
 这两种兼容入口的密钥都在 URL 查询参数中。**不要把完整调用地址公开、发到群里或贴进 Issue。** 只在受信工具中保存，使用 HTTPS，尽可能限制来源网络，并避免让反向代理或调用工具记录完整查询参数；泄露后立即更换 Webhook 密钥。不要拿开放 API Key 或管理员令牌代替它。
 
 ## 4. 先做一次只读测试
 
-下面是 Linux/macOS 的 Bash 示例。`BASE_URL` 是演示变量，按自己的地址修改；密钥在执行时输入，不要写死在脚本中。
+下面是 Linux/macOS 的 Bash 示例。`BASE_URL` 和 `AWBOTHUB_API_KEY` 都只是当前终端的演示变量，不是新增的平台环境参数；按自己的地址修改，密钥在执行时输入，不要写死在脚本中。
 
 ```bash
 BASE_URL='http://127.0.0.1:18001'
-read -rsp '请输入开放 API Key: ' AWBOTNEST_API_KEY
+read -rsp '请输入开放 API Key: ' AWBOTHUB_API_KEY
 printf '\n'
-export AWBOTNEST_API_KEY
+export AWBOTHUB_API_KEY
 
 curl --fail-with-body --show-error \
-  -H "X-API-Key: $AWBOTNEST_API_KEY" \
+  -H "X-API-Key: $AWBOTHUB_API_KEY" \
   "$BASE_URL/api/v1/status"
 ```
 
@@ -115,7 +115,7 @@ curl --fail-with-body --show-error \
 
 ```bash
 curl --fail-with-body --show-error \
-  -H "X-API-Key: $AWBOTNEST_API_KEY" \
+  -H "X-API-Key: $AWBOTHUB_API_KEY" \
   "$BASE_URL/api/v1/logs?limit=50"
 ```
 
@@ -125,12 +125,12 @@ curl --fail-with-body --show-error \
 
 ```bash
 curl --fail-with-body --show-error \
-  -H "X-API-Key: $AWBOTNEST_API_KEY" \
+  -H "X-API-Key: $AWBOTHUB_API_KEY" \
   "$BASE_URL/api/v1/plugins"
 
 PLUGIN_ID='hello_demo'
 curl --fail-with-body --show-error \
-  -H "X-API-Key: $AWBOTNEST_API_KEY" \
+  -H "X-API-Key: $AWBOTHUB_API_KEY" \
   "$BASE_URL/api/v1/logs/plugins/$PLUGIN_ID?limit=50"
 ```
 
@@ -150,11 +150,11 @@ curl --fail-with-body --show-error \
 
 **上传的是可执行代码，不是普通配置。请只上传自己检查过的插件。API Key 的持有人具备较高管理权限，不应提供给只需要看一条状态的陌生服务。**
 
-假设当前目录有一个符合 V2 规范的 `hello_demo.py`：
+假设当前目录有一个符合当前插件规范的 `hello_demo.py`：
 
 ```bash
 curl --fail-with-body --show-error \
-  -H "X-API-Key: $AWBOTNEST_API_KEY" \
+  -H "X-API-Key: $AWBOTHUB_API_KEY" \
   -F 'file=@hello_demo.py' \
   "$BASE_URL/api/v1/plugins/upload"
 ```
@@ -169,7 +169,7 @@ curl --fail-with-body --show-error \
 
 成功响应包含 `ok`、`plugin` 和 `enabled`。新安装的插件不会自动启用，也不会在上传阶段保证它的第三方依赖或所有业务逻辑都能运行。
 
-同名上传可能覆盖已有插件文件。更新已有插件前先备份、停用，再上传；不要认为上传成功就已经热更新了旧实例。目录插件或带前端资源的插件，使用[插件市场](Plugins#2-从插件市场安装推荐)更合适。
+同名上传可能覆盖已有插件文件。更新已有插件前先备份、停用，再上传；不要认为上传成功就已经热更新了旧实例。目录插件或带前端资源的插件，使用[插件市场](Plugins.md#2-从插件市场安装推荐)更合适。
 
 ### 配置好后启用
 
@@ -177,7 +177,7 @@ curl --fail-with-body --show-error \
 
 ```bash
 curl --fail-with-body --show-error -X POST \
-  -H "X-API-Key: $AWBOTNEST_API_KEY" \
+  -H "X-API-Key: $AWBOTHUB_API_KEY" \
   "$BASE_URL/api/v1/plugins/hello_demo/enable"
 ```
 
@@ -218,8 +218,8 @@ curl --fail-with-body --show-error -X POST \
 要区分 **HTTP 开放 API** 与 **插件运行时接口**：
 
 - 本页的 `/api/v1/messages/send` 发送 Telegram 文字消息，当前没有对应的开放 REST 文件发送或企微文件发送端点，不要自行拼一个 `/files/send` 地址。
-- 已安装的插件可以通过 Telegram 客户端原生 `send_file` 发文件；企业微信插件可以通过系统的统一消息上下文回复 Excel、CSV 等文件，复用已有应用凭据。代码和接入方法见 [插件开发入门](Plugin-Development)，不是把文件传给文字消息接口。
-- 企业微信统一回调可接收文字、图片、文件和按钮事件，入口在通知渠道中配置，与开放 API Key 是两套鉴权。见 [账号与通知](Accounts-and-Notifications)。
+- 已安装的插件可以通过 Telegram 客户端原生 `send_file` 发文件；企业微信插件可以通过系统的统一消息上下文回复 Excel、CSV 等文件，复用已有应用凭据。代码和接入方法见 [插件开发入门](Plugin-Development.md)，不是把文件传给文字消息接口。
+- 企业微信统一回调可接收文字、图片、文件和按钮事件，入口在通知渠道中配置，与开放 API Key 是两套鉴权。见 [账号与通知](Accounts-and-Notifications.md)。
 - 系统助手的会话、配对和确认接口只接受管理员登录权限，不接受本页的 API Key。不能把 API Key 发给 Bot 后要求它获得助手管理权限。
 
 ### 只检查服务是否就绪
@@ -259,6 +259,6 @@ curl --fail-with-body --show-error -X POST \
 - 当前是共享 API Key，不提供按接口划分的细粒度权限；拿到 Key 的工具应被当作可信管理工具。
 - 不在 URL 查询参数里放 API Key，不在公开网页的 JavaScript 中放密钥。
 - 密钥泄露后立即重新生成并保存，再更新自己的工具。
-- Bash 调试结束后可执行 `unset AWBOTNEST_API_KEY`；不要把终端截图中的真实输出公开。
+- Bash 调试结束后可执行 `unset AWBOTHUB_API_KEY`；不要把终端截图中的真实输出公开。
 
-下一步：[插件开发入门](Plugin-Development) · [常见问题](Troubleshooting)
+下一步：[插件开发入门](Plugin-Development.md) · [常见问题](Troubleshooting.md)

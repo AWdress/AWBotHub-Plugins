@@ -1,4 +1,4 @@
-"""ai AWBotNest V2 原生插件入口。"""
+"""ai AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -8,7 +8,7 @@ __plugin__ = {'name': 'AI 助手',
  'version': '2.0.4',
  'author': 'AWdress',
  'description': '私聊/群@你时 AI 人形对话（带记忆）；支持主动搭话、/ai 图文解释，以及通过平台统一 AI 使用 /生图 或 /draw 生成图片。自带 Vue 配置界面。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/ai.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/ai.png',
  'changelog': 'v2.0.4 适配平台正式调度接口\n- 主动搭话改用 schedule_interval 注册，不再调用兼容调度入口\n\nv2.0.3 修复 /ai 解释格式显示\n'
               '- 编辑解释消息时显式启用 Telegram HTML 解析\n'
               '- 问题与回答继续进行 HTML 转义，避免内容注入标签\n'
@@ -21,10 +21,10 @@ __plugin__ = {'name': 'AI 助手',
               'v2.0.1 修复媒体回复文本解析\n'
               '- 兼容 Telethon 媒体消息不存在 caption 属性的情况\n'
               '\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v1.3.13 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -34,21 +34,21 @@ __plugin__ = {'name': 'AI 助手',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.3.11 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.3.11 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.3.10 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.3.8 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.3.8 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.3.3 修复平台 AI 调用\n'
               '- 清理遗留的插件 API Key 校验，不再误报未配置 API Key\n'

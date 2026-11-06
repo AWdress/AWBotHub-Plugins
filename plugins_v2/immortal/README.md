@@ -1,6 +1,6 @@
 # Immortal
 
-AWBotNest V2 内置版。业务源码和管理台随插件运行，不需要再启动 Immortal 容器、HTTP 端口或独立机器人。
+AWBotHub 内置版。业务源码和管理台随插件运行，不需要再启动 Immortal 容器、HTTP 端口或独立机器人。
 
 ## 首次使用
 

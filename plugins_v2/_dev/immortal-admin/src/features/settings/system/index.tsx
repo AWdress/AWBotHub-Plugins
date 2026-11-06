@@ -8,6 +8,6 @@ export function SettingsSystem() {
       <SystemConfigForm />
     </ContentSection>
     <RouteNamingForm />
-    <p className='max-w-prose text-sm leading-6 text-muted-foreground'>登录、更新、机器人和通知渠道由 AWBotNest 管理。本插件不启动独立 Bot，不提供 SQL 执行器。</p>
+    <p className='max-w-prose text-sm leading-6 text-muted-foreground'>登录、更新、机器人和通知渠道由 AWBotHub 管理。本插件不启动独立 Bot，不提供 SQL 执行器。</p>
   </div>
 }

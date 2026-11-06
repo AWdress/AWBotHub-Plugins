@@ -1,4 +1,4 @@
-"""keyword_auto_reply AWBotNest V2 原生插件入口。"""
+"""keyword_auto_reply AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -8,12 +8,12 @@ __plugin__ = {'name': '聊天互动助手',
  'version': '2.0.1',
  'author': 'AWdress',
  'description': '按可配置概率自动回复群消息，关键词可选，并支持追加回复、冷却、限群、自动删除及排行榜。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_reply.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_reply.png',
  'changelog': 'v2.0.1 修复原生富文本排行榜用户显示\n- 表格单元格仅保留名称，不再放入会被平台过滤的用户链接\n- 避免无效 tg 协议文本出现在排行榜通知中\n\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v2.2.11 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -27,21 +27,21 @@ __plugin__ = {'name': '聊天互动助手',
               '- 将滑块字段改为精确数值输入，确保当前值始终可见\n'
               '- 保留原有默认值、范围和步长校验\n'
               '\n'
-              'v2.2.8 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v2.2.8 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v2.2.7 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v2.2.5 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v2.2.5 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v2.2.2 修正追加回复与随机数复用\n'
               '- 趣味文字命中时不再发送追加回复\n'
@@ -101,7 +101,7 @@ __plugin__ = {'name': '聊天互动助手',
               'v1.0.6 优化配置界面布局\n'
               '- 开关字段统一置顶，采用推荐的栅格布局\n'
               '- 参数字段添加 order 排序，提升扫描性\n'
-              '- 符合 AWBotNest 插件开发规范\n'
+              '- 符合 AWBotHub 插件开发规范\n'
               '\n'
               'v1.0.5 更新插件 Logo\n'
               '- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示\n'

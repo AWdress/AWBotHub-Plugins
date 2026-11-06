@@ -1,4 +1,4 @@
-"""AWBotNest V2 原生插件开发调试工具。"""
+"""AWBotHub 原生插件开发调试工具。"""
 from __future__ import annotations
 
 from .core import setup as _native_setup, teardown as _native_teardown
@@ -9,8 +9,8 @@ __plugin__ = {'name': '插件开发调试',
  'author': 'AWdress',
  'scope': 'both',
  'description': '在管理员配置页编辑、检查并运行 Python 插件源码，显示运行状态与错误堆栈，适合开发和调试单文件插件。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/custom_plugin.svg',
- 'changelog': 'v2.0.0 完成原生 V2 迁移\n'
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/custom_plugin.svg',
+ 'changelog': 'v2.0.0 完成平台原生迁移\n'
               '- 使用原生事件、内部 API、调度与生命周期接口\n'
               '- 修复 API 路径、Webhook 注册和重载残留问题\n'
               '- 默认示例改为 Telethon 单参数事件写法\n\n'
@@ -22,21 +22,21 @@ __plugin__ = {'name': '插件开发调试',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.0.10 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.0.10 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.0.9 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.0.7 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.0.7 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.0.3 支持独立运行插件\n'
               '- 源码检查可以识别 standalone 范围\n'

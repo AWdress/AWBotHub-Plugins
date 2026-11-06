@@ -790,8 +790,8 @@ class IPPPrinter:
             raise ValueError("IPP 提交前无法读取受限文档") from None
         request_id = secrets.randbelow(0x7FFFFFFF) + 1
         attributes = self._base_attributes(uri) + [
-            (0x42, "requesting-user-name", "AWBotNest"),
-            (0x42, "job-name", "AWBotNest " + title),
+            (0x42, "requesting-user-name", "AWBotHub"),
+            (0x42, "job-name", "AWBotHub " + title),
             (0x22, "ipp-attribute-fidelity", True),
             (0x49, "document-format", mime),
         ]

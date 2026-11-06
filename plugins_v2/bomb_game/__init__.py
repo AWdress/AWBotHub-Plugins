@@ -1,4 +1,4 @@
-"""Native AWBotNest V2 number-bomb game."""
+"""Native AWBotHub number-bomb game."""
 from __future__ import annotations
 
 from collections import deque
@@ -15,11 +15,11 @@ __plugin__ = {
     "author": "AWdress", "scope": "user", "plugin_api_version": 2,
     "description": "群内数字炸弹竞猜：开启后群友回复+金额参与组奖池，轮流猜数字，猜中/范围耗尽即爆炸，中奖者按比例分奖池。",
     "requirements": [],
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/bomb_game.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/bomb_game.png",
     "tags": ["数字炸弹", "群组游戏", "奖池互动"], "render_mode": "vue",
     "config_schema": {},
     "resources": {"timeout_seconds": 120, "max_concurrency": 16, "max_background_tasks": 64},
-    "changelog": "v2.0.0 原生 AWBotNest V2 迁移\n- 移除 V1 兼容运行层与 Pyrogram 模拟层\n- 使用 Telethon 原生事件和交互快速通道\n- 活跃游戏迁移到平台会话运行时，关键状态使用异步存储检查点\n- 后台等待与自动删除任务纳入平台生命周期管理",
+    "changelog": "v2.0.0 原生 AWBotHub 迁移\n- 移除旧版兼容运行层与 Pyrogram 模拟层\n- 使用 Telethon 原生事件和交互快速通道\n- 活跃游戏迁移到平台会话运行时，关键状态使用异步存储检查点\n- 后台等待与自动删除任务纳入平台生命周期管理",
 }
 
 DEFAULTS = {
@@ -153,7 +153,7 @@ async def setup(ctx):
                 amount = extract_amount(text)
                 if amount is not None: await transfer_confirm(event, amount, chat_id)
 
-    ctx.log.info("[数字炸弹] 原生 V2 插件已启用，恢复 %d 个会话", len(state.state))
+    ctx.log.info("[数字炸弹] 平台原生插件已启用，恢复 %d 个会话", len(state.state))
 
 async def teardown(ctx):
     ctx.log.info("[数字炸弹] 已停用")

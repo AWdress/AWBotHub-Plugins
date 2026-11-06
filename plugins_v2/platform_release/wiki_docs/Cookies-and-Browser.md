@@ -22,13 +22,13 @@ Cookie 是网站保存在浏览器中的一类数据，经常包含登录状态�
 
 | 你的情况 | 选择 |
 | --- | --- |
-| 还没有 CookieCloud 服务器，希望直接同步到 AWBotNest | 浏览器直连 |
+| 还没有 CookieCloud 服务器，希望直接同步到 AWBotHub | 浏览器直连 |
 | 已经有一个 CookieCloud 服务器，浏览器正在往那里上传 | 远程 CookieCloud |
 | 想两个来源一起使用 | 支持，但最后完成的一次同步会替换系统 Cookie 数据；建议先只选一个来源 |
 
 这两个区域没有必须先开启的总开关。**直连填好 UUID 与密码即可使用；远程地址、UUID、密码完整并保存后，按间隔自动同步。** 远程配置不依赖直连区域先生成凭据。
 
-![Cookie 服务演示界面](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/cookies.jpg)
+![Cookie 服务演示界面](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/cookies.jpg)
 
 > 数据目录中的配置和解密后的 Cookie 目前以明文 JSON 保存，网页里的星号只是隐藏显示。请限制数据目录的访问权限，备份也按敏感资料保管。重新生成直连凭据会立即生效，但不会清空已有 Cookie。
 
@@ -79,7 +79,7 @@ https://你的系统域名/cookiecloud
 
 ## 4. 远程 CookieCloud：复用已有服务器
 
-如果已有 CookieCloud 服务，不用搬走它，也不用让浏览器改为直接上传到 AWBotNest。
+如果已有 CookieCloud 服务，不用搬走它，也不用让浏览器改为直接上传到 AWBotHub。
 
 1. 打开「系统设置 → Cookie 服务 → 远程 CookieCloud」。
 2. 填「远程服务器地址」：填写现有 CookieCloud 的**服务根地址**。如果服务部署在 `/cookiecloud` 子路径，应保留该子路径，但不要附加 `/get/UUID`。
@@ -121,13 +121,13 @@ https://你的系统域名/cookiecloud
 5. **插件有没有声明所需域名权限？** 系统不会把所有 Cookie 无条件交给每个插件，需要开发者适配。
 6. **Cookie 有没有失效？** 网站退出、修改密码、撤销会话或风控后，旧 Cookie 可能不再有效。重新登录网站并同步。
 
-域名授权和开发接口见 [插件开发](Plugin-Development)。
+域名授权和开发接口见 [插件开发](Plugin-Development.md)。
 
 ## 7. 浏览器仿真：Chromium 与 CloakBrowser
 
 入口：「系统设置 → 运行环境 → 浏览器仿真」。
 
-![浏览器仿真与 CloakBrowser 版本演示](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/browser.jpg)
+![浏览器仿真与 CloakBrowser 版本演示](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/browser.jpg)
 
 | 选择 | 用途 | 新手建议 |
 | --- | --- | --- |
@@ -211,7 +211,7 @@ CloakBrowser 免费 Key 限制为一个活跃浏览器会话。系统接入的�
 - 所需版本都已满足时，按钮显示「已是最新」。这表示当前检查范围内已是最新，不等于不受兼容版本范围约束。
 - 更新依赖后系统可能自动重启，页面会提示。不要在关键插件任务执行中反复点更新。
 
-**这与 AWBotNest 自身每小时检查新版本是不同任务。** 系统版本更新见 [备份与维护](Maintenance)。
+**这与 AWBotHub 自身每小时检查新版本是不同任务。** 系统版本更新见 [备份与维护](Maintenance.md)。
 
 ## 11. 下载目录、旧版清理与代理
 
@@ -246,8 +246,8 @@ Docker 常见持久化位置：
 | 远程同步失败 | 地址是否是根路径、UUID/密码是否配套、算法和 HTTPS、系统服务器/代理能否访问远程 |
 | 重建容器后又下载 | 检查 `data/` 是否正确挂载并保留，不能只持久化配置文件而漏掉依赖/缓存目录 |
 
-仍无法定位时，提供系统版本、AMD64/ARM64 架构、部署方式、组件/内核版本以及脱敏安装日志，见 [故障排查](Troubleshooting)。不要提交完整 Key 或 Cookie。
+仍无法定位时，提供系统版本、AMD64/ARM64 架构、部署方式、组件/内核版本以及脱敏安装日志，见 [故障排查](Troubleshooting.md)。不要提交完整 Key 或 Cookie。
 
 ---
 
-[返回首页](Home) · [安装部署](Installation) · [插件使用](Plugins) · [网络与通知](Accounts-and-Notifications) · [备份与维护](Maintenance) · [插件开发](Plugin-Development)
+[返回首页](Home.md) · [安装部署](Installation.md) · [插件使用](Plugins.md) · [网络与通知](Accounts-and-Notifications.md) · [备份与维护](Maintenance.md) · [插件开发](Plugin-Development.md)

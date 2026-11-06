@@ -1,4 +1,4 @@
-"""B 站每日综合签到：AWBotNest V2 原生实现。"""
+"""B 站每日综合签到：AWBotHub 原生实现。"""
 from __future__ import annotations
 
 import asyncio
@@ -17,7 +17,7 @@ __plugin__ = {
     "version": "0.1.2",
     "author": "AWdress",
     "description": "使用 B 站 Cookie 完成分享、观看心跳、直播、漫画等每日签到，逐项显示结果和失败原因并推送账号状态。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins_v2/bilibili_signin/logo.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/bilibili_signin/logo.png",
     "changelog": (
         "v0.1.2 精简签到通知\n"
         "- 通知仅显示失败项目、简短错误码和完成/跳过数量，避免长错误日志撑开表格\n"

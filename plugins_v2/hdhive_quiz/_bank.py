@@ -21,7 +21,7 @@ import urllib.request
 
 from ._quiz import normalize
 
-_UA = "AWBotNest-hdhive_quiz/1.0"
+_UA = "AWBotHub-hdhive_quiz/1.0"
 _KV_LAST_SYNC = "bank_last_sync"
 
 

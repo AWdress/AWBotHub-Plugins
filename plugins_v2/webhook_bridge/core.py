@@ -1,4 +1,4 @@
-"""把外部系统的 Webhook 转成 AWBotNest 统一通知。"""
+"""把外部系统的 Webhook 转成 AWBotHub 统一通知。"""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ __plugin__ = {
     "author": "AWdress",
     "description": "接收 NAS、下载器、监控、CI 等外部 Webhook，自动提取内容并通过平台统一通知渠道推送。",
     "changelog": "v1.0.1 加固首次加载配置兜底\n- 配置尚未持久化时仍使用内置字段提取与敏感字段过滤默认值\n- 防止完整载荷兜底通知意外包含令牌、密码等敏感字段\n\nv1.0.0 初始版本\n- 支持 GET、JSON、表单与纯文本事件\n- 支持自动字段提取、模板、去重和限流\n- 提供测试通知、统计查看与状态清理动作",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_relay.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_relay.png",
     "scope": "standalone",
     "default_enabled": False,
     "webhook": True,

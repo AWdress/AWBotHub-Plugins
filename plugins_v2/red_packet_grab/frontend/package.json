@@ -1,5 +1,5 @@
 {
-  "name": "@awbotnest-plugins/red_packet_grab-config",
+  "name": "@awbothub-plugins/red_packet_grab-config",
   "version": "2.0.8",
   "private": true,
   "type": "module",

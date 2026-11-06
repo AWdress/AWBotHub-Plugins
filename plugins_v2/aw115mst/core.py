@@ -1,4 +1,4 @@
-"""AWBotNest V2 lifecycle, administrator APIs and optional Telegram commands."""
+"""AWBotHub lifecycle, administrator APIs and optional Telegram commands."""
 from __future__ import annotations
 
 import asyncio

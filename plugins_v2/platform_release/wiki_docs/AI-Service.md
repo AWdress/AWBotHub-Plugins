@@ -2,9 +2,9 @@
 
 系统提供统一的 AI 接口。使用该接口的插件共享系统中配置的服务商和模型，不需要在每个插件中重复填写服务商密钥。某些旧插件可能仍有自己的 AI 配置，以插件说明为准。
 
-本章说明网页中的实际配置顺序：**服务商 → 模型库 → 模型分工 → 测试 → 插件权限**。系统助手也使用这些模型，完整使用方法见 [系统助手](System-Assistant)。
+本章说明网页中的实际配置顺序：**服务商 → 模型库 → 模型分工 → 测试 → 插件权限**。系统助手也使用这些模型，完整使用方法见 [系统助手](System-Assistant.md)。
 
-![AI 调用概览（演示数据）](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/ai-service.jpg)
+![AI 调用概览（演示数据）](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/ai-service.jpg)
 
 ## 1. 配置前先准备三样东西
 
@@ -14,7 +14,7 @@
 | API Key | 调用此服务的密钥 | 从供应商控制台获取；和系统开放 API Key 不是一回事 |
 | 真实模型名 | 供应商接受的模型 ID | 必须完全匹配供应商实际提供的名称，不能只填宣传名或自己起的别名 |
 
-另外确认服务账户有额度、允许调用该模型，以及 AWBotNest 所在服务器能访问该服务。
+另外确认服务账户有额度、允许调用该模型，以及 AWBotHub 所在服务器能访问该服务。
 
 > 测试也是真实请求，可能计费。不要把 API Key、包含密钥的 URL 或真实私密对话贴到公开问题中。
 
@@ -33,7 +33,7 @@
 
 “读取模型成功”只说明能列出模型，不代表这个 Key 有权调用列表中的每一个模型。部分供应商不提供模型列表接口，仍可按第 3 节手动添加。
 
-![AI 服务商与模型库配置（演示数据）](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/ai-provider.jpg)
+![AI 服务商与模型库配置（演示数据）](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/ai-provider.jpg)
 
 ### 接口格式选什么？
 
@@ -115,7 +115,7 @@ AI 服务页点击「打开系统助手」，在助手「设置」中可沿用�
 - Telegram 语音常见 Ogg，企业微信常见 AMR。系统接受附件，不代表供应商接受对应音频编码；不支持时改发文字或供应商支持的 WAV、MP3、M4A 等音频，系统不自行转码。
 - 不要为了测试把密钥、Cookie 或包含私密资料的截图发给模型。附件会发送给所配置的 AI 服务。
 
-助手的修改权限、TG / 企业微信配对、按钮确认、内置技能和源码排查步骤，见 [系统助手完整教程](System-Assistant)。
+助手的修改权限、TG / 企业微信配对、按钮确认、内置技能和源码排查步骤，见 [系统助手完整教程](System-Assistant.md)。
 
 ## 6. 为插件设置 AI 权限和单独模型
 
@@ -198,4 +198,4 @@ Token 不是人民币，也不是精确的汉字数。供应商不返回用量�
 
 ---
 
-[返回首页](Home) · [系统助手](System-Assistant) · [插件使用](Plugins) · [网络与通知](Accounts-and-Notifications) · [故障排查](Troubleshooting) · [插件开发](Plugin-Development)
+[返回首页](Home.md) · [系统助手](System-Assistant.md) · [插件使用](Plugins.md) · [网络与通知](Accounts-and-Notifications.md) · [故障排查](Troubleshooting.md) · [插件开发](Plugin-Development.md)

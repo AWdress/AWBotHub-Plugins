@@ -1,12 +1,12 @@
 # VPS-Widget
 
-AWBotNest V2 的影视榜单插件，参考 [MakkaPakka518/VPS-Widget](https://github.com/MakkaPakka518/VPS-Widget) 的产品功能与公开数据接口，使用独立实现的 Python 采集器和 Widget 生成器。不是 VPS 监控工具，也不启动独立 Node 服务或额外端口。
+AWBotHub 的影视榜单插件，参考 [MakkaPakka518/VPS-Widget](https://github.com/MakkaPakka518/VPS-Widget) 的产品功能与公开数据接口，使用独立实现的 Python 采集器和 Widget 生成器。不是 VPS 监控工具，也不启动独立 Node 服务或额外端口。
 
-版本：`0.0.1`。需要 Python 3.11 或更新版本，适用于 AWBotNest V2。
+版本：`0.0.1`。需要 Python 3.11 或更新版本，适用于 AWBotHub。
 
 ## 第一次使用
 
-1. 从 V2 插件市场安装 **VPS-Widget**，启用插件后打开配置页。
+1. 从插件市场安装 **VPS-Widget**，启用插件后打开配置页。
 2. 在“配置”填写 **TMDB 密钥**，支持 v3 API Key 或 v4 API Read Access Token。选择榜单来源，保存配置。
 3. 在“榜单状态”点击 **更新全部榜单**，或单独更新某个来源。更新在平台后台执行，离开页面不会停止。
 4. 需要客户端读取时，填写**平台访问地址**，例如 `https://bot.example.com`；有部署子路径需带上，不要填 `/api` 路径。开启“允许客户端读取 Widget”，保存。

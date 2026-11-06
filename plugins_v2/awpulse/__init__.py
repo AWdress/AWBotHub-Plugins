@@ -1,4 +1,4 @@
-"""awpulse AWBotNest V2 原生插件入口。"""
+"""awpulse AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -21,10 +21,10 @@ __plugin__ = {'name': 'AWPulse 色花堂助手',
               'v2.0.1 修复用户资料页 URL\n'
               '- 移除空的 uid 参数，兼容 Discuz 站点当前用户资料页路由\n'
               '\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v1.2.8 适配新版异步存储接口\n'
               '- 兼容新版异步 KV 与原有同步 KV\n'
@@ -34,21 +34,21 @@ __plugin__ = {'name': 'AWPulse 色花堂助手',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.2.6 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.2.6 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.2.5 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.2.3 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.2.3 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.2.0 修复定时任务结束后仍显示运行中\n'
               '- 定时触发只负责投递平台托管后台任务，计划任务状态会立即正常结束\n'
@@ -76,7 +76,7 @@ __plugin__ = {'name': 'AWPulse 色花堂助手',
               '- 签到失败会正确向上返回，整轮运行和通知不再误报成功\n'
               '- 修复签到失败调试文件目录未定义的问题',
  'scope': 'standalone',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/awpulse/logo.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/awpulse/logo.png',
  'requirements': ['cloakbrowser>=0.5.10',
                   'playwright>=1.55',
                   'opencv-python-headless>=4.8',
@@ -91,7 +91,7 @@ __plugin__ = {'name': 'AWPulse 色花堂助手',
                'failure_threshold': 3,
                'recovery_seconds': 120},
  'config_schema': {'password': {'title': 'password',
-                                'section': 'V2 配置',
+                                'section': '插件配置',
                                 'order': 3,
                                 'type': 'password',
                                 'secret': True,

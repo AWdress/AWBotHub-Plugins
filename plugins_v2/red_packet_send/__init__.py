@@ -1,4 +1,4 @@
-"""red_packet_send AWBotNest V2 原生插件入口。"""
+"""red_packet_send AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -10,7 +10,7 @@ __plugin__ = {'name': '发红包',
  'scope': 'user',
  'requirements': ['Pillow>=10.0'],
  'description': '用你的账号在群里发拼手气红包，支持验证码图片或可复制的文字口令，可选每领取一份后更换口令、旧码立即失效。按拼手气随机分配魔力，自带 Vue 配置页和红包监控。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_redpacket.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_redpacket.png',
  'changelog': 'v2.0.3 文字口令与一次性验证码\n'
               '- 新增文字口令开关，不用图片，点击或长按完整口令复制后参与\n'
               '- 一次性开关支持图片和文字模式，每领取一份更换口令，旧码立即失效\n'
@@ -24,10 +24,10 @@ __plugin__ = {'name': '发红包',
               '- 活动创建、参与和手动结束统一读取 Telethon sender\n'
               '- 移除 Pyrogram from_user 兼容分支\n'
               '\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v1.0.22 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -37,21 +37,21 @@ __plugin__ = {'name': '发红包',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.0.20 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.0.20 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.0.19 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.0.17 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.0.17 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.0.13 重复参与反馈\n'
               '- 用户再次发送当前有效参与口令时，回复重复参与无效提示\n'

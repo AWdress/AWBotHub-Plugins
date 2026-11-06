@@ -1,10 +1,10 @@
-"""AWBotNest V2 原生消息结构导出插件。"""
+"""AWBotHub 原生消息结构导出插件。"""
 from __future__ import annotations
 import asyncio
 import re
 from datetime import datetime
 
-__plugin__={"id":"getmsg","name":"取消息结构","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"回复消息发送 /getmsg，将 Telethon 原始结构导出为文本文件。","icon":"https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_utility.png","tags":["消息提取","结构调试","媒体信息"],"config_schema":{"delete_command":{"type":"boolean","default":True,"label":"删除命令消息","section":"功能开关","order":1},"command":{"type":"string","default":".getmsg","label":"触发命令","section":"命令","order":10}},"changelog":"v2.0.0 原生 AWBotNest V2 迁移\n- 使用 Telethon 原始消息结构导出\n- 文件仅写入插件数据目录并在发送后清理\n- 移除 V1 兼容运行层"}
+__plugin__={"id":"getmsg","name":"取消息结构","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"回复消息发送 /getmsg，将 Telethon 原始结构导出为文本文件。","icon":"https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_utility.png","tags":["消息提取","结构调试","媒体信息"],"config_schema":{"delete_command":{"type":"boolean","default":True,"label":"删除命令消息","section":"功能开关","order":1},"command":{"type":"string","default":".getmsg","label":"触发命令","section":"命令","order":10}},"changelog":"v2.0.0 原生 AWBotHub 迁移\n- 使用 Telethon 原始消息结构导出\n- 文件仅写入插件数据目录并在发送后清理\n- 移除旧版兼容运行层"}
 
 def _hit(text,command):
     bare=str(command or "getmsg").lstrip("/.").strip().lower() or "getmsg";parts=(text or "").split()

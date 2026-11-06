@@ -1,4 +1,4 @@
-"""AWBotNest V2 自动报时昵称：时间、特殊字体数字与天气。"""
+"""AWBotHub 自动报时昵称：时间、特殊字体数字与天气。"""
 from __future__ import annotations
 
 import random
@@ -9,7 +9,7 @@ __plugin__ = {
     "author": "AWdress", "scope": "user", "plugin_api_version": 2,
     "description": "定时把昵称改成当前时间、天气图标和温度，支持特殊字体与自定义模板。",
     "requirements": [],
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_cleanup.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_cleanup.png",
     "tags": ["昵称报时", "天气", "定时任务"], "render_mode": "schema",
     "resources": {"timeout_seconds": 60, "max_concurrency": 4, "max_background_tasks": 8, "failure_threshold": 5},
     "config_schema": {

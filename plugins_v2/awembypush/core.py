@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：AWEmbyPush（awembypush）
+# AWBotHub 插件：AWEmbyPush（awembypush）
 #
 # 从 MoviePilot 插件 AWEmbyPush(v1.5.5) 移植而来。
 # 监听 Emby/Jellyfin 的入库 Webhook，经 TMDB 元数据增强、剧集合并、去重后，
@@ -38,7 +38,7 @@ __plugin__ = {
     "scope": "standalone",
     "author": "AWdress",
     "description": "监听 Emby/Jellyfin 入库 Webhook，经 TMDB 增强/剧集合并/去重后，通过 Telegram/企业微信/Bark 推送精美媒体通知。（自 MoviePilot 插件移植）自带 Vue 配置界面 + 最近推送/测试推送。",
-    "changelog": "v2.0.2 修复企业微信反代与 Webhook 地址\n- API 地址未填写协议时自动补全 https://，避免 gettoken 请求因 URL 无协议而失败\n- 配置页直接显示可复制的 Emby/Jellyfin Webhook 完整地址\n\nv1.5.8 标明独立运行\n- 插件不依赖用户账号或机器人，安装后会显示“独立运行”\n- Webhook 和原有通知功能保持不变\n\nv1.5.7 修复去重记录竞态\n- 发送去重记录的读写加锁，避免多线程并发读写竞态\n\nv1.5.6 移植到 AWBotNest 平台\n- 自 MoviePilot 插件 AWEmbyPush v1.5.5 移植\n- 使用平台 Webhook 机制和 Vue 配置界面\n- 支持 Telegram/企业微信/Bark 三种推送渠道\n- 自动走平台代理，支持 TMDB 元数据增强\n- 剧集合并、去重、测试推送功能完整保留",
+    "changelog": "v2.0.2 修复企业微信反代与 Webhook 地址\n- API 地址未填写协议时自动补全 https://，避免 gettoken 请求因 URL 无协议而失败\n- 配置页直接显示可复制的 Emby/Jellyfin Webhook 完整地址\n\nv1.5.8 标明独立运行\n- 插件不依赖用户账号或机器人，安装后会显示“独立运行”\n- Webhook 和原有通知功能保持不变\n\nv1.5.7 修复去重记录竞态\n- 发送去重记录的读写加锁，避免多线程并发读写竞态\n\nv1.5.6 移植到 AWBotHub 平台\n- 自 MoviePilot 插件 AWEmbyPush v1.5.5 移植\n- 使用平台 Webhook 机制和 Vue 配置界面\n- 支持 Telegram/企业微信/Bark 三种推送渠道\n- 自动走平台代理，支持 TMDB 元数据增强\n- 剧集合并、去重、测试推送功能完整保留",
     "icon": "https://raw.githubusercontent.com/AWdress/MoviePilot-Plugins/main/plugins/awembypush/logo.png",
     "default_enabled": False,
     "webhook": True,
@@ -1151,7 +1151,7 @@ async def teardown(ctx):
     _storage_futures.clear()
     _state.clear()
     _event_loop = None
-# V2 异步存储的内存镜像。Webhook 业务在工作线程执行，写入通过主事件循环回提。
+# 平台异步存储的内存镜像。Webhook 业务在工作线程执行，写入通过主事件循环回提。
 _state: dict = {}
 _event_loop = None
 _storage_futures: set = set()

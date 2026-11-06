@@ -1,4 +1,4 @@
-"""百度贴吧签到：AWBotNest V2 原生实现。"""
+"""百度贴吧签到：AWBotHub 原生实现。"""
 from __future__ import annotations
 
 import asyncio
@@ -19,7 +19,7 @@ __plugin__ = {
     "version": "0.1.5",
     "author": "AWdress",
     "description": "使用百度贴吧 Cookie 自动完成关注贴吧签到，支持多账号、定时执行，通知显示简洁统计，完整吧名及结果保留在记录中。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins_v2/tieba_signin/logo.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/tieba_signin/logo.png",
     "changelog": (
         "v0.1.5 精简签到通知\n"
         "- 通知改为紧凑文字，保留状态和本次/此前已签到数量，不再铺开成功贴吧名单\n"

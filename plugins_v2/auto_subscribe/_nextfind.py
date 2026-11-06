@@ -269,7 +269,7 @@ class NextFindClient:
             raise NextFindResponseError("NextFind 响应格式异常：/quota（缺少额度对象）")
         return data
 
-    # Extended NextFind OpenAPI helpers.  These remain thin wrappers so the V1
+    # Extended NextFind OpenAPI helpers.  These remain thin wrappers so the legacy
     # plugin can expose new server capabilities without duplicating HTTP logic.
     def shield_search(self, **params):
         return self._get("/shield/search", params)

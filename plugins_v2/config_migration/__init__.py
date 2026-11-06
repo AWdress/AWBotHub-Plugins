@@ -1,4 +1,4 @@
-"""Import AWBotNest 1 settings through the companion V1 migration plugin."""
+"""Import historical platform settings through the companion migration plugin."""
 from __future__ import annotations
 
 import copy
@@ -12,12 +12,12 @@ __plugin__ = {'name': '平台迁移助手',
  'id': 'config_migration',
  'version': '1.1.5',
  'author': 'AWdress',
- 'description': '通过 V1 配置迁移源，将系统设置和插件配置安全迁移到 AWBotNest 2。',
+ 'description': '导入旧版配置包，将系统设置和插件配置安全迁移到 AWBotHub。',
  'changelog': 'v1.1.5 适配最新平台插件规范\n- 补齐 plugin_api_version 与依赖声明\n- 配置落盘改走平台公开持久化入口，不再导入平台内部模块\n\nv1.1.4 补齐敏感字段显示按钮\n'
-              '- V1 Webhook 密钥与一次性迁移码默认隐藏并提供眼睛按钮\n'
+              '- 旧平台 Webhook 密钥与一次性迁移码默认隐藏并提供眼睛按钮\n'
               '- 点击显示时使用平台受控接口读取真实值\n\n'
               'v1.1.3 迁移合并后的消息转发配置\n'
-              '- V1 转发复读配置、账号范围、启用状态和 Bot 路由直接改写到消息转发助手\n'
+              '- 旧平台转发复读配置、账号范围、启用状态和 Bot 路由直接改写到消息转发助手\n'
               '- 同时存在消息转发配置时只补齐复读字段，不覆盖现有规则\n'
               '\n'
               'v1.1.2 修复预览后无法执行迁移\n'
@@ -30,25 +30,25 @@ __plugin__ = {'name': '平台迁移助手',
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
               'v1.1.0 支持迁移码自动轮换\n'
-              '- V1 成功导出后自动接收并保存下一枚一次性迁移码\n'
-              '- 无需返回 V1 手动重设迁移码即可再次预览和迁移\n'
+              '- 旧平台成功导出后自动接收并保存下一枚一次性迁移码\n'
+              '- 无需返回旧平台手动重设迁移码即可再次预览和迁移\n'
               '\n'
               'v1.0.1 统一插件名称\n'
-              '- V1 与 V2 统一显示为“平台迁移助手”\n'
+              '- 迁移两端统一显示为“平台迁移助手”\n'
               '- 导入端用途改在 Vue 配置页面说明\n'
               '\n'
               'v1.0.0 初始版本\n'
-              '- 支持连接 V1 迁移源并生成脱敏预览\n'
+              '- 支持连接旧平台迁移源并生成脱敏预览\n'
               '- 支持系统设置、插件配置、启用状态、账号范围和 Bot 路由选择性迁移\n'
-              '- 执行前自动备份 V2 配置，默认保留已有有效值',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_utility.png',
+              '- 执行前自动备份当前平台配置，默认保留已有有效值',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_utility.png',
  'scope': 'standalone',
  'plugin_api_version': 2,
  'requirements': [],
  'render_mode': 'vue',
  'tags': ['配置迁移', '版本升级', '安全备份'],
  'resources': {'timeout_seconds': 60, 'max_concurrency': 1, 'max_background_tasks': 1},
- 'config_schema': {'v1_webhook_secret': {'type': 'password', 'secret': True, 'default': '', 'label': 'V1 Webhook 密钥'},
+ 'config_schema': {'v1_webhook_secret': {'type': 'password', 'secret': True, 'default': '', 'label': '旧平台 Webhook 密钥'},
                    'migration_code': {'type': 'password', 'secret': True, 'default': '', 'label': '一次性迁移码'}}}
 
 _ctx = None
@@ -171,7 +171,7 @@ async def _fetch(ctx, values: dict) -> dict:
     base=str(values.get("v1_url") or "").strip().rstrip("/")
     parsed=urlparse(base)
     if parsed.scheme not in {"http","https"} or not parsed.netloc:
-        raise ValueError("V1 平台地址无效")
+        raise ValueError("旧平台地址无效")
     current = ctx.config
     key=str(values.get("v1_webhook_secret") or "").strip()
     code=str(values.get("migration_code") or "")
@@ -181,12 +181,12 @@ async def _fetch(ctx, values: dict) -> dict:
         key = str(current.get("v1_webhook_secret") or "").strip()
     if code == "********":
         code = str(current.get("migration_code") or "")
-    if not key or len(code)<8: raise ValueError("请填写 V1 Webhook 密钥和至少 8 位迁移码")
+    if not key or len(code)<8: raise ValueError("请填写 旧平台 Webhook 密钥和至少 8 位迁移码")
     url=f"{base}/api/v1/plugin/config_migration/webhook"
     response=await ctx.http.post(url, params={"apikey":key}, json={"code":code}, timeout=30)
     response.raise_for_status()
     data=response.json()
-    if not data.get("ok"): raise ValueError(str(data.get("error") or "V1 拒绝导出"))
+    if not data.get("ok"): raise ValueError(str(data.get("error") or "旧平台拒绝导出"))
     if data.get("format")!="awbotnest-v1-migration": raise ValueError("迁移包格式不正确")
     return data
 
@@ -207,8 +207,8 @@ async def setup(ctx):
         except ValueError as exc:
             return {"ok":False, "error":str(exc)}
         except Exception as exc:
-            ctx.log.warning("连接 V1 迁移源失败：%s", type(exc).__name__)
-            return {"ok":False, "error":"无法连接 V1 平台，请检查地址、端口及两端网络是否互通"}
+            ctx.log.warning("连接旧平台迁移源失败：%s", type(exc).__name__)
+            return {"ok":False, "error":"无法连接旧平台，请检查地址、端口及两端网络是否互通"}
         converted=_convert(_bundle); _preview=_summary(converted)
         next_code=str(_bundle.pop("next_code", "") or "")
         # update_config 直接持久化配置且不会重载插件。若改由前端
@@ -226,13 +226,13 @@ async def setup(ctx):
                 else str(values.get("migration_code") or "")
             ),
         })
-        ctx.log.info("已读取 V1 迁移包：%s 个插件配置（敏感内容未写入日志）", _preview["plugin_configs"])
+        ctx.log.info("已读取旧平台迁移包：%s 个插件配置（敏感内容未写入日志）", _preview["plugin_configs"])
         return {"ok":True, "preview":_preview, "next_code":next_code,
-                "warning":"预览已脱敏；执行迁移前会自动备份 V2 配置。"}
+                "warning":"预览已脱敏；执行迁移前会自动备份当前平台配置。"}
 
     async def migrate(request):
         global _bundle, _preview
-        if _bundle is None: return {"ok":False,"error":"请先读取并预览 V1 配置"}
+        if _bundle is None: return {"ok":False,"error":"请先读取并预览旧平台配置"}
         options=_body(request); converted=_convert(_bundle); settings=ctx.settings
         backup_dir=ctx.data_dir/"backups"; backup_dir.mkdir(parents=True,exist_ok=True)
         backup=backup_dir/f"v2-config-{time.strftime('%Y%m%d-%H%M%S')}.json"
@@ -260,8 +260,8 @@ async def setup(ctx):
         # 已完成的原子迁移，不再导入平台内部配置模块。
         ctx.update_config({})
         _bundle=None; _preview=None
-        ctx.log.info("V1 配置迁移完成，V2 原配置已备份到 %s", backup.name)
-        return {"ok":True,"message":"迁移完成。连接类系统设置需重启 V2 后生效。","backup":str(backup),"changed":changed,"restart_required":True}
+        ctx.log.info("旧平台配置迁移完成，当前平台原配置已备份到 %s", backup.name)
+        return {"ok":True,"message":"迁移完成。连接类系统设置需重启当前平台后生效。","backup":str(backup),"changed":changed,"restart_required":True}
 
     ctx.on_api("status",status); ctx.on_api("preview",preview); ctx.on_api("migrate",migrate)
 

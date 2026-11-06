@@ -17,14 +17,15 @@ from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
 
 
-WIKI = "https://github.com/AWdress/AWBotNest/wiki"
+WIKI = "https://github.com/AWdress/AWBotHub/tree/main/docs/guide"
+PAGE_ROOT = "https://github.com/AWdress/AWBotHub/blob/main/docs/guide/"
 DOCS_DIR = Path(__file__).with_name("wiki_docs")
 MAX_PAGES = 64
 MAX_PAGE_BYTES = 96 * 1024
 MAX_TOTAL_BYTES = 1024 * 1024
 MAX_REPLY_UNITS = 700
 _QUESTION = re.compile(r"[?？]|怎么|怎样|如何|咋|为啥|为什么|能否|能不能|是否|有没有|会不会|要不要|在哪|是什么|有什么|哪个|多少|不能|没有通知|支持|求助|请问|哪里|区别|干什么|不懂|不回|没反应|没响应|不响应|没跑|没执行|没运行|不跑|不执行|不生效|失败|错误|报错|无效|收不到|打不开|timeout|invalid|error|\bis required\b|\brequired for\b", re.I)
-_TOPICS = ("awbotnest", "cookie", "cookiecloud", "telegram", "bot", "docker", "compose", "arm", "ai", "api", "cron", "cloakbrowser", "geoip", "oom",
+_TOPICS = ("awbothub", "awbotnest", "cookie", "cookiecloud", "telegram", "bot", "docker", "compose", "arm", "ai", "api", "cron", "cloakbrowser", "geoip", "oom",
            "插件", "企微", "企业微信", "机器人", "账号", "定时", "备份", "日志", "管理员", "浏览器", "代理", "通知", "验证码", "模型", "密钥")
 
 # Topic + intent pairs recognize ordinary group questions, not a growing list
@@ -56,9 +57,9 @@ _NATURAL_FAQS = tuple((key, re.compile(topic, re.I), re.compile(intent, re.I), s
      r"配|设置|填|弄|接入|连不上|不通|用不了", 205),
     ("full-backup", r"备份|迁移|搬家|还原|恢复",
      r"备份.{0,8}(?:数据|系统|平台)|数据.{0,8}备份|迁移.{0,12}(?:服务器|机器|设备)|(?:如何|怎么|办法|想|求).{0,8}(?:备份|迁移|还原|恢复)", 190),
-    ("install", r"安装|部署|平台|系统|awbotnest|docker|compose",
+    ("install", r"安装|部署|平台|系统|awbothub|awbotnest|docker|compose",
      r"(?:求|要|发).{0,8}(?:安装|部署).{0,8}(?:教程|步骤|文档|方法)|(?:怎么|如何|咋|怎样).{0,8}(?:安装|部署|装)|(?:安装|部署).{0,8}(?:教程|步骤)", 185),
-    ("update", r"平台|系统|awbotnest|docker|compose", r"更新|升级", 185),
+    ("update", r"平台|系统|awbothub|awbotnest|docker|compose", r"更新|升级", 185),
     ("plugin-update", r"插件", r"更新|升级|重载", 210),
     ("plugin-install", r"插件", r"装好|装完|装上|安装|启用|配置|设置|下一步", 180),
     ("arm", r"(?<![a-z0-9_])(?:nas|arm(?:64)?|aarch64|amd64|x86_64)(?![a-z0-9_])|树莓派",
@@ -182,9 +183,12 @@ def _slug(link):
             path = path[2:]
         if "/" in path:
             return None
-    prefix = "/AWdress/AWBotNest/wiki/"
-    if path.lower().startswith(prefix.lower()):
-        path = path[len(prefix):]
+    # Read old bundled links as aliases, but always render the current, real
+    # manual URL. No other repository, arbitrary path or host is trusted.
+    prefixes = ("/AWdress/AWBotHub/blob/main/docs/guide/", "/AWdress/AWBotNest/wiki/")
+    matched = next((prefix for prefix in prefixes if path.lower().startswith(prefix.lower())), None)
+    if matched is not None:
+        path = path[len(matched):]
     elif path.startswith("/"):
         return None
     slug = unquote(path)
@@ -258,7 +262,7 @@ def _plain(markdown):
 
 
 _FILLERS = ("请问", "想问", "一下", "怎么", "如何", "为什么", "为何", "什么", "是否", "能不能", "可不可以",
-            "怎么办", "帮我", "平台", "awbotnest", "没有", "不了", "可以", "这个", "那个", "请", "吗", "呢", "啊", "的", "了")
+            "怎么办", "帮我", "平台", "awbothub", "awbotnest", "没有", "不了", "可以", "这个", "那个", "请", "吗", "呢", "啊", "的", "了")
 _ALIASES = (("企微", "企业微信"), ("tg", "telegram"), ("忘记密码", "管理员 密码"),
             ("定时没运行", "插件 定时"), ("docker安装", "docker 安装 部署"),
             ("ai设置", "ai 配置 模型"), ("cookie同步", "cookie 同步 cookiecloud"))
@@ -633,10 +637,10 @@ class WikiLibrary:
         return results
 
     def _render_short(self, title, points, page, *, excerpt=False):
-        url = WIKI + "/" + quote(page, safe="")
+        url = PAGE_ROOT + quote(page, safe="") + ".md"
         prefix = "<b>" + html.escape(_cut(title, 70)) + "</b>\n"
         version = html.escape(self.state["platform_version"])
-        footer = '\n\n<i>内置手册 ' + version + '</i> · <a href="' + url + '">Wiki 原文</a>'
+        footer = '\n\n<i>内置手册 ' + version + '</i> · <a href="' + url + '">手册原文</a>'
         if self.last_refresh_error:
             footer += "\n<i>重读失败，使用已加载手册。</i>"
         output = []
@@ -662,7 +666,7 @@ class WikiLibrary:
     async def answer(self, question):
         await self.refresh()
         if not self.index:
-            return '<b>内置手册暂不可用</b>\n请重新载入手册或重新安装插件。\n<a href="' + WIKI + '">打开官方 Wiki</a>'
+            return '<b>内置手册暂不可用</b>\n请重新载入手册或重新安装插件。\n<a href="' + WIKI + '">打开官方手册</a>'
         if _question_intent(question) and _needs_setting_detail(question) and not self._best_faq(question):
             return "你想设置哪一项？例如 Bot 通知、企微回调、Cookie、AI 或插件。\n说一下具体功能，我再给你操作步骤。"
         matched = self._best_faq(question)
@@ -671,7 +675,7 @@ class WikiLibrary:
             return self._render_short(entry["question"], entry["points"], entry["page"])
         results = self._answer_sections(question)
         if not results or results[0]["score"] < 25:
-            return '<b>手册里暂未找到明确答案</b>\n请补充功能名称或完整报错，我不会猜测。\n<i>内置手册 ' + html.escape(self.state["platform_version"]) + '</i> · <a href="' + WIKI + '">查看 Wiki</a>'
+            return '<b>手册里暂未找到明确答案</b>\n请补充功能名称或完整报错，我不会猜测。\n<i>内置手册 ' + html.escape(self.state["platform_version"]) + '</i> · <a href="' + WIKI + '">查看官方手册</a>'
         item = results[0]
         tokens, _ = _query_tokens(question)
         sentences = [part.strip(" •\t") for part in re.split(r"\n+|(?<=[。！？])", item["text"]) if part.strip(" •\t")]

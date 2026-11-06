@@ -1,9 +1,9 @@
-"""AWBotNest V2 原生消息自删插件。"""
+"""AWBotHub 原生消息自删插件。"""
 from __future__ import annotations
 import asyncio
 import re
 
-__plugin__={"id":"self_delete","name":"删除自己消息","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /dme 数字 或 .dme 数字，删除当前会话里自己最近发的若干条消息。","icon":"https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_cleanup.png","tags":["消息自删","批量清理","聊天管理"],"config_schema":{"command":{"type":"string","default":".dme","label":"触发命令","section":"基础配置","order":10},"tip_seconds":{"type":"number","default":2,"label":"提示停留(秒)","min":0,"max":10,"step":1,"section":"基础配置","order":11}},"changelog":"v2.0.0 原生 AWBotNest V2 迁移\n- 移除 V1 兼容运行层\n- 使用 Telethon 原生历史消息迭代和批量删除"}
+__plugin__={"id":"self_delete","name":"删除自己消息","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /dme 数字 或 .dme 数字，删除当前会话里自己最近发的若干条消息。","icon":"https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_cleanup.png","tags":["消息自删","批量清理","聊天管理"],"config_schema":{"command":{"type":"string","default":".dme","label":"触发命令","section":"基础配置","order":10},"tip_seconds":{"type":"number","default":2,"label":"提示停留(秒)","min":0,"max":10,"step":1,"section":"基础配置","order":11}},"changelog":"v2.0.0 原生 AWBotHub 迁移\n- 移除旧版兼容运行层\n- 使用 Telethon 原生历史消息迭代和批量删除"}
 
 def _count(text,command):
     bare=re.escape(str(command or "dme").lstrip("/.").strip() or "dme")

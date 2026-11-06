@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：影巢口令红包（yingchao_redpacket）—— 测试功能
+# AWBotHub 插件：影巢口令红包（yingchao_redpacket）—— 测试功能
 #
 # 监控指定发包人发的「口令红包」（图片/文档口令）并自动参与：
 #   - OCR 开启且 ddddocr 可用：识别图片口令自动回复。
@@ -26,8 +26,8 @@ __plugin__ = {
     "scope": "user",
     "default_enabled": False,
     "description": "影巢口令红包（测试功能）：监控指定发包人发的口令红包，OCR识别图片口令或复制他人口令参与，含陷阱防护。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/hdhive_lottery.jpg",
-    "changelog": "v1.0.4 修复内存与任务清理\n- 新增过期口令/回复缓存清理，避免长时间运行内存增长\n- 卸载时取消 OCR 超时任务\n\nv1.0.3 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotNest 插件开发规范\nv1.0.2 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/hdhive_lottery.jpg",
+    "changelog": "v1.0.4 修复内存与任务清理\n- 新增过期口令/回复缓存清理，避免长时间运行内存增长\n- 卸载时取消 OCR 超时任务\n\nv1.0.3 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.0.2 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
     "config_schema": {
         "token_enabled": {
             "type": "boolean", "default": False, "label": "启用口令红包监控",

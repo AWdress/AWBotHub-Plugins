@@ -33,7 +33,7 @@ class Transport:
         self.tmdb_key = tmdb_key.strip()
 
     async def _read(self, url, *, params=None, method="GET", json=None, headers=None):
-        headers = {"User-Agent": "Mozilla/5.0 AWBotNest-VPSWidget/0.0.1", **(headers or {})}
+        headers = {"User-Agent": "Mozilla/5.0 AWBotHub-VPSWidget/0.0.1", **(headers or {})}
         # Authenticated APIs never follow redirects; public pages allow only known HTTPS hosts.
         authenticated = bool(headers.get("Authorization") or headers.get("trakt-api-key")
                              or (params or {}).get("api_key"))

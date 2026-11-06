@@ -1,15 +1,14 @@
 # 插件开发入门
 
-这一页面向会一点 Python、想写第一个 V2 插件的人，接口按 **v2.0.2.7** 核对。先完成一个不需要 Telegram、网络或额外依赖的小例子，再按需求接入其他能力。
+这一页面向会一点 Python、想写第一个 AWBotHub 插件的人，接口按 **v2.0.2.7** 核对。先完成一个不需要 Telegram、网络或额外依赖的小例子，再按需求接入其他能力。
 
-完整规范与详细接口放在源码文档中，本文不重复所有参数：
+完整规范与详细接口放在官方文档中，开发插件不需要获取系统核心源码，本文不重复所有参数：
 
-- [插件开发指南](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md)
-- [插件硬性规范](https://github.com/AWdress/AWBotNest/blob/v2/docs/SPEC.md)
-- [开放 API 说明](https://github.com/AWdress/AWBotNest/blob/v2/docs/API.md)
-- [单文件模板](https://github.com/AWdress/AWBotNest/blob/v2/plugins/_TEMPLATE.py)
+- [插件开发指南与单文件示例](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md)
+- [插件硬性规范](https://github.com/AWdress/AWBotHub/blob/main/docs/SPEC.md)
+- [开放 API 说明](https://github.com/AWdress/AWBotHub/blob/main/docs/API.md)
 
-相关使用说明：[插件管理](Plugins) · [开放 API](Open-API) · [系统助手](System-Assistant) · [AI 服务](AI-Service) · [Cookie 与浏览器](Cookies-and-Browser)
+相关使用说明：[插件管理](Plugins.md) · [开放 API](Open-API.md) · [系统助手](System-Assistant.md) · [AI 服务](AI-Service.md) · [Cookie 与浏览器](Cookies-and-Browser.md)
 
 ## 1. 最小可用插件
 
@@ -28,7 +27,7 @@ __plugin__ = {
         "message": {
             "type": "string",
             "label": "消息内容",
-            "default": "你好，AWBotNest！",
+            "default": "你好，AWBotHub！",
             "required": True,
         },
         "run_once": {
@@ -42,7 +41,7 @@ __plugin__ = {
 
 async def setup(ctx):
     async def run(payload):
-        message = str(ctx.config.get("message", "你好，AWBotNest！"))
+        message = str(ctx.config.get("message", "你好，AWBotHub！"))
         ctx.log.info("示例消息：%s", message)
         return {"ok": True, "message": "已写入插件日志"}
 
@@ -86,9 +85,9 @@ async def teardown(ctx):
 - 后台协程用 `ctx.create_task()`，额外资源用 `ctx.add_cleanup()` 登记释放。
 - 不要吞掉 `asyncio.CancelledError`，也不要启动系统无法追踪的永久线程或协程。
 
-### V2 不是 V1 改个版本号
+### 旧插件不能只改版本号
 
-V2 使用 Telethon。V1 插件中的客户端、调度器或内部模块可能不适用，不能只改 `version` 就宣传兼容。新插件使用正式 `ctx` 接口，不导入其他插件的实例，也不读取系统真实配置文件来绕过权限。
+当前平台使用 Telethon。旧插件中的客户端、调度器或内部模块可能不适用，不能只改 `version` 就宣传兼容。新插件使用正式 `ctx` 接口，不导入其他插件的实例，也不读取系统真实配置文件来绕过权限。
 
 ## 3. 选对作用域
 
@@ -120,7 +119,7 @@ V2 使用 Telethon。V1 插件中的客户端、调度器或内部模块可能�
 
 系统助手能查询并调用已有的 Schema 动作按钮，原来已通过 `ctx.action()` 注册的按钮不需要再写一份“助手专用接口”。助手看不到任意 Python 函数，也不会直接操作 Vue 中只有前端逻辑的按钮。
 
-新动作可以通过 `description`、`parameters`、`read_only`、`agent_exposed` 描述用途、参数和权限，便于助手正确使用。真实会改变数据的操作不要标成只读，也不要为了省一次确认把危险动作暴露出去。非敏感配置修改、动作确认与源码排查的边界见 [系统助手](System-Assistant)。
+新动作可以通过 `description`、`parameters`、`read_only`、`agent_exposed` 描述用途、参数和权限，便于助手正确使用。真实会改变数据的操作不要标成只读，也不要为了省一次确认把危险动作暴露出去。非敏感配置修改、动作确认与源码排查的边界见 [系统助手](System-Assistant.md)。
 
 ### 自定义 Vue 页面
 
@@ -135,7 +134,7 @@ V2 使用 Telethon。V1 插件中的客户端、调度器或内部模块可能�
 
 内部接口用 `ctx.on_api()` 注册，只对管理员配置操作开放；不要为配置页随意注册公开 Webhook。Vue 的前端依赖由作者构建，系统启用插件时不会帮你运行 `npm install` 或编译前端。
 
-详细说明：[配置表单](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#配置表单) · [Vue 配置界面（开发指南中的同名章节）](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md) · [配置页内部 API](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#配置页内部-api)
+详细说明：[配置表单](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md#配置表单) · [Vue 配置界面（开发指南中的同名章节）](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md) · [配置页内部 API](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md#配置页内部-api)
 
 ## 5. Cron 字段与定时任务是两件事
 
@@ -161,7 +160,7 @@ async def daily():
 ctx.schedule_cron("daily", daily, hour=9, minute=0)
 ```
 
-`schedule_cron` 接收 APScheduler 字段参数，不是把任意 Cron 字符串直接塞给 `hour`。自定义字符串转换、五段/六段兼容和时区处理，请阅读[调度与后台任务](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#调度与后台任务)，对照正式插件接口实现并测试；不要套用开放 REST API 的请求格式。
+`schedule_cron` 接收 APScheduler 字段参数，不是把任意 Cron 字符串直接塞给 `hour`。自定义字符串转换、五段/六段兼容和时区处理，请阅读[调度与后台任务](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md#调度与后台任务)，对照正式插件接口实现并测试；不要套用开放 REST API 的请求格式。
 
 普通周期任务可用 `ctx.schedule_interval("refresh", refresh, seconds=300)`。任务名称应稳定且在插件实例内唯一，不要每次运行都重新注册一个新任务。
 
@@ -182,9 +181,9 @@ ctx.schedule_cron("daily", daily, hour=9, minute=0)
 | 持久化数据 | `ctx.storage`、`ctx.data_dir` | 只写插件自己的命名空间和目录。 |
 | 短期交互状态 | `ctx.sessions` | 适合会话锁与临时状态，不要高频写数据库。 |
 
-具体签名及示例：[系统服务](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#系统服务) · [通知](Accounts-and-Notifications) · [AI 配置](AI-Service) · [Cookie 与浏览器](Cookies-and-Browser)
+具体签名及示例：[系统服务](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md#系统服务) · [通知](Accounts-and-Notifications.md) · [AI 配置](AI-Service.md) · [Cookie 与浏览器](Cookies-and-Browser.md)
 
-企业微信文字、图片、文件和按钮事件通过 `ctx.on_wecom_message()` 接入统一回调；消息类型、成员隔离、媒体大小限制、回复方法见[企业微信统一消息回调](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#企业微信统一消息回调)。不要为同一个应用另搭一套不必要的回调入口。
+企业微信文字、图片、文件和按钮事件通过 `ctx.on_wecom_message()` 接入统一回调；消息类型、成员隔离、媒体大小限制、回复方法见[企业微信统一消息回调](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md#企业微信统一消息回调)。不要为同一个应用另搭一套不必要的回调入口。
 
 ### CloakBrowser 的 Key 与资源释放
 
@@ -204,7 +203,7 @@ ctx.schedule_cron("daily", daily, hour=9, minute=0)
 
 ### 企业微信：复用系统回调
 
-管理员先完成 [账号与通知](Accounts-and-Notifications) 中的自建应用回调配置，允许具体成员，并把此通知渠道关联给插件。插件启用后才会收到消息；仅注册函数或只设置 `scope: "wecom"` 都不能替代这些授权。
+管理员先完成 [账号与通知](Accounts-and-Notifications.md) 中的自建应用回调配置，允许具体成员，并把此通知渠道关联给插件。插件启用后才会收到消息；仅注册函数或只设置 `scope: "wecom"` 都不能替代这些授权。
 
 系统先验签、解密并检查成员与插件绑定，然后把统一消息对象交给 `ctx.on_wecom_message()`。常用接口：
 
@@ -282,7 +281,7 @@ async def reply_export(event, excel_bytes: bytes):
 
 `event.reply()` 会发回原会话，群里的请求也会回到群里。私人账单应限制为已授权用户的私聊，先核对发送者，再查询或导出。大小、发言权限和限流遵循 Telegram 的规则，不使用企业微信的 20 MiB 限制。
 
-系统助手的 Telegram／企业微信配对、图片识别和按钮确认见 [系统助手](System-Assistant)，不用在插件中重复实现助手回调。
+系统助手的 Telegram／企业微信配对、图片识别和按钮确认见 [系统助手](System-Assistant.md)，不用在插件中重复实现助手回调。
 
 ## 8. 第三方依赖怎么声明
 
@@ -296,11 +295,11 @@ async def reply_export(event, excel_bytes: bytes):
 
 标准库不用声明。发行包名和导入名可能不同；extras 也可能需要显式补齐附加包。系统依赖目录是共享的，不是插件独立虚拟环境，不能强制降级核心库或删除公共依赖来解决自己的问题。
 
-包在 x86_64 可用，不代表 ARM64 和当前 Python 版本也有可用 wheel；有原生扩展的包要分别验证。详见[依赖声明与安装](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#python-依赖声明与安装)。
+包在 x86_64 可用，不代表 ARM64 和当前 Python 版本也有可用 wheel；有原生扩展的包要分别验证。详见[依赖声明与安装](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md#python-依赖声明与安装)。
 
 ## 9. 发布到插件市场
 
-当前仓库界面接受名为 `AWBotNest-Plugins` 的公开 GitHub 仓库，V2 清单放在仓库根目录的 `manifest_v2.json`。
+官方插件仓库为 [`AWdress/AWBotHub-Plugins`](https://github.com/AWdress/AWBotHub-Plugins)，插件清单放在仓库根目录的 `manifest_v2.json`。自建仓库使用当前平台支持的公开 GitHub 仓库格式；旧平台不识别新名称时先升级平台。
 
 上面入门插件对应的最小清单：
 
@@ -321,7 +320,7 @@ async def reply_export(event, excel_bytes: bytes):
 
 仓库中的文件路径、插件 ID、版本和作用域必须相互一致。发布更新时，清单和入口元数据一起改版本；只换文件、不改版本，管理员可能看不到更新提示。
 
-目录插件和 Vue 资源的发布方式，请按[市场发布规范](https://github.com/AWdress/AWBotNest/blob/v2/docs/PLUGIN_GUIDE.md#发布到插件市场)组织。测试文件、真实 Key、Cookie、Session、日志和个人配置不要放入插件发布包。
+目录插件和 Vue 资源的发布方式，请按[市场发布规范](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md#发布到插件市场)组织。测试文件、真实 Key、Cookie、Session、日志和个人配置不要放入插件发布包。
 
 ## 10. 发布前最低检查清单
 
@@ -337,4 +336,4 @@ async def reply_export(event, excel_bytes: bytes):
 
 遇到系统接口行为与文档不一致时，报告系统版本、最小复现代码和脱敏日志。不要让管理员为了让插件工作而把所有权限、全部密钥或整个配置目录发给你。
 
-返回：[Wiki 首页](Home) · [插件管理](Plugins) · [常见问题](Troubleshooting)
+返回：[Wiki 首页](Home.md) · [插件管理](Plugins.md) · [常见问题](Troubleshooting.md)

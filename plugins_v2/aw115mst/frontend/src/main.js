@@ -9,8 +9,8 @@ const host = {
   async saveConfig(values) { config = structuredClone(values) },
   async revealSecret(field) { return config[field] || '' },
   async callApi(path) {
-    if (path === '/status') return {ok: false, message: '当前为独立界面预览，运行状态与记录需在 AWBotNest 平台中读取。'}
-    return {ok: false, message: '当前为独立界面预览，请在 AWBotNest 平台中执行此操作。'}
+    if (path === '/status') return {ok: false, message: '当前为独立界面预览，运行状态与记录需在 AWBotHub 平台中读取。'}
+    return {ok: false, message: '当前为独立界面预览，请在 AWBotHub 平台中执行此操作。'}
   },
   toast: {success: console.log, error: console.error},
 }

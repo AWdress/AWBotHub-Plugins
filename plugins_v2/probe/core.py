@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：插件开发探针（probe）
+# AWBotHub 插件：插件开发探针（probe）
 #
 # 给插件开发者用的「信息采集器」。在 getmsg 的原始结构之上，额外生成一份
 # 带「访问路径」的速查，把开发时最常翻的字段全拆好：
@@ -9,7 +9,7 @@
 #   - 媒体 media（photo / document / video... 的 file_id / mime / 大小）
 #   - 内联键盘 reply_markup（每个按钮的 text 与 callback_data / url，做点按钮用）
 #   - 被回复消息 / 转发来源 / via_bot 等关系字段
-#   - 建议使用的 V2 on_message 参数（按本条消息特征推断）
+#   - 建议使用的 平台 on_message 参数（按本条消息特征推断）
 #   - 末尾附完整 Telethon 原始结构（等价 getmsg）
 #
 # 触发：
@@ -33,8 +33,8 @@ __plugin__ = {
     "version": "1.0.12",
     "author": "AWdress",
     "description": "开发插件时采集消息/会话/按钮/回调的完整信息：回复消息发 .probe 导出带访问路径的字段速查 + 原始结构；.cbprobe 抓 Bot 收到的回调。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_utility.png",
-    "changelog": "v1.0.3 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotNest 插件开发规范\nv1.0.2 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_utility.png",
+    "changelog": "v1.0.3 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.0.2 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
     "scope": "both",
     "default_enabled": False,
     "config_schema": {
@@ -66,7 +66,7 @@ __plugin__.update(
     changelog=(
         "v1.0.12 完成 Telethon 原生字段迁移\n"
         "- 修复回复、媒体组、按钮、回调与文件投递接口\n"
-        "- 报告改为 AWBotNest V2 原生事件注册示例\n\n"
+        "- 报告改为 AWBotHub 原生事件注册示例\n\n"
         + __plugin__["changelog"]
     ),
 )
@@ -257,7 +257,7 @@ def _fmt_relations(message, reply, limit: int) -> list:
 
 def _fmt_suggested_filters(message) -> list:
     incoming = not bool(getattr(message, "outgoing", False))
-    out = ["", "【建议的 V2 事件注册】"]
+    out = ["", "【建议的 平台事件注册】"]
     out.append(f"  @ctx.on_message(incoming={incoming}, outgoing={not incoming}, pattern=r\"^命令\", chats=[{getattr(message, 'chat_id', 0)}])")
     out.append("  回调按钮使用 @ctx.on_callback(pattern=rb\"^前缀\")")
     out.append("  私聊/群组/频道在回调内读取 event.is_private / is_group / is_channel")
@@ -267,7 +267,7 @@ def _fmt_suggested_filters(message) -> list:
 def _build_report(message, source: str, limit: int, *, chat=None, sender=None, reply=None) -> str:
     head = [
         "=" * 60,
-        "AWBotNest 插件开发探针 · probe",
+        "AWBotHub 插件开发探针 · probe",
         f"生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}",
         f"采集来源: {source}",
         "=" * 60,
@@ -297,7 +297,7 @@ def _build_cb_report(cb, limit: int, *, sender=None) -> str:
         data = bytes(data).decode("utf-8", "replace")
     lines = [
         "=" * 60,
-        "AWBotNest 插件开发探针 · 回调抓取（CallbackQuery）",
+        "AWBotHub 插件开发探针 · 回调抓取（CallbackQuery）",
         f"生成时间: {datetime.now():%Y-%m-%d %H:%M:%S}",
         "=" * 60,
         "",

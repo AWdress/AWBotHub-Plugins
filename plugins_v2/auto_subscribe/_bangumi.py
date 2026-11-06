@@ -9,7 +9,7 @@ import httpx
 
 
 _API = "https://api.bgm.tv/v0/subjects/{subject_id}"
-_UA = "AWBotNest-AutoSubscribe/1.3"
+_UA = "AWBotHub-AutoSubscribe/1.3"
 _CACHE_TTL = 3600
 _cache: dict[int, tuple[float, list[str]]] = {}
 _lock = RLock()

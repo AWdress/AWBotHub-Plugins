@@ -34,7 +34,7 @@ class Transport:
         self.checkpoint = checkpoint or (lambda: None)
 
     async def _read(self, url, *, params=None, method="GET", json=None, headers=None):
-        headers = {"User-Agent": "Mozilla/5.0 AWBotNest-NextFindCharts/1.0", **(headers or {})}
+        headers = {"User-Agent": "Mozilla/5.0 AWBotHub-NextFindCharts/1.0", **(headers or {})}
         # Authenticated APIs never follow redirects; public pages allow only known HTTPS hosts.
         authenticated = bool(headers.get("Authorization") or headers.get("trakt-api-key")
                              or (params or {}).get("api_key"))

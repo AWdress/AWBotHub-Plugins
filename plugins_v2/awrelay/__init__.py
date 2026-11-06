@@ -1,4 +1,4 @@
-"""awrelay AWBotNest V2 原生插件入口。"""
+"""awrelay AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -12,7 +12,7 @@ __plugin__ = {'name': 'AWRelay',
  'version': '2.0.6',
  'author': 'AWdress',
  'description': '轻量自托管的 Telegram 私聊消息中转机器人。访客私聊转发到群组论坛话题，管理员在对应话题内回复用户。内置人机验证、广告过滤、黑名单。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/awrelay/logo.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/awrelay/logo.png',
  'changelog': 'v2.0.6 修复用户资料深链\n- 公开用户名优先使用通用 t.me 链接，无用户名时使用 openmessage 数字 ID 深链\n- 没有公开用户名的用户也能从话题中直接打开资料\n- 清理任务改用平台 schedule_cron 正式接口\n\nv2.0.5 修复 Bot 论坛转发受限\n'
               '- Bot 即使已取得群实体，话题查询、创建和消息复制也统一走官方 Bot API\n'
               '- 不再调用 Telegram 禁止 Bot 使用的 GetForumTopicsRequest\n'
@@ -37,12 +37,12 @@ __plugin__ = {'name': 'AWRelay',
               '- 改用 Telethon grouped_id 恢复相册聚合转发\n'
               '- 启动时校验完整群组 ID、超级群和论坛状态，并记录双向转发结果\n'
               '\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
-              'v1.2.19 修复 AWRelay V2 事件与话题接口\n'
+              'v1.2.19 修复 AWRelay 平台事件与话题接口\n'
               '- 修正 Telethon 论坛话题 API 所属命名空间与创建参数\n'
               '- 验证按钮改为匹配 callback data，恢复访客人机验证\n'
               '- 使用完整 -100 会话 ID 匹配管理群，恢复话题内回复\n'
@@ -51,7 +51,7 @@ __plugin__ = {'name': 'AWRelay',
               'v1.2.18 修复 Telegram 话题中转\n'
               '- 使用 Telethon 原生请求创建论坛话题并生成转发随机 ID\n'
               '- 修复话题回复 ID、验证码回调数据和话题发送参数转换\n'
-              '- 状态接口通过 V2 客户端读取群组名称\n'
+              '- 状态接口通过平台客户端读取群组名称\n'
               '\n'
               'v1.2.17 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -61,21 +61,21 @@ __plugin__ = {'name': 'AWRelay',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.2.15 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.2.15 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.2.14 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.2.12 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.2.12 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.2.8 修复话题匹配\n'
               '- 修复 General 话题（thread_id=0）误命中无 topic_id 的待处理记录\n'

@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：115 频道监控（movie_monitor_115）
+# AWBotHub 插件：115 频道监控（movie_monitor_115）
 #
 # 通用监控：监听会话里的 115 分享消息，不依赖固定频道格式——
 #   1) 优先直接读取消息里写好的「TMDB ID」；
@@ -22,7 +22,7 @@ __plugin__ = {
     "version": "1.0.16",
     "author": "AWdress",
     "description": "通用监控频道里的 115 分享，读取/识别 TMDB 后查 Emby 媒体库，缺失的转发给 CMS 入库机器人。可选电影/电视剧，默认全部。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_cloud_media.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_cloud_media.png",
     "changelog": "v1.0.16 修复 Vue 配置与测试接口\n- 配置读取和保存迁移到新版平台 host 接口\n- 状态、日志、群组名称和连接测试改用 host.callApi\n- 保留旧配置的监控开关兼容性\n\nv1.0.14 修复识别与配置缺陷\n- 修复保存配置接口误用 await req.json() 导致配置无法保存\n- 修复 TMDB 搜索调用了不存在的 multi_search（改为 search_all）\n- 修复 Emby 查重缺少 media_type 参数导致去重失效、重复入库\n\nv1.0.13 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
     "scope": "user",
     "default_enabled": False,

@@ -1,4 +1,4 @@
-"""Task catalog only; scheduling belongs to AWBotNest, not APScheduler here."""
+"""Task catalog only; scheduling belongs to AWBotHub, not APScheduler here."""
 from importlib import import_module
 from ..core.runtime import get_runtime, require_download
 

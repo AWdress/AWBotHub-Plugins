@@ -40,7 +40,7 @@ def _dashboard_config(payload):
 
 def _check_key(key):
     if key not in ALLOWED_KEYS:
-        raise ValueError('此设置由 AWBotNest 平台管理，不能在插件中修改')
+        raise ValueError('此设置由 AWBotHub 平台管理，不能在插件中修改')
 
 
 def _reload(key, payload):

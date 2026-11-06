@@ -1,4 +1,4 @@
-"""human_lottery AWBotNest V2 原生插件入口。"""
+"""human_lottery AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -13,16 +13,16 @@ __plugin__ = {'name': '幸运抽奖',
  'author': 'AWdress',
  'scope': 'user',
  'description': '用用户账号在群里像真人一样发起抽奖：群友发送关键词参与，到时随机开奖，支持状态、提前开奖、取消和历史记录。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/lucky_lottery.svg',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/lucky_lottery.svg',
  'changelog': 'v2.0.3 修复 Telegram 用户资料链接\n- 公开用户名优先使用通用 t.me 链接，无用户名时使用 openmessage 数字 ID 深链\n- 没有公开用户名的参与者也能直接打开资料\n\n'
               'v2.0.2 统一富文本表格通知\n- 开奖结果通知改为平台结构化表格\n\n'
               'v2.0.1 修复创建抽奖参数提示清理\n'
               '- 参数不足或过多时，错误提示按参与回复清理时间自动删除\n'
               '\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v1.1.10 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -32,21 +32,21 @@ __plugin__ = {'name': '幸运抽奖',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.1.8 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.1.8 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.1.7 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.1.5 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.1.5 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.1.1 简化创建格式\n'
               '- 删除重复的“每人奖励”参数，奖品即为每位中奖者获得的奖励\n'

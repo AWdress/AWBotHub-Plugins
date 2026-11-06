@@ -20,7 +20,7 @@ __plugin__ = {
     "default_enabled": False,
     "render_mode": "vue",
     "description": "用用户账号在群里像真人一样发起抽奖：群友发送关键词参与，到时随机开奖，支持状态、提前开奖、取消和历史记录。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/lucky_lottery.svg",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/lucky_lottery.svg",
     "changelog": "v1.1.1 简化创建格式\n- 删除重复的“每人奖励”参数，奖品即为每位中奖者获得的奖励\n- 自动发奖金额统一从奖品名称中提取\n\nv1.1.0 优化抽奖交互与清理\n- 支持按时间或人数开奖、参与提示、昵称链接、原消息链接和结束清理\n\nv1.0.2 更名并启用原创 Logo\n- 插件名称调整为「幸运抽奖」并使用原创 Logo\n\nv1.0.1 新增自动发奖\n- 开奖后回复中奖者参与消息发送奖励命令\n\nv1.0.0 初始版本\n- 支持用户账号发起、参与、开奖、取消和历史记录",
 }
 

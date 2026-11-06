@@ -57,7 +57,7 @@ onMounted(async () => {
       <header><div><p class="eyebrow">ACCOUNT ACCESS</p><h2>登录设置</h2><p>选择憨憨小助手访问 HHanClub 时使用的 Cookie 来源。</p></div><span class="source-badge">{{ cfg.cookie_source === 'manual' ? '手动 Cookie' : '平台同步' }}</span></header>
 
       <div class="source-grid" role="radiogroup" aria-label="Cookie 来源">
-        <label :class="{ selected: cfg.cookie_source === 'platform' }"><input v-model="cfg.cookie_source" type="radio" value="platform"><span class="radio-dot" /><span><b>从平台读取</b><small>使用 AWBotNest 已同步的 hhanclub.net Cookie</small></span></label>
+        <label :class="{ selected: cfg.cookie_source === 'platform' }"><input v-model="cfg.cookie_source" type="radio" value="platform"><span class="radio-dot" /><span><b>从平台读取</b><small>使用 AWBotHub 已同步的 hhanclub.net Cookie</small></span></label>
         <label :class="{ selected: cfg.cookie_source === 'manual' }"><input v-model="cfg.cookie_source" type="radio" value="manual"><span class="radio-dot" /><span><b>手动填写</b><small>使用下方保存的 Cookie，适合平台同步不可用时</small></span></label>
       </div>
 

@@ -1,9 +1,9 @@
-"""AWBotNest V2 原生自动换头像插件。"""
+"""AWBotHub 原生自动换头像插件。"""
 from __future__ import annotations
 import random
 from telethon import functions
 
-__plugin__={"id":"auto_avatar","name":"自动换头像","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"定时从每账号图片池随机更换头像，并提供添加、查看和清空命令。","icon":"https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_media.png","tags":["头像轮换","图片池","定时任务"],"config_schema":{"delete_old":{"type":"boolean","default":True,"label":"删除旧头像","section":"功能开关","order":1},"interval_min":{"type":"number","default":60,"label":"换头像间隔(分钟)","min":10,"max":1440,"step":10,"section":"头像轮换","order":10},"add_command":{"type":"string","default":".avataradd","label":"加图命令","section":"图片池命令","order":20},"list_command":{"type":"string","default":".avatarlist","label":"查看命令","section":"图片池命令","order":21},"clear_command":{"type":"string","default":".avatarclear","label":"清空命令","section":"图片池命令","order":22}},"resources":{"timeout_seconds":120,"max_concurrency":4},"changelog":"v2.0.0 原生 AWBotNest V2 迁移\n- 使用 Telethon 原生头像上传与删除接口\n- 使用平台异步存储记录插件设置的头像\n- 图片池限制在插件数据目录并移除 V1 兼容层"}
+__plugin__={"id":"auto_avatar","name":"自动换头像","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"定时从每账号图片池随机更换头像，并提供添加、查看和清空命令。","icon":"https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_media.png","tags":["头像轮换","图片池","定时任务"],"config_schema":{"delete_old":{"type":"boolean","default":True,"label":"删除旧头像","section":"功能开关","order":1},"interval_min":{"type":"number","default":60,"label":"换头像间隔(分钟)","min":10,"max":1440,"step":10,"section":"头像轮换","order":10},"add_command":{"type":"string","default":".avataradd","label":"加图命令","section":"图片池命令","order":20},"list_command":{"type":"string","default":".avatarlist","label":"查看命令","section":"图片池命令","order":21},"clear_command":{"type":"string","default":".avatarclear","label":"清空命令","section":"图片池命令","order":22}},"resources":{"timeout_seconds":120,"max_concurrency":4},"changelog":"v2.0.0 原生 AWBotHub 迁移\n- 使用 Telethon 原生头像上传与删除接口\n- 使用平台异步存储记录插件设置的头像\n- 图片池限制在插件数据目录并移除旧版兼容层"}
 
 _EXTENSIONS={".jpg",".jpeg",".png",".webp"}
 async def _identity(client):

@@ -1,4 +1,4 @@
-"""hhan_lottery AWBotNest V2 原生插件入口。"""
+"""hhan_lottery AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -17,10 +17,10 @@ __plugin__ = {'name': '憨憨小助手',
               'v2.0.3 补齐 Cookie 显示按钮\n- 手动 Cookie 默认隐藏，点击眼睛后显示平台受控读取的真实值\n- 保存时兼容平台脱敏占位值，避免覆盖已有 Cookie\n\n'
               'v2.0.2 修复多行通知显示\n- 转盘运行摘要按状态、详情拆分为独立表格行\n- 避免完整正文挤入单个单元格导致裁切或显示不全\n\n'
               'v2.0.1 统一富文本表格通知\n- 转盘、赠豆和消息管理通知统一使用结构化表格\n\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v2.9.12 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -30,21 +30,21 @@ __plugin__ = {'name': '憨憨小助手',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v2.9.10 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v2.9.10 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v2.9.9 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v2.9.7 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v2.9.7 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v2.9.0 新增 HHanClub 随机红包自动参与\n'
               '- 仅监听官方机器人 8780479105\n'
@@ -62,7 +62,7 @@ __plugin__ = {'name': '憨憨小助手',
                'recovery_seconds': 60},
  'requirements': ['httpx>=0.27', 'beautifulsoup4>=4.12', 'lxml>=5.0'],
  'config_schema': {'manual_cookie': {'title': 'manual cookie',
-                                     'section': 'V2 配置',
+                                     'section': '插件配置',
                                      'order': 2,
                                      'type': 'password',
                                      'secret': True,

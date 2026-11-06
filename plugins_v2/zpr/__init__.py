@@ -1,10 +1,10 @@
-"""AWBotNest V2 原生二次元图片插件。"""
+"""AWBotHub 原生二次元图片插件。"""
 from __future__ import annotations
 import re
 from uuid import uuid4
 
-__plugin__={"id":"zpr","name":"P站图片","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /zpr [关键词] [数量] [r18] 获取二次元图片；/zp 同时发送原图文件。","icon":"https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_media.png","tags":["二次元图片","Pixiv图片","原图下载"],"config_schema":{"allow_r18":{"type":"boolean","default":False,"label":"允许 R18","section":"功能开关","order":1},"spoiler":{"type":"boolean","default":True,"label":"图片加遮罩","section":"功能开关","order":2},"default_num":{"type":"number","default":3,"label":"默认数量","min":1,"max":10,"step":1,"section":"数量限制","order":10},"max_num":{"type":"number","default":6,"label":"最大数量","min":1,"max":20,"step":1,"section":"数量限制","order":11}},"resources":{"timeout_seconds":180,"max_concurrency":3},"changelog":"v2.0.0 原生 AWBotNest V2 迁移\n- 使用平台 HTTP 服务访问图片接口和下载资源\n- 使用 Telethon 原生图片、遮罩及文件发送\n- 修正插件市场功能标签并移除 V1 兼容层"}
-_API="https://api.lolicon.app/setu/v2";_HEADERS={"User-Agent":"Mozilla/5.0 AWBotNest/2"}
+__plugin__={"id":"zpr","name":"P站图片","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /zpr [关键词] [数量] [r18] 获取二次元图片；/zp 同时发送原图文件。","icon":"https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_media.png","tags":["二次元图片","Pixiv图片","原图下载"],"config_schema":{"allow_r18":{"type":"boolean","default":False,"label":"允许 R18","section":"功能开关","order":1},"spoiler":{"type":"boolean","default":True,"label":"图片加遮罩","section":"功能开关","order":2},"default_num":{"type":"number","default":3,"label":"默认数量","min":1,"max":10,"step":1,"section":"数量限制","order":10},"max_num":{"type":"number","default":6,"label":"最大数量","min":1,"max":20,"step":1,"section":"数量限制","order":11}},"resources":{"timeout_seconds":180,"max_concurrency":3},"changelog":"v2.0.0 原生 AWBotHub 迁移\n- 使用平台 HTTP 服务访问图片接口和下载资源\n- 使用 Telethon 原生图片、遮罩及文件发送\n- 修正插件市场功能标签并移除旧版兼容层"}
+_API="https://api.lolicon.app/setu/v2";_HEADERS={"User-Agent":"Mozilla/5.0 AWBotHub/2"}
 def _command(text):
     match=re.match(r"^[/\.](zp[r]?)(?:\s|$)",text or "",re.I);return None if not match else match.group(1).lower()=="zp"
 def _args(text):

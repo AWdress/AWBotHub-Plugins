@@ -1,8 +1,10 @@
 # 安装与部署
 
-本页按 AWBotNest **v2.0.2.7** 核对。第一次安装，建议选“一键安装”；已经熟悉 Docker Compose，再选手动部署。
+本页操作基于 **v2.0.2.7** 手册，品牌与官方下载地址已校正为 AWBotHub。第一次安装，建议选“一键安装”；已经熟悉 Docker Compose，再选手动部署。
 
-> V1 与 V2 不要共用 `data`、`sessions`、`plugins` 目录。V1 的插件和配置不能当成 V2 的配置直接导入。旧系统先保留，用新目录部署 V2。
+> 每套系统使用独立的 `data`、`sessions`、`plugins` 目录。旧版插件和配置不能直接当作当前系统的数据导入；迁移前先备份并核对兼容性。
+
+> AWBotHub 当前官方安装脚本仍沿用 `/opt/AWBotNest`、`awdress/awbotnest_v2`、服务名 `awbotnest`、容器名 `AWBotNest_V2` 和 `AWBOTNEST_*` 参数。这些是部署兼容标识，不要因为显示名称变化而擅自改名或移动数据。
 
 ## 1. 安装前准备
 
@@ -45,10 +47,10 @@ sudo apt-get install -y curl
 ### 第二步：执行安装命令
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AWdress/AWBotNest/v2/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/AWdress/AWBotHub/main/install.sh | sudo bash
 ```
 
-这条命令会下载并以管理员权限运行安装脚本。希望先检查脚本内容，可以先在 [GitHub 查看 install.sh](https://github.com/AWdress/AWBotNest/blob/v2/install.sh)，确认后再运行。
+这条命令会下载并以管理员权限运行安装脚本。希望先检查脚本内容，可以先在 [GitHub 查看 install.sh](https://github.com/AWdress/AWBotHub/blob/main/install.sh)，确认后再运行。
 
 脚本会询问以下内容。直接回车代表接受括号中的默认值。
 
@@ -66,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/AWdress/AWBotNest/v2/install.sh | s
 看到类似下面的信息，说明启动命令已完成：
 
 ```text
-AWBotNest 已启动。
+AWBotHub 已启动。
 镜像架构：linux/amd64
 网络模式：bridge
 访问地址：http://服务器IP:18001
@@ -75,7 +77,7 @@ AWBotNest 已启动。
 
 架构也可能显示 `linux/arm64`，这是正常的。
 
-用浏览器打开 `http://你的服务器IP:18001`。如果设置过其他访问端口，请替换 `18001`。首次打开后按 [首次使用](First-Run) 设置管理员。
+用浏览器打开 `http://你的服务器IP:18001`。如果设置过其他访问端口，请替换 `18001`。首次打开后按 [首次使用](First-Run.md) 设置管理员。
 
 > 脚本显示的 IP 可能是内网 IP。云服务器应使用你实际可以访问的公网 IP；家里或局域网部署则使用对应内网 IP。安装成功不代表防火墙已自动放行端口。
 
@@ -118,14 +120,14 @@ host 模式没有“左边映射到右边”。系统监听 `19001`，浏览器�
 host 模式，监听 `19001`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AWdress/AWBotNest/v2/install.sh | \
+curl -fsSL https://raw.githubusercontent.com/AWdress/AWBotHub/main/install.sh | \
   sudo env AWBOTNEST_MODE=host AWBOTNEST_PLATFORM_PORT=19001 bash
 ```
 
 bridge 模式，浏览器访问 `19001`，容器内仍监听 `18001`：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AWdress/AWBotNest/v2/install.sh | \
+curl -fsSL https://raw.githubusercontent.com/AWdress/AWBotHub/main/install.sh | \
   sudo env AWBOTNEST_MODE=bridge AWBOTNEST_PORT=19001 AWBOTNEST_PLATFORM_PORT=18001 bash
 ```
 
@@ -142,7 +144,7 @@ docker compose version
 
 ### 第一步：创建独立目录
 
-示例使用 `/opt/AWBotNest`。已有 V1 或其他部署时，请换一个新目录。
+示例使用 `/opt/AWBotNest`。该目录已有其他部署时，请换一个新目录。
 
 ```bash
 sudo mkdir -p /opt/AWBotNest/data /opt/AWBotNest/sessions /opt/AWBotNest/plugins
@@ -208,7 +210,7 @@ docker compose up -d awbotnest
 docker compose ps
 ```
 
-`config -q` 没有输出且正常结束，代表配置格式通过校验；`ps` 应看到 `awbotnest` 正在运行。然后打开对应 IP 和端口，进入 [首次使用](First-Run)。
+`config -q` 没有输出且正常结束，代表配置格式通过校验；`ps` 应看到 `awbotnest` 正在运行。然后打开对应 IP 和端口，进入 [首次使用](First-Run.md)。
 
 ### 持久化目录不能省略
 
@@ -218,15 +220,15 @@ docker compose ps
 | `./sessions` | `/app/sessions` | Telegram 用户账号登录会话 |
 | `./plugins` | `/app/plugins` | 已安装插件文件与插件界面资源 |
 
-`./` 表示相对于 Compose 配置所在目录。重建容器可以保留这些目录里的内容，但换目录、改挂载路径或删宿主机目录都会影响数据。备份方法见 [更新与维护](Maintenance)。
+`./` 表示相对于 Compose 配置所在目录。重建容器可以保留这些目录里的内容，但换目录、改挂载路径或删宿主机目录都会影响数据。备份方法见 [更新与维护](Maintenance.md)。
 
 ### 镜像里已包含什么
 
 - 系统网页、Python 运行环境、Playwright Chromium 和 Xvfb 已包含在镜像中，不用在容器里再安装整套系统。
-- **CloakBrowser 不打包进镜像。** 选择并保存该引擎后，系统会按需要将组件安装到持久化插件依赖目录，内核和数据库缓存保存在 `data/cloakbrowser`。下载与 Key 设置见 [Cookie 与浏览器](Cookies-and-Browser)。
+- **CloakBrowser 不打包进镜像。** 选择并保存该引擎后，系统会按需要将组件安装到持久化插件依赖目录，内核和数据库缓存保存在 `data/cloakbrowser`。下载与 Key 设置见 [Cookie 与浏览器](Cookies-and-Browser.md)。
 - 插件业务依赖按插件要求安装。镜像支持 ARM64，不代表某个插件指定的全部依赖都有 ARM64 版本。
 - Docker 镜像的系统核心经过 Nuitka 编译。系统助手可以核对相应提交的官方源码、准备参考补丁，但不能直接修改编译核心；已安装插件的源码仍可按权限查看和修改。
-- 系统助手的独立沙箱是**可选的另外一项服务**，默认关闭。普通状态查询、插件动作和公开配置修改不需要部署沙箱；代码运行、临时文件和浏览器操作的隔离环境另见 [系统助手](System-Assistant)。
+- 系统助手的独立沙箱是**可选的另外一项服务**，默认关闭。普通状态查询、插件动作和公开配置修改不需要部署沙箱；代码运行、临时文件和浏览器操作的隔离环境另见 [系统助手](System-Assistant.md)。
 
 ## 5. 反向代理和 HTTPS
 
@@ -235,37 +237,16 @@ docker compose ps
 - 系统与反向代理在同一宿主机时，上游示例为 `http://127.0.0.1:18001`。
 - 反向代理也在独立容器里时，不能照抄这个地址：该容器的 `127.0.0.1` 是它自己。应按网络结构使用可达的宿主机地址或同一 Docker 网络中的服务名。
 - 域名、证书和端口转发是在反向代理服务中设置的，不需要把域名填进容器内部监听端口。
-- 企业微信回调需要公网可访问的 HTTPS 地址，详见 [账号与通知](Accounts-and-Notifications)。
+- 企业微信回调需要公网可访问的 HTTPS 地址，详见 [账号与通知](Accounts-and-Notifications.md)。
 
-## 6. 源码运行：仅建议有基础的用户使用
+## 6. 当前发布方式与旧源码部署
 
-源码方式需要自己维护 Python、Node.js、浏览器系统依赖和进程守护。只想使用系统，建议选择 Docker。
+AWBotHub 官方公开仓库当前使用 `main` 分支，提供安装脚本和使用文档，不提供可直接启动的系统核心源码；不要继续使用旧分支的安装教程。首次部署请使用前面的 Docker 方式，不要把克隆文档仓库等同于已经取得可运行的系统源码。
 
-项目声明 Python `3.11` 及以上；当前 Docker 镜像使用 Python `3.13`、前端使用 Node.js `22`。下面是 Linux 示例，要求系统已有 Git、Python 和 Node.js/npm。
+如果你保留了此前合法获取的源码部署，请先备份原工作目录、依赖环境及 `data`、`sessions`、`plugins`，按对应版本的迁移说明处理。旧部署中的 `awbotnest` Python 包、启动模块和工作目录属于运行兼容标识，不能只把名字改为 AWBotHub 就期待继续运行；也不要与其他实例共用数据目录。
 
-```bash
-git clone --branch v2 --single-branch https://github.com/AWdress/AWBotNest.git AWBotNest-v2
-cd AWBotNest-v2
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m playwright install --with-deps chromium
-cd frontend
-npm install
-npm run build
-cd ..
-python -m awbotnest.main
-```
-
-说明：
-
-- 某些 Linux 发行版需要先安装 Python 的 `venv` 支持包。
-- Playwright 安装浏览器系统依赖时可能需要管理员权限。遇到提示请按其说明处理，不要把所有 Python 依赖随意安装到系统全局环境。
-- `npm run build` 会把界面文件输出到项目的 `static` 目录；只启动 Python 而没有构建界面，不能得到完整网页。
-- 命令会前台运行，关闭终端会影响进程。长期运行请配置 systemd 等进程管理器，工作目录为项目目录，解释器使用 `.venv/bin/python`。
-- 有头浏览器需要可用显示服务。无桌面的 Linux 主机可安装 Xvfb 并通过 `xvfb-run -a python -m awbotnest.main` 启动；Docker 已处理这部分依赖。
-- 运行数据保存在此项目的 `data`、`sessions`、`plugins`，同样不要与 V1 共用。
+插件开发不要求取得系统核心源码。开发规范和最小示例见 [插件开发入门](Plugin-Development.md) 与 [官方插件开发指南](https://github.com/AWdress/AWBotHub/blob/main/docs/PLUGIN_GUIDE.md)。
 
 ## 下一步
 
-[首次使用](First-Run) · [更新与维护](Maintenance) · [常见问题](Troubleshooting) · [返回首页](Home)
+[首次使用](First-Run.md) · [更新与维护](Maintenance.md) · [常见问题](Troubleshooting.md) · [返回首页](Home.md)

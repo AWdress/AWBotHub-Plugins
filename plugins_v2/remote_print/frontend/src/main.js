@@ -1,5 +1,5 @@
 // Local preview is read-only: production receives the authenticated host from
-// AWBotNest's RemotePluginConfig component through the ./Config exposure.
+// AWBotHub's RemotePluginConfig component through the ./Config exposure.
 import { createApp, h } from 'vue'
 import Config from './Config.vue'
 

@@ -1,10 +1,10 @@
-"""AWBotNest V2 原生举牌图片插件。"""
+"""AWBotHub 原生举牌图片插件。"""
 from __future__ import annotations
 from io import BytesIO
 import re
 from urllib.parse import urlencode
 
-__plugin__={"id":"jupai","name":"举牌","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /jupai 文字（或回复消息）生成举牌图片。","icon":"https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_media.png","tags":["举牌生成","文字图片","群组互动"],"config_schema":{"command":{"type":"string","default":".jupai","label":"触发命令","section":"命令","order":10},"api_url":{"type":"string","default":"https://api.txqq.pro/api/zt.php","label":"举牌接口地址","section":"接口","order":11}},"resources":{"timeout_seconds":30,"max_concurrency":4},"changelog":"v2.0.0 原生 AWBotNest V2 迁移\n- 使用平台 HTTP 服务下载举牌图片\n- 使用 Telethon 原生文件发送\n- 移除 V1 兼容运行层"}
+__plugin__={"id":"jupai","name":"举牌","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /jupai 文字（或回复消息）生成举牌图片。","icon":"https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_media.png","tags":["举牌生成","文字图片","群组互动"],"config_schema":{"command":{"type":"string","default":".jupai","label":"触发命令","section":"命令","order":10},"api_url":{"type":"string","default":"https://api.txqq.pro/api/zt.php","label":"举牌接口地址","section":"接口","order":11}},"resources":{"timeout_seconds":30,"max_concurrency":4},"changelog":"v2.0.0 原生 AWBotHub 迁移\n- 使用平台 HTTP 服务下载举牌图片\n- 使用 Telethon 原生文件发送\n- 移除旧版兼容运行层"}
 
 def _argument(text,command):
     bare=re.escape(str(command or "jupai").lstrip("/.").strip() or "jupai");match=re.match(rf"^[/\.]{{1}}{bare}(?:\s+(.+))?$",text or "",re.I|re.S)

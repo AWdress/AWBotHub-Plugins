@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest V2 原生业务模块：定时自动回复（custom_auto_reply）
+# AWBotHub 原生业务模块：定时自动回复（custom_auto_reply）
 #
 # 用户账号按设定的时间，自动向指定会话发送消息。
 # 用 list 控件逐条配置「会话 / 时间 / 内容」，各自独立定时；不写时间则用「默认时间」。
@@ -11,8 +11,8 @@ __plugin__ = {
     "version": "1.0.12",
     "author": "AWdress",
     "description": "到点自动用你的账号往指定群/会话发消息。支持多个会话，每个会话可单独设时间和内容。时间支持每天定点、每隔几小时/几分钟、或 cron 表达式。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_reply.png",
-    "changelog": "v1.0.12 显示会话名称\n- 保存 UID 后在设置顶部显示群组/频道名称\n- 注册、发送和通知日志显示名称并保留 UID\n\nv1.0.11 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotNest 插件开发规范\nv1.0.10 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_reply.png",
+    "changelog": "v1.0.12 显示会话名称\n- 保存 UID 后在设置顶部显示群组/频道名称\n- 注册、发送和通知日志显示名称并保留 UID\n\nv1.0.11 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.0.10 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
     "scope": "user",
     "default_enabled": False,
     "config_schema": {

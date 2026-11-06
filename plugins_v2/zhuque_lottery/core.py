@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：朱雀（zhuque_lottery）
+# AWBotHub 插件：朱雀（zhuque_lottery）
 #
 # 朱雀（https://zhuque.in）PT 站自动化合集，迁移自 AWLottery 的「朱雀系列」。
 # 子功能（均可在配置面板分区开关）：
@@ -49,7 +49,7 @@ __plugin__ = {
     "default_enabled": False,
     "render_mode": "vue",
     "description": "朱雀PT站自动化：个人查询、大劫反击、红包雨、大转盘、转账、鳄鱼丼投注、魔法卡定时、道具卡回收、倍投计算。自带 Vue 配置界面 + 战绩/记录管理。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/zhuque_lottery.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/zhuque_lottery.png",
     "changelog": "v1.0.8 接入平台结构化通知表格\n- 灵石转账排行榜改用 ctx.notify_table()\n- Telegram Bot 与 Premium 账号显示原生边框斑马纹表格\n- 普通账号、企业微信和 Bark 由平台自动回退分组文本\n\nv1.0.7 修复抽奖次数校验\n- 修复转盘抽奖未校验次数为正整数，非法次数现在会提示并拦截\n\nv1.0.6 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
 }
 

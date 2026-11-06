@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：拼手气红包(HDSKY)（hdsky_redpacket）
+# AWBotHub 插件：拼手气红包(HDSKY)（hdsky_redpacket）
 #
 # 监控天空(HDSKY)群里「天空小秘」发的拼手气红包，自动点击「抢红包」内联按钮。
 # 可选 /red 占位发言，应对「限最近发言人」的红包。
@@ -25,8 +25,8 @@ __plugin__ = {
     "scope": "user",
     "default_enabled": False,
     "description": "监控天空(HDSKY)群拼手气红包，自动点击「抢红包」按钮。可选 /red 占位发言应对「限最近发言人」。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_redpacket.png",
-    "changelog": "v1.0.5 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotNest 插件开发规范\nv1.0.4 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_redpacket.png",
+    "changelog": "v1.0.5 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.0.4 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
     "config_schema": {
         "resolved_chat_names": {
             "type": "info", "label": "已识别群组名称", "order": 9, "section": "参数配置",

@@ -1,8 +1,8 @@
-"""AWBotNest V2 原生查 ID 插件。"""
+"""AWBotHub 原生查 ID 插件。"""
 from __future__ import annotations
 import asyncio
 
-__plugin__ = {"id":"id","name":"查ID","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /id 或 .id（可回复某条消息）查询群组ID、用户ID、用户名。","icon":"https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_utility.png","tags":["身份查询","用户信息","Telegram账号"],"config_schema":{"delete_command":{"type":"boolean","default":True,"label":"删除命令消息","section":"功能开关","order":1},"command":{"type":"string","default":".id","label":"触发命令","section":"命令","order":10},"auto_delete":{"type":"number","default":20,"label":"结果自动删除(秒)","min":0,"max":120,"step":5,"section":"自动清理","order":11}},"changelog":"v2.0.0 原生 AWBotNest V2 迁移\n- 移除 V1 兼容运行层\n- 使用 Telethon 原生回复消息与实体接口\n- 自动删除任务纳入平台生命周期管理"}
+__plugin__ = {"id":"id","name":"查ID","version":"2.0.0","author":"AWdress","scope":"user","plugin_api_version":2,"requirements":[],"render_mode":"schema","description":"发送 /id 或 .id（可回复某条消息）查询群组ID、用户ID、用户名。","icon":"https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_utility.png","tags":["身份查询","用户信息","Telegram账号"],"config_schema":{"delete_command":{"type":"boolean","default":True,"label":"删除命令消息","section":"功能开关","order":1},"command":{"type":"string","default":".id","label":"触发命令","section":"命令","order":10},"auto_delete":{"type":"number","default":20,"label":"结果自动删除(秒)","min":0,"max":120,"step":5,"section":"自动清理","order":11}},"changelog":"v2.0.0 原生 AWBotHub 迁移\n- 移除旧版兼容运行层\n- 使用 Telethon 原生回复消息与实体接口\n- 自动删除任务纳入平台生命周期管理"}
 
 def _commands(value):
     bare=str(value or "id").lstrip("/.").strip() or "id"

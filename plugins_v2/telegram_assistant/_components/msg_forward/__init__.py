@@ -1,4 +1,4 @@
-"""AWBotNest V2 原生消息转发助手。"""
+"""AWBotHub 原生消息转发助手。"""
 from __future__ import annotations
 import asyncio
 import re
@@ -14,7 +14,7 @@ __plugin__ = {
     "requirements": [],
     "render_mode": "schema",
     "description": "统一提供规则转发、复制搬运、历史遗漏补全和回复复读；兼容迁移原“转发复读”配置。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_relay.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_relay.png",
     "tags": ["消息转发", "规则路由", "转发复读"],
     "config_schema": {
         "enable": {
@@ -112,7 +112,7 @@ __plugin__ = {
     "v2.0.3 修复市场重复显示更新\n- 将最终版本、描述、遗漏补全配置和 changelog 写入平台可静态读取的元数据\n- 平台扫描版本与市场清单保持一致，不再反复提示更新\n\n"
     "v2.0.2 新增历史遗漏补全\n- 增加‘补全遗漏’动作，按现有规则回查来源历史消息并补发\n- 以来源消息 ID 持久化去重，重复执行不会重复发送\n- 支持相册整组补发、关键词/类型/发送者过滤和复制搬运\n\n"
     "v2.0.1 修复 Telethon 媒体与事件转发\n- 单消息和相册统一传递原生 Message，避免 Event 类型不受支持\n- 媒体下载失败时回退原生转发，不再向 send_file 传入 None\n\n"
-    "v2.0.0 原生 AWBotNest V2 迁移\n- 使用 Telethon 原生消息、相册与实体接口\n- 保留多规则过滤、原生转发和复制搬运\n- 移除 V1 兼容运行层",
+    "v2.0.0 原生 AWBotHub 迁移\n- 使用 Telethon 原生消息、相册与实体接口\n- 保留多规则过滤、原生转发和复制搬运\n- 移除旧版兼容运行层",
 }
 
 _URL_RE=re.compile(r"https?://",re.I)
@@ -237,7 +237,7 @@ async def _history_entity(client,value):
     return await client.get_entity(value)
 
 async def _server_forward(client,target,messages,*,drop_author,top_msg_id=None):
-    """复刻 V1 copy/forward：由 Telegram 服务端按消息 ID 复制或转发。"""
+    """复刻 旧版 copy/forward：由 Telegram 服务端按消息 ID 复制或转发。"""
     from telethon.helpers import generate_random_long
     from telethon.tl.functions.messages import ForwardMessagesRequest
 

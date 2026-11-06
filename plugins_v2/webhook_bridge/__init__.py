@@ -1,4 +1,4 @@
-"""AWBotNest V2 原生 Webhook 通知桥。"""
+"""AWBotHub 原生 Webhook 通知桥。"""
 from __future__ import annotations
 
 from .core import setup as _native_setup, teardown as _native_teardown
@@ -10,16 +10,16 @@ __plugin__ = {'name': 'Webhook 通知桥',
  'description': '接收 NAS、下载器、监控、CI 等外部 Webhook，自动提取内容并通过平台统一通知渠道推送。',
  'changelog': 'v2.0.2 修复多行通知显示\n- 外部事件标题、正文和元数据拆分为独立表格行\n- 避免完整正文挤入单个单元格导致裁切或显示不全\n\n'
               'v2.0.1 统一富文本表格通知\n- 外部事件与测试通知改为平台结构化表格\n\n'
-              'v2.0.0 完成原生 V2 迁移\n'
+              'v2.0.0 完成平台原生迁移\n'
               '- 使用原生公开 Webhook、异步存储与动作接口\n'
               '- 修复重载后的路由注册、去重、限流和统计持久化\n\n'
               'v1.0.10 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
               '- 启用时预载数据，按顺序托管写入并在停用时等待完成\n'
               '\n'
-              'v1.0.9 修复 V1 默认配置恢复\n- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n\nv1.0.8 适配平台原生富文本通知\n- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n- 原生富文本不可用时保留可读的文本降级\n\nv1.0.6 AWBotNest 2 规范复核\n- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n- 通过全量元数据、语法和发布清单检查\n\nAWBotNest 2 兼容发布\n'
+              'v1.0.9 修复旧版默认配置恢复\n- 插件启用时恢复被旧版表单错误保存为空的默认值\n- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n\nv1.0.8 适配平台原生富文本通知\n- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n- 原生富文本不可用时保留可读的文本降级\n\nv1.0.6 AWBotHub 规范复核\n- 修复平台实体、生命周期、配置安全和依赖兼容问题\n- 通过全量元数据、语法和发布清单检查\n\nAWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.0.1 加固首次加载配置兜底\n'
               '- 配置尚未持久化时仍使用内置字段提取与敏感字段过滤默认值\n'
@@ -29,7 +29,7 @@ __plugin__ = {'name': 'Webhook 通知桥',
               '- 支持 GET、JSON、表单与纯文本事件\n'
               '- 支持自动字段提取、模板、去重和限流\n'
               '- 提供测试通知、统计查看与状态清理动作',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_relay.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_relay.png',
  'scope': 'standalone',
  'webhook': True,
  'plugin_api_version': 2,

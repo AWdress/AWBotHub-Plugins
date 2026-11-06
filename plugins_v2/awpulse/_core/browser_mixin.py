@@ -47,7 +47,7 @@ class BrowserMixin:
             self.browser = cloakbrowser.launch(
                 headless=headless,
                 args=browser_args,
-                # 代理、License Key 与内核由 AWBotNest 平台统一注入和管理；
+                # 代理、License Key 与内核由 AWBotHub 平台统一注入和管理；
                 # GeoIP 让浏览器时区等指纹与实际出口保持一致。
                 geoip=True,
             )

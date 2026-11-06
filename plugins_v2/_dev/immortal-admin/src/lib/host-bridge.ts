@@ -27,7 +27,7 @@ if (session && window.parent !== window) {
   window.parent.postMessage({ type: 'immortal:ready', session }, location.origin)
 } else {
   clearTimeout(connectTimer)
-  readyReject?.(new Error('请在 AWBotNest 插件配置页打开 Immortal。'))
+  readyReject?.(new Error('请在 AWBotHub 插件配置页打开 Immortal。'))
 }
 
 export async function hostCall<T>(operation: 'request' | 'status', body?: unknown): Promise<T> {

@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：癫影积分红包（dyp_redpacket）
+# AWBotHub 插件：癫影积分红包（dyp_redpacket）
 #
 # 监控「癫影小助手」在癫影积分红包固定群发的积分红包，逐个点击未抢的数字按钮，
 # 落地一格即停（/已抢的、含中文的管理员按钮自动跳过）。
@@ -41,8 +41,8 @@ __plugin__ = {
     "scope": "user",
     "default_enabled": False,
     "description": "监控癫影小助手发的混合积分红包并逐格抢取；支持点名本账号的限时算式报名验证。发包bot/群组内置写死。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/dyp_redpacket.jpg",
-    "changelog": "v1.2.2 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotNest 插件开发规范\nv1.2.1 更新插件 Logo\n- 使用癫影专属图片作为插件卡片与市场图标",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/dyp_redpacket.jpg",
+    "changelog": "v1.2.2 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.2.1 更新插件 Logo\n- 使用癫影专属图片作为插件卡片与市场图标",
     "config_schema": {
         "dyp_enabled": {
             "type": "boolean", "default": False, "label": "启用癫影积分红包",

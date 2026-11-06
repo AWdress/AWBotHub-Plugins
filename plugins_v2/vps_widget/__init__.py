@@ -1,4 +1,4 @@
-"""VPS-Widget for AWBotNest V2; original platform-native implementation."""
+"""VPS-Widget for AWBotHub; original platform-native implementation."""
 
 __plugin__ = {
     "id": "vps_widget", "name": "VPS-Widget", "version": "0.0.1", "author": "AWdress",
@@ -6,7 +6,7 @@ __plugin__ = {
     "render_mode": "vue", "webhook": True,
     "description": "聚合十类影视榜单、匹配 TMDB 并生成 Forward 格式 Widget；使用平台网络、存储与定时任务，不需要额外 Node 服务。",
     "changelog": "v0.0.1 首次发布\n- 十类影视榜单采集与 TMDB 匹配，失败保留旧缓存\n- 中文 Vue 配置页：榜单状态、配置、Widget 地址\n- 自动更新默认关闭，每天北京时间 17:00；公开只读服务与通知默认关闭\n- Widget 地址使用独立只读密钥，支持缓存与分页，不公开管理接口或 TMDB 密钥",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins_v2/vps_widget/icon.svg",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/vps_widget/icon.svg",
     "tags": ["影视榜单", "Widget", "TMDB"], "requirements": ["starlette>=0.40,<2"],
     "resources": {"timeout_seconds": 120, "max_concurrency": 8, "max_background_tasks": 2},
     "config_schema": {

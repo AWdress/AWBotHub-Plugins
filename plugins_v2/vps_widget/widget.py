@@ -38,8 +38,8 @@ def build_widget(base_url: str, token: str) -> str:
         raise ValueError("请先设置平台访问地址并生成只读密钥")
     metadata = {
         "id": "awbotnest.vps_widget.catalogue", "title": "VPS 影视榜单",
-        "description": "读取 AWBotNest 缓存的影视与动画榜单；每页 24 条，可按更新、上映、热度或评分排序。",
-        "author": "AWdress", "site": "https://github.com/AWdress/AWBotNest-Plugins",
+        "description": "读取 AWBotHub 缓存的影视与动画榜单；每页 24 条，可按更新、上映、热度或评分排序。",
+        "author": "AWdress", "site": "https://github.com/AWdress/AWBotHub-Plugins",
         "version": "0.0.1", "requiredVersion": "0.0.1", "detailCacheDuration": 600,
         "modules": [
             _module("guduo", "骨朵热度", "loadGuduo",

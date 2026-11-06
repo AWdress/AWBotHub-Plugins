@@ -1,81 +1,85 @@
 {
   "schema": 1,
-  "source": "https://github.com/AWdress/AWBotNest/wiki",
+  "source": "https://github.com/AWdress/AWBotHub/tree/main/docs/guide",
   "snapshot_date": "2026-11-03",
   "platform_version": "v2.0.2.7",
-  "source_commit": "ca0d148acff9a8002b031c57201c318a006d4435",
+  "source_commit": null,
+  "snapshot_origin_commit": "ca0d148acff9a8002b031c57201c318a006d4435",
+  "snapshot_origin": "原始 Wiki 2026-11-03 快照；此提交不是当前官方文档仓库的提交",
+  "local_revision_date": "2026-11-06",
+  "local_revision": "校正 AWBotHub 品牌、官方地址及失效教程；保留原功能快照与运行兼容标识",
   "hash_normalization": "utf8-lf-no-bom",
   "pages": [
     {
       "title": "账号登录与通知配置",
       "slug": "Accounts-and-Notifications",
-      "sha256": "ca94e49ed8ff9341e1a81dd7ee0c4c4cf600a13ca35dc7cec3f48fbac81a4ba7",
+      "sha256": "45d2efd351cfc07fc6f3e8c89dc1c68e6e62b203f479ad367957c886af8c873f",
       "file": "Accounts-and-Notifications.md"
     },
     {
       "title": "AI 服务：从接入到排错",
       "slug": "AI-Service",
-      "sha256": "075be165e4d7c863ab0edb51215298180fd275ac2fdaf85468d1874572cbdcd5",
+      "sha256": "f342a51e01acc9132f560f3a7dde2f12451d05e07746f3a67a96de7969e739e2",
       "file": "AI-Service.md"
     },
     {
       "title": "Cookie 同步与浏览器服务",
       "slug": "Cookies-and-Browser",
-      "sha256": "1266a66db5d22d508419cb70ff565ef02544fd61cb7ed3f0d3f5255fee1fa4d4",
+      "sha256": "9af187c635499577c3dd72bd9d8492802ba792baaac10fd771557a80345501d8",
       "file": "Cookies-and-Browser.md"
     },
     {
       "title": "首次使用",
       "slug": "First-Run",
-      "sha256": "a98a9983e9ddf4cfe5808766d2e299b886b7878115dda742a422ac3031b67794",
+      "sha256": "f8667e374564e2d6b2ab3e16bc25310ca6e87135dce95c80aaf69af51d0775da",
       "file": "First-Run.md"
     },
     {
-      "title": "AWBotNest V2 使用手册",
+      "title": "AWBotHub 使用手册",
       "slug": "Home",
-      "sha256": "b17c6f09b8a603533bc6017d793fd3d04a751f0f7805c23ef064fa2918163fd4",
+      "sha256": "778a1c4baa4b7a13ceec9a0a98ec662d612f5e5c45e707449914687d5777a0ef",
       "file": "Home.md"
     },
     {
       "title": "安装与部署",
       "slug": "Installation",
-      "sha256": "0f6b79e2b8e30862074a07fb0358e1ae67204f492ce7f0aaa4395d86be1308fe",
+      "sha256": "cd0f78132c7fe7e40a82d94cb1545c1b2c42c5e860a654f7bb8dbd11e7c434e4",
       "file": "Installation.md"
     },
     {
       "title": "更新、备份与日常维护",
       "slug": "Maintenance",
-      "sha256": "f5fe478826aad3b55e2744717c9a4684b779c6ff5d5c98ed870208e93b00a5c4",
+      "sha256": "1ae9226276fa688cbc5b2423e00f7b620b4e35e6007485d50d4a4a9abbbad27f",
       "file": "Maintenance.md"
     },
     {
       "title": "开放 API",
       "slug": "Open-API",
-      "sha256": "e0fcaeeec6c7c21338dbc7e688a7d675b0c0164934c10daae77875a56a87ac03",
+      "sha256": "e85cae4459642752239138906ebefe90581acb1f392558792129f38972bb91c3",
       "file": "Open-API.md"
     },
     {
       "title": "插件开发入门",
       "slug": "Plugin-Development",
-      "sha256": "0c56ae409881ead6d772532902a37a65934e450710b81fa0a0457a0ddbce1570",
+      "sha256": "329c0622b465c4f1de4835ba8de9643d78dc582d71b0b0dd39798ec4f0a70878",
       "file": "Plugin-Development.md"
     },
     {
       "title": "插件安装与使用",
       "slug": "Plugins",
-      "sha256": "243bc6f37403468ed272ab129058b809982e1db227eee8000475277531644415",
+      "sha256": "dfd3069cb2e9f30b523ee8f1faeeb15e9a2a8d21d4ae36a3d1287aab34fa51c2",
       "file": "Plugins.md"
     },
     {
       "title": "系统助手：从第一次提问到排查问题",
       "slug": "System-Assistant",
-      "sha256": "c94f437ca3c6e43a1795603f848f054a5a79d6cebb44781752be919dcc66b4ff",
+      "sha256": "348ff6cca47b7522837719e72e83e26184ef0a4c73240f4521cceda468b568d0",
       "file": "System-Assistant.md"
     },
     {
       "title": "常见问题与故障排查",
       "slug": "Troubleshooting",
-      "sha256": "74237b711a9298690ddd062d63a3c2d9f60b281906fe592f49bae8a284a7715c",
+      "sha256": "3fca5aaf86e73b6028a4798708e7dbd869ff231f5b3e5acbf46cd353d42dc302",
       "file": "Troubleshooting.md"
     }
   ]

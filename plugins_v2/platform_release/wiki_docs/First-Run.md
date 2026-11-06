@@ -1,12 +1,12 @@
 # 首次使用
 
-本页从“已经能打开 AWBotNest 网页”开始。如果网页还打不开，先看 [安装与部署](Installation)。
+本页从“已经能打开 AWBotHub 网页”开始。如果网页还打不开，先看 [安装与部署](Installation.md)。
 
 ## 1. 先设置管理员账号
 
 首次打开时，页面会显示“首次使用 · 设置管理员账号”。没有统一的默认管理员密码，也不需要去别处注册网站账号。
 
-![首次设置管理员账号](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/first-run.jpg)
+![首次设置管理员账号](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/first-run.jpg)
 
 1. 在“管理员用户名”填入你要用于网页登录的用户名。
 2. 在“设置密码”填写密码。
@@ -17,7 +17,7 @@
 
 成功后会进入管理界面。以后打开网页，用这里设置的用户名和密码登录。
 
-> 管理员账号只是 AWBotNest 的网页管理账号，不是 Telegram 手机号、Bot 用户名，也不是服务器 SSH 账号。不要把这些密码混填。
+> 管理员账号只是 AWBotHub 的网页管理账号，不是 Telegram 手机号、Bot 用户名，也不是服务器 SSH 账号。不要把这些密码混填。
 
 如果是全新部署，却已经显示普通登录页，应先确认是否误用了旧 `data` 目录，或访问到了另一个正在运行的实例。不要急着删除配置文件。
 
@@ -47,7 +47,7 @@
 
 电脑可用上下方向键选择结果、回车打开，按 `Esc` 关闭。手机顶部通常只显示图标，与电脑的文字按钮是同一个入口。
 
-![快捷打开插件和设置](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/quick-open.jpg)
+![快捷打开插件和设置](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/quick-open.jpg)
 
 系统设置页还有独立的“搜索设置”输入框。例如输入“浏览器”，点击结果就会定位到“浏览器仿真”，不必逐个翻分类。
 
@@ -58,7 +58,7 @@
 3. 用显示／隐藏按钮决定哪些卡片出现在首页。
 4. 点击“完成整理”关闭；需要重来时可点“恢复默认”。
 
-![首页卡片整理](https://raw.githubusercontent.com/wiki/AWdress/AWBotNest/images/dashboard-layout.jpg)
+![首页卡片整理](https://raw.githubusercontent.com/AWdress/AWBotHub/main/docs/guide/images/dashboard-layout.jpg)
 
 手机和电脑的首页布局分别保存。隐藏“账号”或“即将执行”卡片不会让账号下线，也不会取消定时任务。
 
@@ -95,11 +95,11 @@ Bot 和用户账号不是互相替代的关系。插件支持哪种账号，取�
 
 验证码可能发送到 Telegram 已登录设备，而不一定是短信。不要连续重复发送，也不要把验证码、两步验证密码发给其他人。
 
-更详细的账号登录和 Bot 通知设置见 [账号与通知](Accounts-and-Notifications)。
+更详细的账号登录和 Bot 通知设置见 [账号与通知](Accounts-and-Notifications.md)。
 
 ## 4. 安装第一个插件
 
-建议先装一个你明确知道用途、支持 V2 的插件，不要第一次就同时启用很多插件，出错时不容易判断来源。
+建议先装一个你明确知道用途、适用于当前平台的插件，不要第一次就同时启用很多插件，出错时不容易判断来源。
 
 1. 打开“插件管理”。
 2. 切换到“插件市场”。
@@ -114,18 +114,18 @@ Bot 和用户账号不是互相替代的关系。插件支持哪种账号，取�
 
 有些插件第一次启用会安装第三方依赖，浏览器类插件还可能下载浏览器内核。此时先看日志，确认是在下载、安装还是报错，不要反复关闭、开启造成重复操作。
 
-插件类型、账号绑定、定时规则和自检说明见 [插件管理](Plugins)。
+插件类型、账号绑定、定时规则和自检说明见 [插件管理](Plugins.md)。
 
 ## 5. 按需配置服务
 
 不使用的功能可以先不填。
 
-- **通知**：到“系统设置 → 通知渠道”添加渠道，设置默认通知目标。再用一个已启用、明确会发送通知的插件，按它的说明执行一次，确认消息到达正确目标。见 [账号与通知](Accounts-and-Notifications)。
-- **AI**：到“系统设置 → AI 服务”添加服务、模型并设置模型分工。单独填一个 API Key 不等于已经完成模型设置。见 [AI 服务](AI-Service)。
-- **系统助手**：配置好可用的文字模型后，点击顶部助手图标，按[系统助手教程](System-Assistant)启用。先用只读问题测试，例如“查看系统状态”；不需要为了日常管理先开启联网、MCP 或独立沙箱。
-- **Cookie**：到“系统设置 → Cookie 服务”配置浏览器直连或远程 CookieCloud。见 [Cookie 与浏览器](Cookies-and-Browser)。
-- **代理与浏览器**：到“系统设置 → 运行环境”配置。使用 Docker bridge 时，代理地址里的 `127.0.0.1` 不是宿主机，请先看网络说明。见 [安装与部署](Installation)。
-- **对外接口**：有自动化脚本需要调用时，再配置“开放接口”。不要把 API 密钥给不可信的人。见 [开放 API](Open-API)。
+- **通知**：到“系统设置 → 通知渠道”添加渠道，设置默认通知目标。再用一个已启用、明确会发送通知的插件，按它的说明执行一次，确认消息到达正确目标。见 [账号与通知](Accounts-and-Notifications.md)。
+- **AI**：到“系统设置 → AI 服务”添加服务、模型并设置模型分工。单独填一个 API Key 不等于已经完成模型设置。见 [AI 服务](AI-Service.md)。
+- **系统助手**：配置好可用的文字模型后，点击顶部助手图标，按[系统助手教程](System-Assistant.md)启用。先用只读问题测试，例如“查看系统状态”；不需要为了日常管理先开启联网、MCP 或独立沙箱。
+- **Cookie**：到“系统设置 → Cookie 服务”配置浏览器直连或远程 CookieCloud。见 [Cookie 与浏览器](Cookies-and-Browser.md)。
+- **代理与浏览器**：到“系统设置 → 运行环境”配置。使用 Docker bridge 时，代理地址里的 `127.0.0.1` 不是宿主机，请先看网络说明。见 [安装与部署](Installation.md)。
+- **对外接口**：有自动化脚本需要调用时，再配置“开放接口”。不要把 API 密钥给不可信的人。见 [开放 API](Open-API.md)。
 
 ## 6. 保存与重启怎么判断
 
@@ -144,7 +144,7 @@ Bot 和用户账号不是互相替代的关系。插件支持哪种账号，取�
 
 到“系统设置 → 维护”，点击“下载配置包”，把 ZIP 放到安全位置。
 
-这份配置包只包含系统设置和插件设置，不是完整数据备份；Telegram 会话、Cookie 数据、日志和插件程序不在里面。要迁移服务器或保留完整运行环境，还要备份 `data`、`sessions`、`plugins` 三个目录，操作见 [更新与维护](Maintenance)。
+这份配置包只包含系统设置和插件设置，不是完整数据备份；Telegram 会话、Cookie 数据、日志和插件程序不在里面。要迁移服务器或保留完整运行环境，还要备份 `data`、`sessions`、`plugins` 三个目录，操作见 [更新与维护](Maintenance.md)。
 
 配置包可能包含密钥、通知凭据和管理员认证资料。不要当成普通截图或示例文件发到群里。
 
@@ -158,4 +158,4 @@ Bot 和用户账号不是互相替代的关系。插件支持哪种账号，取�
 - 有通知需求时，已实际触发一次插件通知，并确认消息到达正确目标。
 - 已保存配置包；重要系统另有完整目录备份。
 
-[账号与通知](Accounts-and-Notifications) · [插件管理](Plugins) · [更新与维护](Maintenance) · [常见问题](Troubleshooting) · [返回首页](Home)
+[账号与通知](Accounts-and-Notifications.md) · [插件管理](Plugins.md) · [更新与维护](Maintenance.md) · [常见问题](Troubleshooting.md) · [返回首页](Home.md)

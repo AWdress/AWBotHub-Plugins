@@ -2,7 +2,7 @@
 # 数字炸弹游戏 - 状态管理（GameStateManager）
 #
 # 原项目用 data/bomb_game_state.json 在 user/bot 多实例间同步状态。
-# 原生 V2 使用 ctx.sessions 保存活跃局，ctx.storage 保存关键检查点。
+# 当前平台使用 ctx.sessions 保存活跃局，ctx.storage 保存关键检查点。
 #   - 每群一个 Session 和 storage 键：game:<chat_id>。
 #   - Session lock 内只进行校验和内存变更；持久化在释放锁后执行。
 #   - 配置（entry_fee / pool_ratio / wait_time / 范围调整）从 ctx.config 实时读取，

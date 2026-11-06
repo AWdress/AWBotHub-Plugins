@@ -157,7 +157,7 @@ def parse_sites(raw: str) -> dict[int, list[SiteConfig]]:
 
 
 def _reply_of(msg):
-    """Return the reply message populated by the V2 event adapter.
+    """Return the reply message populated by the platform event adapter.
 
     Telethon exposes ``reply_to_msg_id`` and an async ``get_reply_message``;
     the old Pyrogram ``reply_to_message`` attribute does not exist.  The

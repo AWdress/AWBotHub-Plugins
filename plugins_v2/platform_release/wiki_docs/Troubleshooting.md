@@ -4,6 +4,8 @@
 
 本页命令中的容器名是默认的 `AWBotNest_V2`。改过容器名、端口或目录的，请换成自己的实际值。涉及密钥、会话、Cookie 的文件，不要上传到公开 issue。
 
+> 产品现名为 AWBotHub，`AWBotNest_V2`、`awbotnest` 服务名及 `AWBOTNEST_ADMIN_TOKEN` 等仍是兼容运行标识，不是需要手工改掉的旧显示文案。
+
 ## 1. 提问前先收集什么
 
 建议提供以下信息：
@@ -45,7 +47,7 @@ docker logs --tail 100 AWBotNest_V2
 | host，系统监听 `19001` | `http://服务器IP:19001`，没有额外端口映射 |
 | 已配置 HTTPS 反向代理 | 先用实际域名访问，再分别排查反代和后端 |
 
-默认 bridge 配置没有特别改动时，访问端口是 `18001`。完整端口示例见 [安装与部署](Installation)。
+默认 bridge 配置没有特别改动时，访问端口是 `18001`。完整端口示例见 [安装与部署](Installation.md)。
 
 还要检查：
 
@@ -61,7 +63,7 @@ docker logs --tail 100 AWBotNest_V2
 
 优先检查反向代理：上游地址和端口、HTTPS 证书、路径转发、WebSocket 支持。
 
-尤其注意：反向代理也在独立 Docker 容器内时，它的 `127.0.0.1` 通常不是 AWBotNest 所在容器，也不是宿主机。不能因为两者在同一台服务器，就把两个容器里的 localhost 当成同一个地址。
+尤其注意：反向代理也在独立 Docker 容器内时，它的 `127.0.0.1` 通常不是 AWBotHub 所在容器，也不是宿主机。不能因为两者在同一台服务器，就把两个容器里的 localhost 当成同一个地址。
 
 网页能显示但 API 报 `502`、运行日志不实时更新，仍可能是反代配置问题。不要只用“首页打开了”判断转发全部正常。
 
@@ -71,7 +73,7 @@ docker logs --tail 100 AWBotNest_V2
 
 先确认：
 
-- 输入的是 AWBotNest 网页管理员账号，不是 Telegram 账号、服务器账号或 Bot 用户名。
+- 输入的是 AWBotHub 网页管理员账号，不是 Telegram 账号、服务器账号或 Bot 用户名。
 - 大小写、输入法、前后空格是否正确。
 - 是否访问了另一套实例或另一端口。
 - 最近是否导入其他实例的配置包，管理员凭据随配置改变。
@@ -84,12 +86,12 @@ docker logs --tail 100 AWBotNest_V2
 
 ### 忘记密码，但你拥有服务器管理权限
 
-当前 V2 的管理员密码摘要保存在 `data/config.json`，没有可替代此配置的独立 `auth.json` 密码文件。**不要删除整个配置文件来重置密码。**
+当前平台的管理员密码摘要保存在 `data/config.json`，没有可替代此配置的独立 `auth.json` 密码文件。**不要删除整个配置文件来重置密码。**
 
 以下方法仅供系统所有者或获授权的服务器管理员使用：
 
 1. 先通过防火墙、反向代理访问限制等方式，让初始化期间只有你能访问网页。清空认证字段后，不能把初始化入口敞开给其他人。
-2. 停止 AWBotNest。Docker 示例：`docker stop AWBotNest_V2`。
+2. 停止 AWBotHub。Docker 示例：`docker stop AWBotNest_V2`。
 3. 找到实际挂载的 `data/config.json`，复制一份到安全位置，使用新的备份文件名，避免覆盖旧备份。
 4. 用文本编辑器打开原 `config.json`，**只将以下三个已有字段的值改为空字符串**，保留其他字段、逗号和 JSON 结构：
 
@@ -145,11 +147,11 @@ docker logs --tail 100 AWBotNest_V2
 
 用户账号与 Bot 通知不是同一条连接。用户账号离线时，若 Bot 和明确的 Chat ID 都有效，通知仍可发送。若通知也失败，核对目标是否先启动过 Bot、群组/频道权限、Chat ID、Token 和投递日志。
 
-详细步骤见 [账号与通知](Accounts-and-Notifications)。不要通过反复删除账号来处理短暂网络波动。
+详细步骤见 [账号与通知](Accounts-and-Notifications.md)。不要通过反复删除账号来处理短暂网络波动。
 
 ## 5. 插件装好了但不运行、定时时间到了没反应
 
-先看 [插件管理](Plugins) 中的启用、配置和账号绑定步骤。下载插件不等于启用插件；需要用户账号的插件，也不能只配一个 Bot 就运行。
+先看 [插件管理](Plugins.md) 中的启用、配置和账号绑定步骤。下载插件不等于启用插件；需要用户账号的插件，也不能只配一个 Bot 就运行。
 
 排查顺序：
 
@@ -182,7 +184,7 @@ docker logs --tail 100 AWBotNest_V2
 
 图片接口和文字接口不同。生图成功，只证明对应图片请求可用，不能证明 Chat Completions、Responses 或 Anthropic Messages 都可用。
 
-到“系统设置 → AI 服务 → 最近调用”，先看实际模型、协议、状态码、错误分类和耗时，再按 [AI 服务](AI-Service) 的步骤排查。
+到“系统设置 → AI 服务 → 最近调用”，先看实际模型、协议、状态码、错误分类和耗时，再按 [AI 服务](AI-Service.md) 的步骤排查。
 
 | 现象 | 优先检查 |
 | --- | --- |
@@ -229,7 +231,7 @@ cloakbrowser[geoip]>=0.5.10,<0.6
 - 浏览器内核：真正的 Chromium 程序，可能有 Stable、Preview 或无 Key 免费内核。
 - GeoIP 等资源：功能所需的额外数据库。
 
-这三者不是同一个下载。同一个插件明确需要另一个通道，或者关闭 Key 后首次使用旧免费内核，可能发生新的正常下载。具体目录和版本说明见 [Cookie 与浏览器](Cookies-and-Browser)。
+这三者不是同一个下载。同一个插件明确需要另一个通道，或者关闭 Key 后首次使用旧免费内核，可能发生新的正常下载。具体目录和版本说明见 [Cookie 与浏览器](Cookies-and-Browser.md)。
 
 若每次重建容器都重新下载，先核对 `data` 挂载和缓存路径；不要只持久化一个 `config.json` 而漏掉其余目录。
 
@@ -237,7 +239,7 @@ cloakbrowser[geoip]>=0.5.10,<0.6
 
 一个是 Python 组件版本，一个是内核版本，本来就不能相互比较。“已是最新”也指当前兼容范围及实际所需通道，不代表所有通道都已下载。
 
-免费 Key 开启、删除、单会话等待和旧内核回退，见 [Cookie 与浏览器](Cookies-and-Browser)。不要公开 Key，也不要直接删除整个缓存目录作为第一步。
+免费 Key 开启、删除、单会话等待和旧内核回退，见 [Cookie 与浏览器](Cookies-and-Browser.md)。不要公开 Key，也不要直接删除整个缓存目录作为第一步。
 
 ## 8. 内存很高、系统突然重新初始化
 
@@ -251,7 +253,7 @@ docker top AWBotNest_V2 -eo pid,ppid,rss,comm
 docker inspect AWBotNest_V2 --format 'StartedAt={{.State.StartedAt}} RestartCount={{.RestartCount}} OOMKilled={{.State.OOMKilled}}'
 ```
 
-进一步检查方式见 [更新与维护](Maintenance) 的内存部分。重点判断：
+进一步检查方式见 [更新与维护](Maintenance.md) 的内存部分。重点判断：
 
 - Python 主进程是否持续增长，还是浏览器运行时的短暂峰值。
 - 容器内存上限是否过小，同时运行多少重型任务。
@@ -262,7 +264,7 @@ docker inspect AWBotNest_V2 --format 'StartedAt={{.State.StartedAt}} RestartCoun
 
 不要用清空日志、删插件依赖来代替内存诊断。提高额度、减少重型并行任务、修复具体插件的资源释放，需要依据进程和日志证据选择。
 
-当前版本会在系统托管的工作结束后安排空闲回收，公共 OCR 工作进程也会在空闲后退出。内存不一定立即回落到启动值，详细行为见 [任务结束后的内存回收](Maintenance#任务结束后内存会自动回收吗)。插件仍持有的数据、独立模型和活跃任务不能靠垃圾回收强行释放。
+当前版本会在系统托管的工作结束后安排空闲回收，公共 OCR 工作进程也会在空闲后退出。内存不一定立即回落到启动值，详细行为见 [任务结束后的内存回收](Maintenance.md#任务结束后内存会自动回收吗)。插件仍持有的数据、独立模型和活跃任务不能靠垃圾回收强行释放。
 
 ## 9. 点了清理日志，怎么好像没变化
 
@@ -282,11 +284,11 @@ docker inspect AWBotNest_V2 --format 'StartedAt={{.State.StartedAt}} RestartCoun
 - **磁盘没有明显变小：** 网页历史体积通常很小，清理并不删除文件日志和 Docker 日志。
 - **没有看到结果：** 清除级别/关键词等筛选，查看系统日志中的“日志手动清理完成”或“日志自动清理完成”。失败会记录错误，不应当作清理成功。
 
-自动清理默认每天北京时间 `03:00` 执行，默认保留 1000 条。关闭定时清理不等于禁止手动清理。详细设置见 [更新与维护](Maintenance)。
+自动清理默认每天北京时间 `03:00` 执行，默认保留 1000 条。关闭定时清理不等于禁止手动清理。详细设置见 [更新与维护](Maintenance.md)。
 
 ## 10. 系统助手能聊天，却不能操作或读图
 
-先确定使用的是顶部“系统助手”，而不是某个聊天插件；两者的设置、权限和会话不相同。完整接入步骤见 [系统助手](System-Assistant)。
+先确定使用的是顶部“系统助手”，而不是某个聊天插件；两者的设置、权限和会话不相同。完整接入步骤见 [系统助手](System-Assistant.md)。
 
 | 现象 | 检查什么 |
 | --- | --- |
@@ -322,4 +324,4 @@ docker inspect AWBotNest_V2 --format 'StartedAt={{.State.StartedAt}} RestartCoun
 
 如果问题只发生在某个插件，且系统服务和其他插件正常，请同时联系插件开发者。系统能提供通用服务，但无法替不兼容插件自动补全所有业务逻辑。
 
-[安装与部署](Installation) · [首次使用](First-Run) · [账号与通知](Accounts-and-Notifications) · [AI 服务](AI-Service) · [系统助手](System-Assistant) · [Cookie 与浏览器](Cookies-and-Browser) · [更新与维护](Maintenance) · [返回首页](Home)
+[安装与部署](Installation.md) · [首次使用](First-Run.md) · [账号与通知](Accounts-and-Notifications.md) · [AI 服务](AI-Service.md) · [系统助手](System-Assistant.md) · [Cookie 与浏览器](Cookies-and-Browser.md) · [更新与维护](Maintenance.md) · [返回首页](Home.md)

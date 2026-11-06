@@ -1,4 +1,4 @@
-"""awembypush AWBotNest V2 原生插件入口。"""
+"""awembypush AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -16,10 +16,10 @@ __plugin__ = {'name': 'AWEmbyPush',
               'v2.0.1 补齐敏感字段显示按钮\n'
               '- TMDB API Key、Telegram Bot Token 与企业微信 Secret 默认隐藏\n'
               '- 点击眼睛后显示平台受控读取的真实值，不再停留在脱敏占位符\n\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v1.5.19 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -29,21 +29,21 @@ __plugin__ = {'name': 'AWEmbyPush',
               '- Vue 页面业务字段按新规范由自定义配置页保存\n'
               '- schema 仅保留密码等敏感字段，避免数组或对象被旧类型声明拒绝\n'
               '\n'
-              'v1.5.17 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.5.17 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.5.16 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.5.14 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.5.14 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.5.8 标明独立运行\n'
               '- 插件不依赖用户账号或机器人，安装后会显示“独立运行”\n'
@@ -52,7 +52,7 @@ __plugin__ = {'name': 'AWEmbyPush',
               'v1.5.7 修复去重记录竞态\n'
               '- 发送去重记录的读写加锁，避免多线程并发读写竞态\n'
               '\n'
-              'v1.5.6 移植到 AWBotNest 平台\n'
+              'v1.5.6 移植到 AWBotHub 平台\n'
               '- 自 MoviePilot 插件 AWEmbyPush v1.5.5 移植\n'
               '- 使用平台 Webhook 机制和 Vue 配置界面\n'
               '- 支持 Telegram/企业微信/Bark 三种推送渠道\n'
@@ -62,19 +62,19 @@ __plugin__ = {'name': 'AWEmbyPush',
  'webhook': True,
  'requirements': ['requests>=2.28'],
  'config_schema': {'tmdb_api_key': {'title': 'tmdb api key',
-                                    'section': 'V2 配置',
+                                    'section': '插件配置',
                                     'order': 2,
                                     'type': 'password',
                                     'secret': True,
                                     'default': ''},
                    'tg_bot_token': {'title': 'tg bot token',
-                                    'section': 'V2 配置',
+                                    'section': '插件配置',
                                     'order': 11,
                                     'type': 'password',
                                     'secret': True,
                                     'default': ''},
                    'wx_corp_secret': {'title': 'wx corp secret',
-                                      'section': 'V2 配置',
+                                      'section': '插件配置',
                                       'order': 15,
                                       'type': 'password',
                                       'secret': True,

@@ -110,7 +110,7 @@ def find_numbered_buttons(message) -> list[tuple[int, int]]:
     """返回所有未抢数字按钮的 (row, col) 列表（癫影积分红包）。"""
     result: list[tuple[int, int]] = []
     # Telethon 的便捷属性是 ``message.buttons``；底层 ReplyInlineMarkup 则是
-    # ``reply_markup.rows[*].buttons``。V1/Pyrogram 的旧按钮集合在 V2 消息上
+    # ``reply_markup.rows[*].buttons``。旧版 Pyrogram 的旧按钮集合在当前平台消息上
     # 不存在，因此必须同时兼容前两种 Telethon 结构。
     rows = getattr(message, "buttons", None)
     if not rows:

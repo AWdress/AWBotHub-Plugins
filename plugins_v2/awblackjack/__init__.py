@@ -1,4 +1,4 @@
-"""awblackjack AWBotNest V2 原生插件入口。"""
+"""awblackjack AWBotHub 原生插件入口。"""
 from __future__ import annotations
 
 from .core import setup as _core_setup, teardown as _core_teardown
@@ -8,15 +8,15 @@ __plugin__ = {'name': 'AWBlackjack',
  'version': '2.0.1',
  'author': 'AWdress',
  'description': 'SpringSunday 21 点单账号自动挂机插件，通过 MQTT 与其他实例同步对局状态并协助处理平局。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/awblackjack.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/awblackjack.png',
  'scope': 'standalone',
  'requirements': ['aiomqtt>=2.0', 'aiohttp>=3.9', 'beautifulsoup4>=4.12', 'lxml>=5.0'],
  'changelog': 'v2.0.1 统一富文本表格通知\n'
               '- 进程异常和平局协同通知改为平台结构化表格\n\n'
-              'v2.0.0 原生 AWBotNest V2 迁移\n'
+              'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'
-              '- 移除 V1 兼容运行层\n'
+              '- 移除旧版兼容运行层\n'
               '\n'
               'v1.0.9 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
@@ -26,21 +26,21 @@ __plugin__ = {'name': 'AWBlackjack',
               '- 将滑块字段改为精确数值输入，确保当前值始终可见\n'
               '- 保留原有默认值、范围和步长校验\n'
               '\n'
-              'v1.0.7 修复 V1 默认配置恢复\n'
-              '- 插件启用时恢复被旧版 V2 表单错误保存为空的默认值\n'
+              'v1.0.7 修复旧版默认配置恢复\n'
+              '- 插件启用时恢复被旧版表单错误保存为空的默认值\n'
               '- 保留已有非空配置、关闭状态、零值和空列表，不覆盖用户有效设置\n'
               '\n'
               'v1.0.6 适配平台原生富文本通知\n'
-              '- 将 notify_table 和 send_rich 交由 AWBotNest 2 平台原生服务处理\n'
+              '- 将 notify_table 和 send_rich 交由 AWBotHub 平台原生服务处理\n'
               '- 原生富文本不可用时保留可读的文本降级\n'
               '\n'
-              'v1.0.4 AWBotNest 2 规范复核\n'
-              '- 修复 V2 实体、生命周期、配置安全和依赖兼容问题\n'
+              'v1.0.4 AWBotHub 规范复核\n'
+              '- 修复平台实体、生命周期、配置安全和依赖兼容问题\n'
               '- 通过全量元数据、语法和发布清单检查\n'
               '\n'
-              'AWBotNest 2 兼容发布\n'
+              'AWBotHub 兼容发布\n'
               '- 使用 Telethon 原生事件、调度和生命周期托管\n'
-              '- 保留 AWBotNest 1 版本与原有数据\n'
+              '- 保留原有数据\n'
               '\n'
               'v1.0.1 完整性审查与稳定性修复\n'
               '- 修复跨零点挂机时段永远不生效\n'
@@ -52,7 +52,7 @@ __plugin__ = {'name': 'AWBlackjack',
               'v1.0.0 初始迁移\n'
               '- 完整迁移 AWBlackJack 单账号挂机、自动抓牌、对战和平局协助逻辑\n'
               '- 保留 MQTT 跨实例状态同步，每个插件实例仅运行一个站点账号\n'
-              '- 配置、日志、运行目录与生命周期接入 AWBotNest 平台\n'
+              '- 配置、日志、运行目录与生命周期接入 AWBotHub 平台\n'
               '- 支持连接测试、后台重启、崩溃自动拉起和平台错误通知',
  'config_schema': {'enabled': {'type': 'boolean',
                                'default': False,

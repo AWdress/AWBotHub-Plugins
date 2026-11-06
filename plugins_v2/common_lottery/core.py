@@ -1,5 +1,5 @@
 # =============================================================================
-# AWBotNest 插件：通用抽奖（common_lottery）
+# AWBotHub 插件：通用抽奖（common_lottery）
 #
 # 自动参与 @Lottery8Bot 这类通用抽奖机器人发起的抽奖（任意群可参与，不限站点）：
 # 监听抽奖消息 → 解析口令 → 按需自动加入指定群/频道 → 随机等待后发口令参与。
@@ -20,8 +20,8 @@ __plugin__ = {
     "version": "1.0.7",
     "author": "AWdress",
     "description": "自动参与 @Lottery8Bot 等通用抽奖：解析口令、按需自动加群、随机等待后发口令。任意群可用。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/common_lottery.jpg",
-    "changelog": "v1.0.7 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotNest 插件开发规范\nv1.0.6 更新插件 Logo\n- 使用通用抽奖专属图片作为插件卡片与市场图标",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/common_lottery.jpg",
+    "changelog": "v1.0.7 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.0.6 更新插件 Logo\n- 使用通用抽奖专属图片作为插件卡片与市场图标",
     "scope": "user",
     "default_enabled": False,
     "config_schema": {

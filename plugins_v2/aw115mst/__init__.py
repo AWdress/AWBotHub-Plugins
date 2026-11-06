@@ -1,11 +1,11 @@
-"""AW115MST: self-contained AWBotNest V2 plugin."""
+"""AW115MST: self-contained AWBotHub plugin."""
 from .core import setup, teardown
 
 __plugin__ = {
     "id": "aw115mst", "name": "AW115MST", "version": "0.0.1", "plugin_api_version": 2,
     "author": "AWdress", "scope": "bot", "render_mode": "vue",
     "description": "本地文件 SHA1 检测与 115 秒传入库，支持扫码登录、复制/移动分类、定时巡检、待秒传重检、可选真实上传和运行记录。",
-    "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins_v2/aw115mst/logo.png",
+    "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/aw115mst/logo.png",
     "tags": ["115", "秒传", "文件管理"], "cookie_domains": ["115.com", "*.115.com"],
     "changelog": "v0.0.1 首次发布\n- 内置文件检测、扫码登录、秒传入库、待秒传重检与可选真实上传\n- 使用平台 HTTP、调度、通知和管理员接口，提供 Vue 分组配置页\n- 默认复制保源、关闭自动任务及删除；记录回执与文件快照，重名不覆盖\n- 需要 Python 3.12 或更高版本；秒传命中会实际加入网盘",
     "resources": {"timeout_seconds": 900, "max_concurrency": 4, "max_background_tasks": 4},

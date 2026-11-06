@@ -1,4 +1,4 @@
-"""AWBotNest V2 原生定时自动回复插件。"""
+"""AWBotHub 原生定时自动回复插件。"""
 from __future__ import annotations
 
 from .core import setup as _native_setup
@@ -10,7 +10,7 @@ __plugin__ = {'name': '定时自动回复',
  'requirements': [],
  'author': 'AWdress',
  'description': '到点自动用你的账号往指定群/会话发消息。支持多个会话，每个会话可单独设时间和内容。时间支持每天定点、每隔几小时/几分钟、或 cron 表达式。',
- 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/family_reply.png',
+ 'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_reply.png',
  'scope': 'user',
  'config_schema': {'notify_owner': {'type': 'boolean',
                                     'default': False,
@@ -102,7 +102,7 @@ __plugin__ = {'name': '定时自动回复',
                                          '例：`0 9 * * 1-5` 工作日每天 9:00；`*/15 9-18 * * *` 9~18 点每 15 分钟一次；`30 8 '
                                          '1 * *` 每月 1 号 8:30。'}},
  'tags': ['定时消息', '多会话规则', '自动发送'],
- 'changelog': 'v2.0.2 适配平台统一 Cron 编辑器\n- Cron 配置声明标准 format，由平台统一展示和校验\n\nv2.0.1 统一富文本表格通知\n- 定时发送成功和失败通知改为平台结构化表格\n\nv2.0.0 原生 AWBotNest V2 迁移\n- 使用平台原生间隔与 Cron 调度\n- 使用 Telethon 原生账号、会话及消息接口\n- 保留逐会话时间、内容和通知功能并移除 V1 兼容层'}
+ 'changelog': 'v2.0.2 适配平台统一 Cron 编辑器\n- Cron 配置声明标准 format，由平台统一展示和校验\n\nv2.0.1 统一富文本表格通知\n- 定时发送成功和失败通知改为平台结构化表格\n\nv2.0.0 原生 AWBotHub 迁移\n- 使用平台原生间隔与 Cron 调度\n- 使用 Telethon 原生账号、会话及消息接口\n- 保留逐会话时间、内容和通知功能并移除旧版兼容层'}
 
 
 async def setup(ctx):
