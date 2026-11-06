@@ -163,7 +163,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.10",
+    "version": "2.7.11",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotNest-Plugins/main/plugins/icons/pt_checkin_v2.svg",
@@ -208,6 +208,14 @@ __plugin__ = {
     },
 }
 __plugin__["changelog"] = "v2.7.10 增加猪猪服务器登录超时诊断\n- 超时时自动记录页面类别、表单/日历可见性、会话和账号匹配状态，无需查看浏览器窗口\n- 汇总关键请求的固定网络错误分类，不记录网址、响应正文、密码或 Token\n- 仅增强排查信息，不增加登录/签到点击，不改变成功判定与等待时限\n\nv2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
+
+__plugin__["changelog"] = (
+    "v2.7.11 自动处理猪猪规则阅读确认\n"
+    "- 登录后遇站点规则阅读页，仅对已识别的原生“确认已阅读”按钮点击一次，再继续进入日历\n"
+    "- 确认前核对站点、账号、提示与按钮，控件禁用或页面未加载时等待，不误点其他协议\n"
+    "- 阅读确认不等于签到成功，仍严格核对日历与当天签到记录\n\n"
+    + __plugin__["changelog"]
+)
 
 SITES = {
     # PT 社区常用的 12 个站点置于第一组；其余已有适配站点置于第二组。
@@ -664,7 +672,8 @@ def _piggo_log_login_timeout(page, ctx, username, observation) -> None:
             raise ValueError("untrusted page")
         path = (parsed.path or "/").rstrip("/").lower()
         route = "日历页" if path == "/calendar" else (
-            "登录页" if path in {"/login", "/login.php", "/takelogin.php"} else "其他站内页")
+            "规则阅读页" if path == "/wiki/rules-general" else (
+                "登录页" if path in {"/login", "/login.php", "/takelogin.php"} else "其他站内页"))
         data = page.evaluate("""() => {
             // 只读取当前状态，不调用站点内部函数，不修改存储或发起请求。
             if (location.protocol !== 'https:' || !['piggo.me', 'www.piggo.me'].includes(location.hostname) ||
@@ -727,6 +736,84 @@ def _piggo_log_login_timeout(page, ctx, username, observation) -> None:
                  "（仅作排查，不代表失败根因）", level="warning", site="猪猪")
 
 
+def _piggo_confirm_wiki_reading(page, ctx, guard, username, reading, deadline) -> str:
+    """仅确认已识别的官网规则阅读回执，不同意其他协议、不调用确认接口。"""
+    if (guard().path or "/").rstrip("/").lower() != "/wiki/rules-general":
+        return ""
+    # 选择器与文案来自官网当前 Wiki 组件；不对其他 Wiki、邀请规则或通用弹窗猜测点击。
+    section = page.locator("article.wiki-main .wiki-ack")
+    if not section.count():
+        if reading.get("attempted") and not reading.get("completed"):
+            reading["completed"] = True
+            _runtime_log(ctx, "官网规则阅读确认区域已关闭，继续核对日历登录状态", site="猪猪")
+        return ""
+    if reading.get("attempted"):
+        # 原生提交可能重绘按钮或显示处理中；此后只观察，不重新判断可点击候选。
+        return "waiting"
+    hint = page.locator("article.wiki-main .wiki-ack-hint")
+    button = page.locator('article.wiki-main .wiki-ack > button.btn[type="button"]')
+
+    def recognized_button():
+        if section.count() != 1 or hint.count() != 1 or button.count() != 1:
+            raise RuntimeError("猪猪规则阅读确认区域不明确，本轮未自动点击")
+        if not section.is_visible() or not hint.is_visible() or not button.is_visible():
+            return False
+        if "".join(hint.inner_text().split()) != "阅读完毕后请确认，才能继续使用站点。" \
+                or button.inner_text().strip() != "确认已阅读":
+            raise RuntimeError("猪猪规则阅读确认内容已变化，本轮未自动点击其他确认或协议")
+        verification = page.locator('.site-cap[role="dialog"][aria-label="人机验证"], .captcha-row, .site-captcha')
+        if any(verification.nth(index).is_visible() for index in range(verification.count())):
+            raise RuntimeError("猪猪规则阅读确认出现人机验证，本轮未自动点击")
+        return True
+
+    if not recognized_button():
+        return "waiting"
+    try:
+        state = page.evaluate("""() => {
+            let user = {};
+            try { user = JSON.parse(localStorage.getItem('pig_user') || '{}'); } catch (_) {}
+            const text = document.body?.innerText || '';
+            const token = localStorage.getItem('pig_token');
+            return {
+                username: user?.id && typeof user.username === 'string' ? user.username : '',
+                hasSession: typeof token === 'string' && !!token.trim() && token !== '********',
+                locked: text.includes('页面已锁定') && text.includes('空闲过久'),
+                loginForm: !!document.querySelector('form input#username')
+            };
+        }""")
+    except Exception as exc:
+        guard()
+        if any(marker in str(exc) for marker in (
+            "Execution context was destroyed", "Cannot find context with specified id",
+            "Unable to retrieve content because the page is navigating",
+        )):
+            return "waiting"
+        raise RuntimeError("猪猪规则阅读状态读取失败，本轮未自动确认阅读") from None
+    guard()
+    if not isinstance(state, dict) or state.get("hasSession") is not True \
+            or state.get("locked") is not False or state.get("loginForm") is not False \
+            or not isinstance(state.get("username"), str) or not state["username"].strip():
+        return "waiting"
+    if state["username"].casefold() != username.casefold():
+        raise RuntimeError("猪猪当前登录账号与所填用户名不一致，本轮未确认阅读")
+    if (guard().path or "/").rstrip("/").lower() != "/wiki/rules-general":
+        return "waiting"
+    # 身份快照期间 SPA 可能重绘；动作前重新核对控件与文案，拒绝变成其他协议。
+    if not recognized_button() or not button.is_enabled() or time.monotonic() >= deadline:
+        return "waiting"
+    if (guard().path or "/").rstrip("/").lower() != "/wiki/rules-general":
+        return "waiting"
+    # 即使原生点击超时，也只观察官网结果；绝不再次提交阅读确认。
+    reading["attempted"] = True
+    _runtime_log(ctx, "检测到官网站点规则阅读确认，原生点击“确认已阅读”（本轮仅一次）", site="猪猪")
+    try:
+        button.click(timeout=10_000)
+    except Exception:
+        _runtime_log(ctx, "官网阅读确认操作未确认，等待页面结果，不重复点击", level="warning", site="猪猪")
+    guard()
+    return "submitted"
+
+
 def _piggo_ensure_login(page, ctx, loop) -> tuple[str, str] | None:
     if ctx is None:
         return
@@ -746,6 +833,7 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
         raise RuntimeError("猪猪尚未填写完整的用户名和密码，请在插件配置中填写并保存")
     submitted = False
     calendar_navigated = False
+    reading = {}
     expected = (username, password)
 
     def guard():
@@ -790,6 +878,14 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
                 guard()
                 _runtime_log(ctx, "官网账号密码登录成功，仅使用本轮浏览器会话", site="猪猪")
                 return expected
+            if path == "/wiki/rules-general":
+                reading_action = _piggo_confirm_wiki_reading(page, ctx, guard, username, reading, deadline)
+                if reading_action:
+                    if reading_action == "submitted":
+                        # 仅在已处理规则门禁后，允许再次进入原来的日历目标。
+                        calendar_navigated = False
+                    page.wait_for_timeout(500)
+                    continue
             if path in {"/login", "/login.php", "/takelogin.php"}:
                 captcha = page.locator(".captcha-row, .site-captcha, input[name='otp'], input[name='totp']")
                 if any(captcha.nth(index).is_visible() for index in range(captcha.count())):
@@ -852,6 +948,10 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
     parsed = guard()
     _piggo_log_login_timeout(page, ctx, username, observation)
     parsed = guard()
+    if (parsed.path or "/").rstrip("/").lower() == "/wiki/rules-general":
+        if reading.get("attempted"):
+            raise RuntimeError("猪猪规则阅读确认提交后仍未进入日历，本轮未签到；未重复点击阅读确认")
+        raise RuntimeError("猪猪停留在站点规则阅读页，未找到可安全确认的原生阅读按钮，本轮未签到")
     if (parsed.path or "/").rstrip("/").lower() == "/calendar":
         try:
             state = page.evaluate("""() => {
