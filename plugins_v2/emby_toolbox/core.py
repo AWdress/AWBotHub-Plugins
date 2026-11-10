@@ -14,7 +14,7 @@
 # 说明：
 # - 每个功能都有独立开关。
 # - 每个功能也有独立 action 按钮。
-# - 所有 Emby 写操作默认可选锁定数据，尽量减少后续被刮削覆盖。
+# - 字段维护仅保护所修改字段，保留原整体锁状态，不新增整体锁。
 # =============================================================================
 
 import asyncio
@@ -32,11 +32,12 @@ from urllib.parse import quote, urlsplit, urlunsplit
 import requests
 
 from .cover_templates import render_cover
+from .lock_repair import LockRepair, locked_fields, whole_locked
 
 __plugin__ = {
     "name": "Emby 工具箱",
     "id": "emby_toolbox",
-    "version": "2.1.6",
+    "version": "2.1.7",
     "author": "AWdress",
     "description": "集成 Emby 剧集校验、Genre 清理/映射、季名刮削、国家语言 Tag、别名写入、STRM 刷新、元数据缺失检查等维护功能。支持定时执行与完整日志。",
     "icon": "https://cdn.simpleicons.org/emby",
@@ -74,7 +75,7 @@ DEFAULT_LANGUAGE = '其他语种'
 
 DEFAULTS: Dict[str, Any] = {
     'emby_server': '', 'api_key': '', 'user_id': '', 'tmdb_key': '',
-    'library_names': '', 'fix_lock_data': True, 'max_output': 50,
+    'library_names': '', 'lock_modified_fields': True, 'max_output': 50,
     'genre_mapping_json': '{\n  "Sci-Fi & Fantasy": "科幻",\n  "War & Politics": "战争"\n}',
     'genre_remove_list': '', 'add_hant_title': True, 'strm_delay': 3,
     'enable_episode_fix': True, 'enable_delete_episode_genre': False,
@@ -89,6 +90,10 @@ DEFAULTS: Dict[str, Any] = {
 # Keep the module metadata and the marketplace manifest in sync without
 # duplicating the historical release notes below.
 __plugin__["changelog"] = (
+    "v2.1.7 修复字段维护误设整体锁\n"
+    "- 六条维护路径不再新增整体锁，字段保护与原有整体锁状态分开处理\n"
+    "- 旧锁定开关仅迁移为字段锁；增加手动误锁预览、备份与确认修复\n"
+    "- 修复保留 LockedFields，不自动全库解锁、不直接改 NFO 或触发刮削\n\n"
     "v2.1.6 修复别名与分类封面实际写入\n"
     "- 别名写入改用 Emby 实际持久化的 ForcedSortName，并在完整条目上回读确认\n"
     "- 别名缓存升级后自动失效，避免旧缓存跳过修复\n"
@@ -163,14 +168,16 @@ def _now() -> str:
 
 
 def _cfg(ctx) -> Dict[str, Any]:
-    c = {**DEFAULTS, **dict(ctx.config or {})}
+    saved = dict(ctx.config or {})
+    c = {**DEFAULTS, **saved}
     return {
         'emby_server': str(c.get('emby_server', '') or '').strip(),
         'api_key': str(c.get('api_key', '') or '').strip(),
         'user_id': str(c.get('user_id', '') or '').strip(),
         'tmdb_key': str(c.get('tmdb_key', '') or '').strip(),
         'library_names': str(c.get('library_names', '') or ''),
-        'fix_lock_data': bool(c.get('fix_lock_data', True)),
+        # 旧开关只继承“保护字段”的意图，绝不迁移成整体锁。
+        'lock_modified_fields': bool(saved.get('lock_modified_fields', saved.get('fix_lock_data', True))),
         'max_output': int(c.get('max_output', 50) or 50),
         'genre_mapping_json': str(c.get('genre_mapping_json', '') or ''),
         'genre_remove_list': str(c.get('genre_remove_list', '') or ''),
@@ -190,6 +197,34 @@ def _cfg(ctx) -> Dict[str, Any]:
         'schedule_cron': str(c.get('schedule_cron', '0 3 * * *') or '0 3 * * *'),
         'schedule_functions': list(c.get('schedule_functions', []) or []),
     }
+
+
+def _apply_field_locks(item: Dict[str, Any], cfg: Dict[str, Any], *fields: str) -> None:
+    """只增加字段保护；原本整体锁定的条目必须仍整体锁定。
+
+    Emby 读取 DTO 通常使用 IsLocked，写入 DTO 使用 LockData。显式转换
+    原状态，避免漏传非空布尔字段时被服务端默认值意外解锁。缺失/冲突状态
+    不猜测，拒绝写入。季集编号没有验证过可用的字段锁枚举，不编造字段名。
+    """
+    original = whole_locked(item)
+    locked = locked_fields(item)
+    if cfg.get('lock_modified_fields', cfg.get('fix_lock_data', True)):
+        for field in fields:
+            if field not in locked:
+                locked.append(field)
+    item['LockedFields'] = locked
+    item['LockData'] = original
+    item.pop('IsLocked', None)
+
+
+def _locks_match(item: Dict[str, Any], verify: Dict[str, Any]) -> bool:
+    if 'LockData' not in item:
+        return True
+    try:
+        return (whole_locked(verify) is item['LockData']
+                and set(locked_fields(verify)) == set(locked_fields(item)))
+    except ValueError:
+        return False
 
 
 def _base_url(server: str) -> str:
@@ -335,7 +370,7 @@ def _get_system_item(cfg: Dict[str, Any], item_id: str, user_id: str = "") -> Di
                     params={
                         'Ids': item_id,
                         'api_key': cfg['api_key'],
-                        'Fields': 'Genres,GenreItems,Tags,SortName,ForcedSortName,LockedFields,SeasonName,Name',
+                        'Fields': 'Genres,GenreItems,Tags,SortName,ForcedSortName,LockedFields,LockData,IsLocked,SeasonName,Name',
                     },
                     headers=_headers(cfg['api_key']),
                     timeout=30,
@@ -392,6 +427,7 @@ def _update_item(cfg: Dict[str, Any], item: Dict[str, Any]) -> None:
                 full = _get_user_item(cfg, user_id, item_id, base)
                 complete = dict(full)
                 complete.update(item)
+                complete.pop('IsLocked', None)
                 retry = requests.post(url, params=params, headers=_post_headers(cfg['api_key']), json=complete, timeout=60)
                 retry.raise_for_status()
                 cfg['_active_server'] = base
@@ -427,6 +463,8 @@ def _update_item_verified(
     """
     _update_item(cfg, item)
     verify = _get_system_item(cfg, str(item['Id']), user_id)
+    if not _locks_match(item, verify):
+        return False
     for key, wanted in expected.items():
         got = verify.get(key)
         if key in unordered:
@@ -477,6 +515,50 @@ def _get_recursive_items(
         if not page or len(page) < limit or (total and len(result) >= total):
             break
         start += len(page)
+    return result
+
+
+def _get_lock_repair_children(cfg: Dict[str, Any], parent_id: str) -> List[Dict[str, Any]]:
+    """误锁修复专用的严格分页；读不全时拒绝生成可执行计划。
+
+    不能复用普通扫描遇重复页就停止的宽松逻辑。服务端缩小每页数量时
+    按实际数量推进，直到严格达到稳定的 TotalRecordCount。
+    """
+    result, seen = [], set()
+    total = None
+    while total is None or len(result) < total:
+        response = requests.get(
+            f"{_base_url(cfg['emby_server'])}/emby/Items",
+            headers=_headers(cfg['api_key']),
+            params={
+                'api_key': cfg['api_key'], 'ParentId': parent_id, 'Recursive': 'true',
+                'IncludeItemTypes': 'Season,Episode', 'StartIndex': len(result), 'Limit': 500,
+                'Fields': 'Name,Type,LockedFields,LockData,IsLocked,ParentId,SeriesId',
+                'SortBy': 'SortName', 'SortOrder': 'Ascending',
+            }, timeout=60,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if (not isinstance(payload, dict) or not isinstance(payload.get('Items'), list)
+                or type(payload.get('TotalRecordCount')) is not int):
+            raise ValueError('下级条目列表缺少完整分页信息，请重新预览')
+        current_total = payload['TotalRecordCount']
+        if current_total < 0 or current_total > 200000:
+            raise ValueError('下级条目总数异常，已停止预览')
+        if total is None:
+            total = current_total
+        elif total != current_total:
+            raise ValueError('预览期间下级条目总数变化，请待入库结束后重新预览')
+        page = payload['Items']
+        if not page and len(result) != total:
+            raise ValueError('下级条目分页提前结束，未生成解锁计划')
+        for item in page:
+            if not isinstance(item, dict) or not item.get('Id') or str(item['Id']) in seen:
+                raise ValueError('下级条目分页重复或格式异常，未生成解锁计划')
+            seen.add(str(item['Id']))
+            result.append(item)
+        if len(result) > total:
+            raise ValueError('下级条目分页总数不一致，未生成解锁计划')
     return result
 
 
@@ -788,11 +870,12 @@ def _episode_fix(cfg: Dict[str, Any], ctx=None) -> str:
             item = _get_user_item(cfg, user_id, str(row['id']))
             item['ParentIndexNumber'] = row['file_season']
             item['IndexNumber'] = row['file_episode']
-            if cfg['fix_lock_data']:
-                item['LockData'] = True
+            _apply_field_locks(item, cfg)
             _update_item(cfg, item)
             verify = _get_user_item(cfg, user_id, str(row['id']))
-            if verify.get('ParentIndexNumber') == row['file_season'] and verify.get('IndexNumber') == row['file_episode']:
+            if (verify.get('ParentIndexNumber') == row['file_season']
+                    and verify.get('IndexNumber') == row['file_episode']
+                    and _locks_match(item, verify)):
                 ok_count += 1
             else:
                 fail_count += 1
@@ -846,12 +929,7 @@ def _delete_episode_genre(cfg: Dict[str, Any], ctx=None) -> str:
             # GenreItems 为服务端维护字段，不放入更新 DTO；清空 Genres 后由
             # Emby 自动移除对应关联，避免旧 ID 让英文 Genre 被重新挂回。
             item.pop('GenreItems', None)
-            if cfg['fix_lock_data']:
-                locked = item.get('LockedFields') or []
-                if 'Genres' not in locked:
-                    locked.append('Genres')
-                item['LockedFields'] = locked
-                item['LockData'] = True
+            _apply_field_locks(item, cfg, 'Genres')
             ok = _update_item_verified(
                 cfg, item, {'Genres': []}, user_id, unordered=('Genres',)
             )
@@ -979,13 +1057,8 @@ def _genre_mapper(cfg: Dict[str, Any], ctx=None) -> str:
             # 发送旧 ID 或无 ID 的关联对象会让部分 Emby 版本静默忽略整个 Genre
             # 更新；只提交官方支持的 Genres 字段，服务端会重建关联实体。
             item.pop('GenreItems', None)
-            if cfg['fix_lock_data']:
-                locked = item.get('LockedFields') or []
-                if 'Genres' not in locked:
-                    locked.append('Genres')
-                item['LockedFields'] = locked
-                item['LockData'] = True
             try:
+                _apply_field_locks(item, cfg, 'Genres')
                 confirmed = _update_item_verified(
                     cfg, item, {'Genres': new_genres}, user_id,
                     unordered=('Genres',)
@@ -1082,13 +1155,8 @@ def _season_renamer(cfg: Dict[str, Any], ctx=None) -> str:
                     continue
                 full = _get_user_item(cfg, user_id, str(season['Id']))
                 full['Name'] = new_name
-                lf = full.get('LockedFields') or []
-                if 'Name' not in lf:
-                    lf.append('Name')
-                full['LockedFields'] = lf
-                if cfg['fix_lock_data']:
-                    full['LockData'] = True
                 try:
+                    _apply_field_locks(full, cfg, 'Name')
                     confirmed = _update_item_verified(cfg, full, {'Name': new_name}, user_id)
                 except Exception as exc:
                     confirmed = False
@@ -1139,7 +1207,14 @@ def _country_scraper(cfg: Dict[str, Any], ctx=None) -> str:
             langs = tmdb.get('spoken_languages', []) or []
             if not prod and not langs:
                 continue
-            item = item0
+            # 列表 DTO 不保证包含整体锁及全部元数据。使用最新完整详情，
+            # 防止部分更新在 Emby 端按默认值解锁或覆盖其他字段。
+            try:
+                item = _get_user_item(cfg, user_id, str(item0['Id']))
+            except Exception as exc:
+                if ctx:
+                    ctx.log.warning(f'[emby_toolbox] 国家/语言标签读取失败 {item0.get("Name", "未知")}: {exc}')
+                continue
             old_tags = [t['Name'].strip() for t in item.get('TagItems', []) if isinstance(t, dict) and t.get('Name') and t.get('Name').strip()]
             if not old_tags and item.get('Tags'):
                 old_tags = [t.strip() for t in item.get('Tags') if isinstance(t, str) and t.strip()]
@@ -1170,13 +1245,8 @@ def _country_scraper(cfg: Dict[str, Any], ctx=None) -> str:
                 continue
             item['Tags'] = new_tags
             item['TagItems'] = [{'Name': t} for t in new_tags]
-            lf = item.get('LockedFields') or []
-            if 'Tags' not in lf:
-                lf.append('Tags')
-            item['LockedFields'] = lf
-            if cfg['fix_lock_data']:
-                item['LockData'] = True
             try:
+                _apply_field_locks(item, cfg, 'Tags')
                 confirmed = _update_item_verified(
                     cfg, item, {'Tags': new_tags}, user_id, unordered=('Tags',)
                 )
@@ -1230,6 +1300,8 @@ def _update_alias_verified(
     """
     _update_item(cfg, item)
     verify = _get_system_item(cfg, str(item['Id']), user_id)
+    if not _locks_match(item, verify):
+        return False
     forced = verify.get('ForcedSortName')
     sort_name = verify.get('SortName')
     if forced not in (None, ''):
@@ -1327,13 +1399,8 @@ def _alt_renamer(cfg: Dict[str, Any], ctx=None) -> str:
             # ItemUpdateService.  SortName is calculated by the server and
             # should not be treated as a writable alias field.
             item['ForcedSortName'] = sort_all
-            lf = item.get('LockedFields') or []
-            if 'SortName' not in lf:
-                lf.append('SortName')
-            item['LockedFields'] = lf
-            if cfg['fix_lock_data']:
-                item['LockData'] = True
             try:
+                _apply_field_locks(item, cfg, 'SortName')
                 confirmed = _update_alias_verified(cfg, item, sort_all, user_id)
             except Exception as exc:
                 confirmed = False
@@ -1956,6 +2023,28 @@ async def setup(ctx):
             await asyncio.gather(*(asyncio.wrap_future(x) if not isinstance(x, asyncio.Future) else x for x in list(pending_writes)), return_exceptions=True)
     ctx.add_cleanup(flush_state)
 
+    def save_lock_backup(backup):
+        # 运行于 worker 线程。必须确认持久化已完成，不能只投递异步写入
+        # 就开始改媒体库；存储失败/超时不进行任何解锁。
+        future = asyncio.run_coroutine_threadsafe(
+            ctx.storage.set('lock_repair_backup', backup), event_loop,
+        )
+        future.result(timeout=30)
+        state['lock_repair_backup'] = backup
+
+    def read_lock_item(cfg, item_id):
+        if not cfg.get('_lock_repair_user_id'):
+            cfg['_lock_repair_user_id'] = _resolve_user_id(cfg)
+        return _get_user_item(cfg, cfg['_lock_repair_user_id'], item_id)
+
+    repair = LockRepair(
+        get_item=read_lock_item,
+        update_item=_update_item,
+        get_children=_get_lock_repair_children,
+        save_backup=save_lock_backup,
+        log=ctx.log,
+    )
+
     def _persist_history(row: Dict[str, Any]):
         _RECENT.appendleft(row)
         try:
@@ -1965,13 +2054,39 @@ async def setup(ctx):
         except Exception:
             pass
 
-    async def _execute(keys: List[str], source: str, label: str):
+    async def _execute(keys: List[str], source: str, label: str, repair_request=None):
         nonlocal active_task
         cfg = _cfg(ctx)
         _RUNTIME.update(running=True, task=label, source=source, started_at=_now(),
                         finished_at='', last_result='', last_ok=None)
         results, success = [], True
         try:
+            if repair_request is not None:
+                ok, message = _validate_basic(cfg)
+                if not ok:
+                    raise ValueError(message)
+                action, data = repair_request
+                ctx.log.info('[emby_toolbox] 开始：%s', label)
+                if action == 'preview':
+                    worker = asyncio.create_task(asyncio.to_thread(
+                        repair.preview, cfg, data.get('item_ids', ''),
+                        data.get('include_children', False),
+                    ))
+                else:
+                    worker = asyncio.create_task(asyncio.to_thread(
+                        repair.apply, cfg, data.get('token', ''),
+                        data.get('confirmed', False),
+                    ))
+                try:
+                    outcome = await asyncio.shield(worker)
+                except asyncio.CancelledError:
+                    repair.cancel()
+                    # to_thread 的取消不能终止线程，等待其安全停止后再释放任务。
+                    await asyncio.shield(worker)
+                    raise
+                success = bool(outcome.get('ok'))
+                results.append(outcome.get('message', '误锁修复未返回结果'))
+                ctx.log.info('[emby_toolbox] %s', results[-1])
             for key in keys:
                 title = FEATURES.get(key, (key, '', False))[0] if key != 'scan_episode_mismatch' else '扫描剧集季集'
                 need_tmdb = FEATURES.get(key, ('', '', False))[2]
@@ -2014,12 +2129,12 @@ async def setup(ctx):
             _RUNTIME.update(running=False, finished_at=_now())
             active_task = None
 
-    def _dispatch(keys: List[str], source: str, label: str):
+    def _dispatch(keys: List[str], source: str, label: str, repair_request=None):
         nonlocal active_task
         if active_task is not None and not active_task.done():
             return False
         active_task = ctx.create_task(
-            _execute(keys, source, label),
+            _execute(keys, source, label, repair_request),
             name=f'Emby 工具箱：{label}',
         )
         return True
@@ -2029,6 +2144,7 @@ async def setup(ctx):
         return [key for key in FEATURES if cfg.get(f'enable_{key}', False)]
 
     def _cleanup():
+        repair.cancel()
         if active_task is not None and not active_task.done():
             active_task.cancel()
 
@@ -2039,7 +2155,36 @@ async def setup(ctx):
         history = list(state.get('run_history', []) or [])
         return {**_RUNTIME, 'history': history[:8],
                 'schedule': _cfg(ctx)['schedule_cron'],
-                'scheduled': bool(scheduled_jobs)}
+                'scheduled': bool(scheduled_jobs),
+                'lock_repair': repair.view()}
+
+    @ctx.on_api('/locks/preview', methods=['POST'])
+    async def api_lock_preview(req):
+        data = req.json or {}
+        if not isinstance(data, dict) or not isinstance(data.get('item_ids'), str):
+            return {'ok': False, 'message': '请填写需要核对的条目 ID'}
+        if type(data.get('include_children', False)) is not bool:
+            return {'ok': False, 'message': '下级条目选项必须是开或关'}
+        if not _dispatch([], '手动', '只读预览误锁条目', ('preview', data)):
+            return {'ok': False, 'message': '已有维护任务正在运行，请稍后再预览'}
+        return {'ok': True, 'started': True, 'message': '正在后台只读预览，不会修改媒体库'}
+
+    @ctx.on_api('/locks/apply', methods=['POST'])
+    async def api_lock_apply(req):
+        data = req.json or {}
+        if (not isinstance(data, dict) or data.get('confirmed') is not True
+                or not isinstance(data.get('token'), str) or not data['token']):
+            return {'ok': False, 'message': '请先预览并明确确认修复范围'}
+        if not _dispatch([], '手动', '备份并解除已确认的整体锁', ('apply', data)):
+            return {'ok': False, 'message': '已有维护任务正在运行，请稍后操作'}
+        return {'ok': True, 'started': True, 'message': '已开始后台处理；先保存锁状态备份，再逐条回读确认解锁'}
+
+    @ctx.on_api('/locks/backup', methods=['GET'])
+    async def api_lock_backup(req):
+        backup = state.get('lock_repair_backup')
+        if not backup:
+            return {'ok': False, 'message': '尚无锁状态备份，确认修复后会在写入前生成'}
+        return {'ok': True, 'backup': backup}
 
     @ctx.on_api('/test', methods=['POST'])
     async def api_test(req):

@@ -1,7 +1,7 @@
 {
   "name": "awbothub-emby-toolbox-fe",
   "private": true,
-  "version": "2.1.2",
+  "version": "2.1.7",
   "type": "module",
   "scripts": {
     "dev": "vite",

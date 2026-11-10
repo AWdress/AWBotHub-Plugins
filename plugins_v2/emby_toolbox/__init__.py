@@ -5,7 +5,7 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': 'Emby 工具箱',
  'id': 'emby_toolbox',
- 'version': '2.1.6',
+ 'version': '2.1.7',
  'author': 'AWdress',
  'description': '集成 Emby 剧集校验、Genre 清理/映射、季名刮削、国家语言 Tag、别名写入、STRM 刷新、元数据缺失检查等维护功能。支持定时执行与完整日志。',
  'icon': 'https://cdn.simpleicons.org/emby',
@@ -91,6 +91,10 @@ async def teardown(ctx):
 
 __plugin__["name"] = 'Emby 工具箱'
 __plugin__["changelog"] = (
+    'v2.1.7 修复字段维护误设整体锁\n'
+    '- 六条维护路径不再新增整体锁，字段保护与原有整体锁状态分开处理\n'
+    '- 旧锁定开关仅迁移为字段锁；增加手动误锁预览、备份与确认修复\n'
+    '- 修复保留 LockedFields，不自动全库解锁、不直接改 NFO 或触发刮削\n\n'
     'v2.1.6 修复别名与分类封面实际写入\n'
     '- 别名写入改用 Emby 实际持久化的 ForcedSortName，并在完整条目上回读确认\n'
     '- 别名缓存升级后自动失效，避免旧缓存跳过修复\n'
