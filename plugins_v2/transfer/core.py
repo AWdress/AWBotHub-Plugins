@@ -28,6 +28,7 @@ import asyncio
 import random
 import re
 import time
+from decimal import Decimal, InvalidOperation
 
 from ._sites import (
     build_active_sites, detect_direction, counterparty_message,
@@ -35,6 +36,8 @@ from ._sites import (
     user_identity, builtin_site_keys,
 )
 from ._records import RecordStore
+from ._ssd_requests import SSDRequests
+from ._ssd_receipt import parse_ssd_receipt
 from . import _leaderboard as lb
 
 # 站点（群组ID/转账bot/货币/解析方式）全部内置写死在 _sites.py 的 _BUILTIN_SITES，
@@ -44,7 +47,7 @@ from . import _leaderboard as lb
 __plugin__ = {
     "name": "多站点转账",
     "id": "transfer",
-    "version": "2.0.9",
+    "version": "2.0.10",
     "author": "AWdress",
     "scope": "user",
     "default_enabled": False,
@@ -55,6 +58,10 @@ __plugin__ = {
 }
 
 __plugin__["changelog"] = (
+    "v2.0.10 修复 SSD 独立成功回执不发榜\n"
+    "- 支持删除确认提示后另发成功消息，以及五分钟免确认时的独立回执\n"
+    "- 持久保存原转账关联，按群组、双方真实账号和金额核对，不靠昵称或金额猜测\n"
+    "- 新回执、编辑回执和重启仍按原请求去重；无法唯一关联时明确提示\n\n"
     "v2.0.9 兼容 SSD 小额转账回执\n"
     "- SSD 官方机器人回复 +1 请求时，支持以 💸 开头的简短成功回执\n"
     "- 按 Telegram 无格式原文解析回执和转账口令，避免加粗等格式导致漏触发\n"
@@ -88,6 +95,8 @@ async def setup(ctx):
     store = RecordStore(ctx)
     await store.initialize()
     ctx.add_cleanup(store.close)
+    ssd_requests = SSDRequests(ctx)
+    await ssd_requests.initialize()
 
     # hdsky 专用：缓存自己发出的回复消息（"+金额"），key=chat_id → 被回复消息id
     hdsky_pay_cache: dict[int, int] = {}
@@ -110,6 +119,12 @@ async def setup(ctx):
     def _ssd_groups() -> set[int]:
         """SpringSunday 大额确认监听的群（内置写死的两个 ssd 群）。"""
         return {-1002014253433, -1001173590111}
+
+    async def _remember_ssd(command, chat_id, confirmation_id=None):
+        snapshot = _ssd_request_snapshot(command, chat_id, confirmation_id)
+        if snapshot is not None:
+            return await ssd_requests.remember(snapshot)
+        return None
 
     async def _prepare(event):
         """Adapt a Telethon event to the synchronous transfer parsers."""
@@ -144,29 +159,37 @@ async def setup(ctx):
 
     ctx.log.info("多站点转账插件已启用，配置站点群数=%s", len(_sites()))
 
-    # ── handler 1：hdsky 缓存自己发出的回复（先于 bot 确认到达）─────────────────
+    # ── handler 1：缓存自己发出的 SSD 请求与 HDSky 回复 ──────────────────────
     @ctx.on_message(incoming=False, outgoing=True)
     async def cache_outgoing_reply(event):
         client = event.client
         message = await _prepare(event)
         try:
             sites = _sites().get(event.chat_id)
-            if not sites or not any(s.parser == "hdsky" for s in sites):
+            if not sites:
+                return
+            if any(s.site_name == "springsunday" for s in sites):
+                await _remember_ssd(message, event.chat_id)
+            if not any(s.parser == "hdsky" for s in sites):
                 return
             rid = getattr(message, "reply_to_msg_id", None)
             if rid:
                 hdsky_pay_cache[event.chat_id] = rid
         except Exception as e:
-            ctx.log.debug("hdsky 缓存失败: %s", e)
+            ctx.log.warning("缓存转出请求失败: %s", e)
 
-    # ── handler 1b：hdsky 缓存「别人回复我的 +金额」发送者（供转入取真实 uid）─────
+    # ── handler 1b：缓存 SSD/HDSky 中「别人回复我的 +金额」请求 ────────────────
     @ctx.on_message(incoming=True)
     async def cache_incoming_plus(event):
         client = event.client
         message = await _prepare(event)
         try:
             sites = _sites().get(event.chat_id)
-            if not sites or not any(s.parser == "hdsky" for s in sites):
+            if not sites:
+                return
+            if any(s.site_name == "springsunday" for s in sites):
+                await _remember_ssd(message, event.chat_id)
+            if not any(s.parser == "hdsky" for s in sites):
                 return
             mm = re.match(r"^\+?\s*(\d+(?:\.\d+)?)\s*$", (message.text or "").strip())
             if not mm:
@@ -184,7 +207,7 @@ async def setup(ctx):
             hdsky_get_senders[:] = [x for x in hdsky_get_senders if now - x[3] <= 120]
             hdsky_get_senders.append((round(float(mm.group(1)), 4), uid, name, now))
         except Exception as e:
-            ctx.log.debug("hdsky +金额 发送者缓存失败: %s", e)
+            ctx.log.warning("缓存转入请求失败: %s", e)
 
     # ── handler 2：通用转账监听（所有配置群的 bot 消息）──────────────────────────
     @ctx.on_message(incoming=True)
@@ -210,6 +233,26 @@ async def setup(ctx):
             if site is None:
                 return
 
+            if site.site_name == "springsunday":
+                command = getattr(message, "_v2_reply", None)
+                pending = _ssd_confirmation_pending(message)
+                snapshot = await _remember_ssd(
+                    command, event.chat_id, message.id if pending else None,
+                )
+                if pending:
+                    return
+                if snapshot is not None:
+                    if _plus_transfer_succeeded(message, site):
+                        if await ssd_requests.bind(snapshot, message.id) is None:
+                            ctx.log.warning("SSD 回执关联未保存，未记账（消息 %s）", message.id)
+                            return
+                    await _handle_generic(ctx, store, client, message, site, _rank_size)
+                else:
+                    await _handle_ssd_detached(
+                        ctx, store, ssd_requests, client, message, site, _rank_size,
+                    )
+                return
+
             if site.parser == "hdsky":
                 await _handle_hdsky(ctx, store, client, message, site,
                                     hdsky_pay_cache, hdsky_get_senders, _rank_size)
@@ -219,9 +262,7 @@ async def setup(ctx):
         except Exception as e:
             ctx.log.error("处理转账消息出错: %s", e)
 
-    # 同一分派逻辑再挂一份「编辑消息」监听：springsunday 大额转账需确认，确认后 bot
-    # 会「编辑」之前那条提示消息来送达成功结果，ctx.on_message 收不到编辑，故补挂
-    # on_edited_message（平台标准能力，见 SPEC）。去重按 message.id 防同条多次编辑重复记。
+    # 同时处理编辑回执与删除确认后另发的新回执；SSD 按原始请求去重。
     ctx.on_edited_message()(on_transfer_bot)
 
     # ── handler 3：排行榜命令（自己发出的 .<命令词>）────────────────────────────
@@ -276,6 +317,7 @@ async def setup(ctx):
                 return
             if not _ssd_confirmation_pending(message):
                 return
+            await _remember_ssd(rtm, event.chat_id, message.id)
             kb = _inline_keyboard(message)
             position = _ssd_button_position(kb, mode)
             if position is None:
@@ -406,7 +448,7 @@ def _ssd_confirmation_pending(message) -> bool:
             or _ssd_button_position(keyboard, "5min") is not None)
 
 
-def _plus_transfer_succeeded(message, site=None) -> bool:
+def _plus_transfer_succeeded(message, site=None, *, request_amount=None) -> bool:
     """+金额仅是请求；必须有机器人明确的最终转账成功回执才记账。"""
     text = _transfer_text(message)
     if _ssd_confirmation_pending(message) or any(k in text for k in _TRANSFER_SKIP_KEYWORDS):
@@ -416,6 +458,8 @@ def _plus_transfer_succeeded(message, site=None) -> bool:
     if getattr(site, "site_name", None) == "springsunday" and text.lstrip().startswith("💸"):
         command = getattr(message, "_v2_reply", None)
         amount = extract_plus_amount(_transfer_text(command))
+        if amount is None and command is None:
+            amount = request_amount
         if re.fullmatch(r"0*1(?:\.0+)?", amount or ""):
             return True
     # 不以单独“成功”或昵称中的字样判断；不认识的状态保守跳过。
@@ -444,6 +488,146 @@ def _plus_transfer_source_key(message, site, direction: str) -> str | None:
     if own_id <= 0 or chat_id == 0 or source_id <= 0:
         return None
     return f"{site.site_name}:{own_id}:{chat_id}:{source_id}"
+
+
+def _ssd_amount(value) -> str | None:
+    try:
+        amount = Decimal(str(value).replace(",", ""))
+        if amount.is_finite() and amount > 0:
+            text = format(amount, "f")
+            return text.rstrip("0").rstrip(".") if "." in text else text
+    except (InvalidOperation, ValueError, TypeError):
+        pass
+    return None
+
+
+def _ssd_request_snapshot(command, chat_id, confirmation_id=None) -> dict | None:
+    """只缓存可核实的本人转账请求，不保存 Telegram 会话或凭据。"""
+    amount = _ssd_amount(extract_plus_amount(_transfer_text(command)))
+    original = getattr(command, "_v2_reply", None)
+    sender = getattr(command, "_v2_sender", None)
+    recipient = getattr(original, "_v2_sender", None)
+    if amount is None or sender is None or recipient is None:
+        return None
+    sender_self = bool(getattr(sender, "is_self", False))
+    recipient_self = bool(getattr(recipient, "is_self", False))
+    if sender_self == recipient_self:
+        return None
+    sender_id = _safe_int(getattr(sender, "id", None), 0)
+    recipient_id = _safe_int(getattr(recipient, "id", None), 0)
+    command_id = _safe_int(getattr(command, "id", None), 0)
+    chat_id = _safe_int(chat_id, 0)
+    if min(sender_id, recipient_id, command_id) <= 0 or not chat_id:
+        return None
+    if getattr(getattr(command, "reply_to", None), "reply_to_peer_id", None) is not None:
+        return None
+    for source in (command, original):
+        source_chat = getattr(source, "chat_id", None)
+        if source_chat is not None and _safe_int(source_chat, 0) != chat_id:
+            return None
+    direction = "out" if sender_self else "in"
+    counterparty = original if sender_self else command
+    user_id, user_name = user_identity(counterparty)
+    created_at = time.time()
+    date = getattr(command, "date", None)
+    if date is not None:
+        try:
+            created_at = date.timestamp()
+        except (AttributeError, ValueError, OverflowError, OSError):
+            return None
+    return {
+        "chat_id": chat_id, "command_id": command_id,
+        "own_id": sender_id if sender_self else recipient_id,
+        "sender_id": sender_id, "recipient_id": recipient_id,
+        "amount": amount, "direction": direction,
+        "user_id": user_id, "user_name": user_name,
+        "target_id": _safe_int(getattr(counterparty, "id", None), 0),
+        "confirmation_ids": [confirmation_id] if confirmation_id else [],
+        "created_at": created_at,
+    }
+
+
+async def _ssd_party_id(client, party) -> int | None:
+    if party.get("id"):
+        return _safe_int(party["id"], 0) or None
+    username = party.get("username")
+    if not username:
+        return None
+    try:
+        entity = await asyncio.wait_for(client.get_entity("@" + username), timeout=10)
+    except Exception:
+        return None
+    # 公开用户链接须向 Telegram 核实为用户，不以显示昵称或频道 ID 推断身份。
+    if (not hasattr(entity, "first_name") or getattr(entity, "broadcast", False)
+            or getattr(entity, "megagroup", False)):
+        return None
+    return _safe_int(getattr(entity, "id", None), 0) or None
+
+
+async def _handle_ssd_detached(ctx, store, requests, client, message, site, rank_size_fn):
+    """恢复删确认后另发的成功回执；必须精确关联原请求才允许入账。"""
+    if getattr(getattr(message, "reply_to", None), "reply_to_peer_id", None) is not None:
+        return
+    reply_id = getattr(message, "reply_to_msg_id", None)
+    receipt = parse_ssd_receipt(message)
+    if receipt is None and not reply_id:
+        if _plus_transfer_succeeded(message, site):
+            ctx.log.warning("SSD 成功回执缺少可核实的双方账号，未记账（消息 %s）", message.id)
+        return
+    me = getattr(client, "me", None)
+    if me is None:
+        try:
+            me = await client.get_me()
+        except Exception:
+            me = None
+    own_id = _safe_int(getattr(me, "id", None), 0)
+    if own_id <= 0:
+        ctx.log.warning("SSD 无法核实当前账号，未恢复独立回执（消息 %s）", message.id)
+        return
+    identity = {}
+    if receipt is not None:
+        sender_id, recipient_id = await asyncio.gather(
+            _ssd_party_id(client, receipt["sender"]),
+            _ssd_party_id(client, receipt["recipient"]),
+        )
+        if not sender_id or not recipient_id or own_id not in (sender_id, recipient_id):
+            return
+        identity = {"sender_id": sender_id, "recipient_id": recipient_id,
+                    "amount": receipt["amount"]}
+    snapshot = requests.resolve(
+        message.chat_id, own_id, message.id, reply_id=reply_id, **identity,
+    )
+    if snapshot is None:
+        ctx.log.warning("SSD 独立成功回执无法唯一关联原转账，未记账（消息 %s）", message.id)
+        return
+    if receipt is not None:
+        # 结构化回执已经精确验证成功状态；不要把双方昵称里的“失败”等词误当状态。
+        keyboard = _inline_keyboard(message)
+        if (_ssd_button_position(keyboard, "once") is not None
+                or _ssd_button_position(keyboard, "5min") is not None):
+            return
+    elif not _plus_transfer_succeeded(message, site, request_amount=snapshot["amount"]):
+        return
+    if await requests.bind(snapshot, message.id) is None:
+        ctx.log.warning("SSD 独立回执关联未保存，未记账（消息 %s）", message.id)
+        return
+    source_key = f"{site.site_name}:{own_id}:{message.chat_id}:{snapshot['command_id']}"
+    if store.is_source_duplicate(site.site_name, source_key):
+        return
+    target = None
+    if snapshot.get("target_id"):
+        try:
+            target = await asyncio.wait_for(
+                client.get_messages(message.chat_id, snapshot["target_id"]), timeout=10,
+            )
+        except Exception:
+            pass
+    ctx.log.info("SSD 已关联独立成功回执 %s → 原转账 %s", message.id, snapshot["command_id"])
+    await _record_and_notify(
+        ctx, store, client, message, target or message, site, snapshot["direction"],
+        snapshot["user_id"], snapshot["user_name"], float(snapshot["amount"]),
+        rank_size_fn, source_key=source_key,
+    )
 
 
 def _ssd_button_position(keyboard, mode: str) -> tuple[int, int] | None:
