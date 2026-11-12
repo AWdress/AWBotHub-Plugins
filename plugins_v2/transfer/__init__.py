@@ -9,13 +9,14 @@ except ImportError:
 
 __plugin__ = {'name': '多站点转账',
  'id': 'transfer',
- 'version': '2.0.8',
+ 'version': '2.0.9',
  'author': 'AWdress',
  'scope': 'user',
  'requirements': ['Pillow>=10.0', 'imgkit>=1.2'],
  'description': '监听多个PT站群的转账bot，记录转入/转出并生成排行榜。站点群组/bot内置，用户只开关每站点功能。自带 Vue 配置界面 + 排行榜管理。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/transfer.png',
- 'changelog': 'v2.0.8 修复 SSD 新版确认与提前记账\n- 兼容新版确认转账提示，只按官方机器人明确的按钮文字自动确认\n- 待确认、税费预览和取消消息不记账，仅在明确成功回执后更新排行榜\n- SSD 按原始转账请求持久去重，避免延迟编辑、多条回执和重启后重复入账\n\n'
+ 'changelog': 'v2.0.9 兼容 SSD 小额转账回执\n- SSD 官方机器人回复 +1 请求时，支持以 💸 开头的简短成功回执\n- 按 Telegram 无格式原文解析回执和转账口令，避免加粗等格式导致漏触发\n- 保留确认、预览、失败与取消排除，以及原始请求持久去重\n\n'
+              'v2.0.8 修复 SSD 新版确认与提前记账\n- 兼容新版确认转账提示，只按官方机器人明确的按钮文字自动确认\n- 待确认、税费预览和取消消息不记账，仅在明确成功回执后更新排行榜\n- SSD 按原始转账请求持久去重，避免延迟编辑、多条回执和重启后重复入账\n\n'
               'v2.0.7 适配正式存储并修复用户资料链接\n- 排行榜记录改用平台异步 storage 接口\n- 普通 HTML 致谢优先使用 t.me 公开链接，无用户名时使用 openmessage 数字 ID 深链；原生表格不再包含无效链接\n\n'
               'v2.0.6 修复 SSD 确认与 ZmPT 延迟\n- SSD 大额确认改用 Telethon 原生按钮坐标并按按钮文字选择单次或 5 分钟确认\n- 恢复 ZmPT 电力致谢与榜单发送前固定等待约 11 秒\n\n'
               'v2.0.5 清理隐藏全局开关\n- 群内致谢、转入榜和转出榜只读取配置页可见的每站点开关\n- 移除已废弃全局字段的运行时回退，避免隐藏配置影响行为\n\n'

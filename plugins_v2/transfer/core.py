@@ -44,7 +44,7 @@ from . import _leaderboard as lb
 __plugin__ = {
     "name": "多站点转账",
     "id": "transfer",
-    "version": "2.0.8",
+    "version": "2.0.9",
     "author": "AWdress",
     "scope": "user",
     "default_enabled": False,
@@ -55,6 +55,10 @@ __plugin__ = {
 }
 
 __plugin__["changelog"] = (
+    "v2.0.9 兼容 SSD 小额转账回执\n"
+    "- SSD 官方机器人回复 +1 请求时，支持以 💸 开头的简短成功回执\n"
+    "- 按 Telegram 无格式原文解析回执和转账口令，避免加粗等格式导致漏触发\n"
+    "- 保留确认、预览、失败与取消排除，以及原始请求持久去重\n\n"
     "v2.0.8 修复 SSD 新版确认与提前记账\n"
     "- 兼容新版确认转账提示，只按官方机器人明确的按钮文字自动确认\n"
     "- 待确认、税费预览和取消消息不记账，仅在明确成功回执后更新排行榜\n"
@@ -262,10 +266,10 @@ async def setup(ctx):
             if not (rtm and getattr(rtm, "_v2_sender", None)
                     and getattr(rtm._v2_sender, "is_self", False)):
                 return
-            if not extract_plus_amount(getattr(rtm, "text", None)):
+            if not extract_plus_amount(_transfer_text(rtm)):
                 return
-            prompt_text = message.text or getattr(message, "caption", "") or ""
-            if any(marker in prompt_text for marker in (
+            prompt_text = _transfer_text(message)
+            if prompt_text.lstrip().startswith("💸") or any(marker in prompt_text for marker in (
                 "失败", "错误", "余额不足", "已取消", "取消成功", "转账成功", "转赠成功",
                 "转账完成", "转赠完成", "已成功",
             )):
@@ -372,6 +376,15 @@ _TRANSFER_SKIP_KEYWORDS = (
 )
 
 
+def _transfer_text(message) -> str:
+    """读取 Telegram 原文，避免 Telethon 的 text 格式化结果干扰状态与金额匹配。"""
+    for field in ("raw_text", "message", "text", "caption"):
+        value = getattr(message, field, None)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
 def _inline_keyboard(message) -> list[list]:
     """保留原始行列坐标，兼容 Telethon 与旧版内联键盘。"""
     markup = getattr(message, "reply_markup", None)
@@ -383,7 +396,7 @@ def _inline_keyboard(message) -> list[list]:
 
 
 def _ssd_confirmation_pending(message) -> bool:
-    text = getattr(message, "text", None) or getattr(message, "caption", None) or ""
+    text = _transfer_text(message)
     if any(marker in text for marker in (
         "请确认转账", "请确认你的转账", "确认你的转账", "转账金额过大", "转账金额较大",
     )):
@@ -393,11 +406,18 @@ def _ssd_confirmation_pending(message) -> bool:
             or _ssd_button_position(keyboard, "5min") is not None)
 
 
-def _plus_transfer_succeeded(message) -> bool:
+def _plus_transfer_succeeded(message, site=None) -> bool:
     """+金额仅是请求；必须有机器人明确的最终转账成功回执才记账。"""
-    text = getattr(message, "text", None) or getattr(message, "caption", None) or ""
+    text = _transfer_text(message)
     if _ssd_confirmation_pending(message) or any(k in text for k in _TRANSFER_SKIP_KEYWORDS):
         return False
+    # SSD 的 +1 回执只有“💸 yue / 💸 ++ / 💸 真抠”等短句。
+    # 仅为该站精确金额 1 放行开头的成功标志；官方发送者及本人回复链由调用方校验。
+    if getattr(site, "site_name", None) == "springsunday" and text.lstrip().startswith("💸"):
+        command = getattr(message, "_v2_reply", None)
+        amount = extract_plus_amount(_transfer_text(command))
+        if re.fullmatch(r"0*1(?:\.0+)?", amount or ""):
+            return True
     # 不以单独“成功”或昵称中的字样判断；不认识的状态保守跳过。
     return bool(re.search(
         r"(?:^|[\r\n。！!])\s*(?:[^\w\u3400-\u9fff]\s*)*"
@@ -465,13 +485,13 @@ async def _handle_generic(ctx, store, client, message, site, rank_size_fn):
         return
 
     # 金额提取（严格对齐原项目：reply 站只从 bot 文本取，plus 站只从「+金额」取）
-    bot_text = message.text or getattr(message, "caption", None) or ""
+    bot_text = _transfer_text(message)
     # 失败/确认提示 → 不是成功转账，跳过
     if any(k in bot_text for k in _TRANSFER_SKIP_KEYWORDS):
         return
     source_key = None
     if site.parser == "plus":
-        if not _plus_transfer_succeeded(message):
+        if not _plus_transfer_succeeded(message, site):
             return
         source_key = _plus_transfer_source_key(message, site, direction)
         if source_key is None:
@@ -479,7 +499,7 @@ async def _handle_generic(ctx, store, client, message, site, rank_size_fn):
             return
         # springsunday/mock：金额取回复链里的「+金额」消息
         plus_msg = plus_amount_message(message, direction)
-        amount_str = extract_plus_amount(getattr(plus_msg, "text", None))
+        amount_str = extract_plus_amount(_transfer_text(plus_msg))
     else:  # reply：audiences/hddolby/azusa/zm，金额取自 bot 文本，不回退「+金额」
         amount_str = extract_amount_from_text(bot_text, site.amount_re)
     if amount_str is None:
