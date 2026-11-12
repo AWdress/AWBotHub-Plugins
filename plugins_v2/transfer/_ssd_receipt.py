@@ -197,3 +197,92 @@ def parse_ssd_receipt(message):
                 continue
             results.append({"amount": normalized, "sender": sender, "recipient": recipient})
     return results[0] if len(results) == 1 else None
+
+
+def parse_ssd_confirmation_amount(message):
+    """Read the unique, explicit debit field in an authenticated SSD prompt.
+
+    The caller authenticates the bot and verifies that confirmation is pending.
+    This is *not* a success predicate: tax/net amounts and random-range command
+    bounds cannot establish the actual transferred amount.  Duplicate debit
+    fields, even equal ones, and fields embedded in linked display names are
+    rejected instead of guessed.
+    """
+    text = _raw_text(message)
+    fields = [line for line in re.finditer(r"[^\r\n]+", text)
+              if re.match(r"[ \t]*转出金额(?=[:：\s]|$)", line.group())]
+    if len(fields) != 1:
+        return None
+    field = fields[0]
+    match = re.fullmatch(
+        r"[ \t]*转出金额[ \t]*[:：][ \t]*(?P<amount>"
+        + _NUMBER_PATTERN + r")[ \t]+茉莉[。.]?[ \t]*",
+        field.group(),
+    )
+    if match is None:
+        return None
+
+    start = sum(2 if ord(ch) > 0xFFFF else 1 for ch in text[:field.start()])
+    end = start + sum(2 if ord(ch) > 0xFFFF else 1 for ch in field.group())
+    for entity in getattr(message, "entities", None) or ():
+        if type(entity).__name__ not in _IDENTITY_ENTITIES:
+            continue
+        offset, length = getattr(entity, "offset", None), getattr(entity, "length", None)
+        if (not isinstance(offset, int) or isinstance(offset, bool)
+                or not isinstance(length, int) or isinstance(length, bool)
+                or offset < 0 or length <= 0):
+            return None
+        if offset < end and start < offset + length:
+            return None
+    try:
+        amount = Decimal(match["amount"].replace(",", ""))
+        if not amount.is_finite() or amount <= 0:
+            return None
+        normalized = format(amount, "f")
+        return normalized.rstrip("0").rstrip(".") if "." in normalized else normalized
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def parse_ssd_success_amount(message):
+    """Read the actual amount from a complete, directly correlated receipt.
+
+    Unlike ``parse_ssd_receipt``, this does not authenticate the two parties.
+    It may only be used when the caller already has the exact original request
+    through Telegram's reply chain.  A detached receipt still requires entity
+    identities.  Only the final debit sentence before known tax/footer text is
+    considered, never a number in a display name or the tax/net amount.
+    """
+    text = _raw_text(message)
+    header = _HEADER_RE.match(text)
+    if header is None:
+        return None
+    remainder = text[header.end():]
+    leading = re.match(r"[ \t\r\n]+", remainder)
+    if leading is None:
+        return None
+    body = remainder[leading.end():]
+    candidates = []
+    action_pattern = re.compile(
+        r"[ \t]+转账[ \t]+(?P<amount>" + _NUMBER_PATTERN + r")[ \t]+茉莉[。.]"
+    )
+    for action in action_pattern.finditer(body):
+        names = body[:action.start()]
+        if "\n" in names or "\r" in names:
+            continue
+        if not any(names[:separator.start()].strip() and names[separator.end():].strip()
+                   for separator in re.finditer(r"[ \t]+向[ \t]+", names)):
+            continue
+        if not _TAIL_RE.fullmatch(body[action.end():]):
+            continue
+        try:
+            amount = Decimal(action["amount"].replace(",", ""))
+            if not amount.is_finite() or amount <= 0:
+                continue
+            normalized = format(amount, "f")
+            if "." in normalized:
+                normalized = normalized.rstrip("0").rstrip(".")
+            candidates.append(normalized)
+        except (InvalidOperation, ValueError):
+            continue
+    return candidates[0] if len(candidates) == 1 else None

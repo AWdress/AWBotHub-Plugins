@@ -37,7 +37,9 @@ from ._sites import (
 )
 from ._records import RecordStore
 from ._ssd_requests import SSDRequests
-from ._ssd_receipt import parse_ssd_receipt
+from ._ssd_receipt import (
+    parse_ssd_receipt, parse_ssd_confirmation_amount, parse_ssd_success_amount,
+)
 from . import _leaderboard as lb
 
 # 站点（群组ID/转账bot/货币/解析方式）全部内置写死在 _sites.py 的 _BUILTIN_SITES，
@@ -47,7 +49,7 @@ from . import _leaderboard as lb
 __plugin__ = {
     "name": "多站点转账",
     "id": "transfer",
-    "version": "2.0.10",
+    "version": "2.0.11",
     "author": "AWdress",
     "scope": "user",
     "default_enabled": False,
@@ -58,6 +60,10 @@ __plugin__ = {
 }
 
 __plugin__["changelog"] = (
+    "v2.0.11 支持 SSD 随机金额转账\n"
+    "- 支持 +下限-上限 口令的自动确认与排行榜\n"
+    "- 以官方确认页和成功回执的实际转出额记账，不取上下限、税费或到账额\n"
+    "- 保留独立回执关联和持久去重；实额冲突、越界或关联不明确时不记账\n\n"
     "v2.0.10 修复 SSD 独立成功回执不发榜\n"
     "- 支持删除确认提示后另发成功消息，以及五分钟免确认时的独立回执\n"
     "- 持久保存原转账关联，按群组、双方真实账号和金额核对，不靠昵称或金额猜测\n"
@@ -120,8 +126,8 @@ async def setup(ctx):
         """SpringSunday 大额确认监听的群（内置写死的两个 ssd 群）。"""
         return {-1002014253433, -1001173590111}
 
-    async def _remember_ssd(command, chat_id, confirmation_id=None):
-        snapshot = _ssd_request_snapshot(command, chat_id, confirmation_id)
+    async def _remember_ssd(command, chat_id, confirmation_id=None, actual_amount=None):
+        snapshot = _ssd_request_snapshot(command, chat_id, confirmation_id, actual_amount)
         if snapshot is not None:
             return await ssd_requests.remember(snapshot)
         return None
@@ -236,17 +242,31 @@ async def setup(ctx):
             if site.site_name == "springsunday":
                 command = getattr(message, "_v2_reply", None)
                 pending = _ssd_confirmation_pending(message)
+                actual_amount = (parse_ssd_confirmation_amount(message) if pending
+                                 else parse_ssd_success_amount(message))
                 snapshot = await _remember_ssd(
-                    command, event.chat_id, message.id if pending else None,
+                    command, event.chat_id, message.id if pending else None, actual_amount,
                 )
                 if pending:
                     return
                 if snapshot is not None:
-                    if _plus_transfer_succeeded(message, site):
-                        if await ssd_requests.bind(snapshot, message.id) is None:
-                            ctx.log.warning("SSD 回执关联未保存，未记账（消息 %s）", message.id)
-                            return
-                    await _handle_generic(ctx, store, client, message, site, _rank_size)
+                    if (actual_amount is None and not _plus_transfer_succeeded(
+                            message, site, request_amount=snapshot["amount"])):
+                        return
+                    if snapshot["amount"] is None:
+                        ctx.log.warning("SSD 随机转账未取得实际金额，未记账（消息 %s）", message.id)
+                        return
+                    if await ssd_requests.bind(snapshot, message.id, amount=snapshot["amount"]) is None:
+                        ctx.log.warning("SSD 回执关联未保存，未记账（消息 %s）", message.id)
+                        return
+                    source_key = (f"{site.site_name}:{snapshot['own_id']}:"
+                                  f"{event.chat_id}:{snapshot['command_id']}")
+                    target = counterparty_message(message, snapshot["direction"]) or message
+                    await _record_and_notify(
+                        ctx, store, client, message, target, site, snapshot["direction"],
+                        snapshot["user_id"], snapshot["user_name"], float(snapshot["amount"]),
+                        _rank_size, source_key=source_key,
+                    )
                 else:
                     await _handle_ssd_detached(
                         ctx, store, ssd_requests, client, message, site, _rank_size,
@@ -307,7 +327,8 @@ async def setup(ctx):
             if not (rtm and getattr(rtm, "_v2_sender", None)
                     and getattr(rtm._v2_sender, "is_self", False)):
                 return
-            if not extract_plus_amount(_transfer_text(rtm)):
+            request = _ssd_request_spec(_transfer_text(rtm))
+            if request is None:
                 return
             prompt_text = _transfer_text(message)
             if prompt_text.lstrip().startswith("💸") or any(marker in prompt_text for marker in (
@@ -317,7 +338,13 @@ async def setup(ctx):
                 return
             if not _ssd_confirmation_pending(message):
                 return
-            await _remember_ssd(rtm, event.chat_id, message.id)
+            actual_amount = parse_ssd_confirmation_amount(message)
+            if request["amount"] is None and actual_amount is None:
+                ctx.log.warning("SSD 随机转账确认页未提供明确转出金额，未自动确认")
+                return
+            if await _remember_ssd(rtm, event.chat_id, message.id, actual_amount) is None:
+                ctx.log.warning("SSD 确认金额与原请求不符或关联未保存，未自动确认")
+                return
             kb = _inline_keyboard(message)
             position = _ssd_button_position(kb, mode)
             if position is None:
@@ -438,14 +465,18 @@ def _inline_keyboard(message) -> list[list]:
 
 
 def _ssd_confirmation_pending(message) -> bool:
-    text = _transfer_text(message)
-    if any(marker in text for marker in (
-        "请确认转账", "请确认你的转账", "确认你的转账", "转账金额过大", "转账金额较大",
-    )):
-        return True
     keyboard = _inline_keyboard(message)
-    return (_ssd_button_position(keyboard, "once") is not None
-            or _ssd_button_position(keyboard, "5min") is not None)
+    if (_ssd_button_position(keyboard, "once") is not None
+            or _ssd_button_position(keyboard, "5min") is not None):
+        return True
+    # A complete success receipt may contain these words in a linked nickname.
+    # Live confirmation buttons always take precedence over receipt text.
+    if parse_ssd_success_amount(message) is not None:
+        return False
+    text = _transfer_text(message)
+    return any(marker in text for marker in (
+        "请确认转账", "请确认你的转账", "确认你的转账", "转账金额过大", "转账金额较大",
+    ))
 
 
 def _plus_transfer_succeeded(message, site=None, *, request_amount=None) -> bool:
@@ -458,8 +489,9 @@ def _plus_transfer_succeeded(message, site=None, *, request_amount=None) -> bool
     if getattr(site, "site_name", None) == "springsunday" and text.lstrip().startswith("💸"):
         command = getattr(message, "_v2_reply", None)
         amount = extract_plus_amount(_transfer_text(command))
-        if amount is None and command is None:
-            amount = request_amount
+        if amount is None and request_amount is not None:
+            if command is None or _ssd_request_spec(_transfer_text(command)) is not None:
+                amount = request_amount
         if re.fullmatch(r"0*1(?:\.0+)?", amount or ""):
             return True
     # 不以单独“成功”或昵称中的字样判断；不认识的状态保守跳过。
@@ -501,14 +533,37 @@ def _ssd_amount(value) -> str | None:
     return None
 
 
-def _ssd_request_snapshot(command, chat_id, confirmation_id=None) -> dict | None:
+def _ssd_request_spec(text) -> dict | None:
+    """SSD 支持固定额与 +下界-上界，其他站点仍沿用原单值解析。"""
+    if not isinstance(text, str):
+        return None
+    fixed = _ssd_amount(extract_plus_amount(text))
+    if fixed is not None:
+        return {"amount": fixed, "amount_min": fixed, "amount_max": fixed}
+    match = re.fullmatch(r"\+\s*([0-9]+(?:\.[0-9]+)?)\s*-\s*([0-9]+(?:\.[0-9]+)?)", text.strip())
+    if match is None:
+        return None
+    lower, upper = (_ssd_amount(value) for value in match.groups())
+    if lower is None or upper is None or Decimal(lower) > Decimal(upper):
+        return None
+    return {"amount": lower if lower == upper else None,
+            "amount_min": lower, "amount_max": upper}
+
+
+def _ssd_request_snapshot(command, chat_id, confirmation_id=None, actual_amount=None) -> dict | None:
     """只缓存可核实的本人转账请求，不保存 Telegram 会话或凭据。"""
-    amount = _ssd_amount(extract_plus_amount(_transfer_text(command)))
+    request = _ssd_request_spec(_transfer_text(command))
     original = getattr(command, "_v2_reply", None)
     sender = getattr(command, "_v2_sender", None)
     recipient = getattr(original, "_v2_sender", None)
-    if amount is None or sender is None or recipient is None:
+    if request is None or sender is None or recipient is None:
         return None
+    if actual_amount is not None:
+        actual = _ssd_amount(actual_amount)
+        if (actual is None or not Decimal(request["amount_min"]) <= Decimal(actual)
+                <= Decimal(request["amount_max"])):
+            return None
+        request["amount"] = actual
     sender_self = bool(getattr(sender, "is_self", False))
     recipient_self = bool(getattr(recipient, "is_self", False))
     if sender_self == recipient_self:
@@ -539,7 +594,7 @@ def _ssd_request_snapshot(command, chat_id, confirmation_id=None) -> dict | None
         "chat_id": chat_id, "command_id": command_id,
         "own_id": sender_id if sender_self else recipient_id,
         "sender_id": sender_id, "recipient_id": recipient_id,
-        "amount": amount, "direction": direction,
+        **request, "direction": direction,
         "user_id": user_id, "user_name": user_name,
         "target_id": _safe_int(getattr(counterparty, "id", None), 0),
         "confirmation_ids": [confirmation_id] if confirmation_id else [],
@@ -566,10 +621,13 @@ async def _ssd_party_id(client, party) -> int | None:
 
 async def _handle_ssd_detached(ctx, store, requests, client, message, site, rank_size_fn):
     """恢复删确认后另发的成功回执；必须精确关联原请求才允许入账。"""
+    if _ssd_confirmation_pending(message):
+        return
     if getattr(getattr(message, "reply_to", None), "reply_to_peer_id", None) is not None:
         return
     reply_id = getattr(message, "reply_to_msg_id", None)
     receipt = parse_ssd_receipt(message)
+    actual_amount = parse_ssd_success_amount(message)
     if receipt is None and not reply_id:
         if _plus_transfer_succeeded(message, site):
             ctx.log.warning("SSD 成功回执缺少可核实的双方账号，未记账（消息 %s）", message.id)
@@ -584,7 +642,7 @@ async def _handle_ssd_detached(ctx, store, requests, client, message, site, rank
     if own_id <= 0:
         ctx.log.warning("SSD 无法核实当前账号，未恢复独立回执（消息 %s）", message.id)
         return
-    identity = {}
+    identity = {"amount": actual_amount} if actual_amount is not None else {}
     if receipt is not None:
         sender_id, recipient_id = await asyncio.gather(
             _ssd_party_id(client, receipt["sender"]),
@@ -600,15 +658,20 @@ async def _handle_ssd_detached(ctx, store, requests, client, message, site, rank
     if snapshot is None:
         ctx.log.warning("SSD 独立成功回执无法唯一关联原转账，未记账（消息 %s）", message.id)
         return
+    actual_amount = actual_amount or snapshot["amount"]
+    if actual_amount is None:
+        ctx.log.warning("SSD 随机转账回执未提供实际金额，未记账（消息 %s）", message.id)
+        return
     if receipt is not None:
         # 结构化回执已经精确验证成功状态；不要把双方昵称里的“失败”等词误当状态。
         keyboard = _inline_keyboard(message)
         if (_ssd_button_position(keyboard, "once") is not None
                 or _ssd_button_position(keyboard, "5min") is not None):
             return
-    elif not _plus_transfer_succeeded(message, site, request_amount=snapshot["amount"]):
+    elif not (parse_ssd_success_amount(message) is not None
+              or _plus_transfer_succeeded(message, site, request_amount=actual_amount)):
         return
-    if await requests.bind(snapshot, message.id) is None:
+    if await requests.bind(snapshot, message.id, amount=actual_amount) is None:
         ctx.log.warning("SSD 独立回执关联未保存，未记账（消息 %s）", message.id)
         return
     source_key = f"{site.site_name}:{own_id}:{message.chat_id}:{snapshot['command_id']}"
@@ -625,7 +688,7 @@ async def _handle_ssd_detached(ctx, store, requests, client, message, site, rank
     ctx.log.info("SSD 已关联独立成功回执 %s → 原转账 %s", message.id, snapshot["command_id"])
     await _record_and_notify(
         ctx, store, client, message, target or message, site, snapshot["direction"],
-        snapshot["user_id"], snapshot["user_name"], float(snapshot["amount"]),
+        snapshot["user_id"], snapshot["user_name"], float(actual_amount),
         rank_size_fn, source_key=source_key,
     )
 

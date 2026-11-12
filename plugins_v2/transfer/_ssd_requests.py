@@ -88,10 +88,21 @@ def _snapshot(value, now):
     if (result[own_field] != result["own_id"] or result[other_field] != result["user_id"]
             or result["sender_id"] == result["recipient_id"]):
         return None
-    amount = _amount(value.get("amount"))
-    if amount is None:
+    raw_amount = value.get("amount")
+    amount = _amount(raw_amount) if raw_amount is not None else None
+    if raw_amount is not None and amount is None:
+        return None
+    if "amount_min" in value or "amount_max" in value:
+        minimum, maximum = _amount(value.get("amount_min")), _amount(value.get("amount_max"))
+    else:
+        # Existing version-1 cache entries represent a fixed amount.
+        minimum = maximum = amount
+    if minimum is None or maximum is None or Decimal(minimum) > Decimal(maximum):
+        return None
+    if amount is not None and not Decimal(minimum) <= Decimal(amount) <= Decimal(maximum):
         return None
     result["amount"] = amount
+    result["amount_min"], result["amount_max"] = minimum, maximum
     name = value.get("user_name")
     if not isinstance(name, str):
         return None
@@ -111,12 +122,17 @@ def _snapshot(value, now):
         if aliases is None:
             return None
         result[field] = aliases
+    if amount is None and result["receipt_ids"]:
+        # A completed request always needs the actual amount established by SSD.
+        return None
     return result
 
 
 def _same_request(left, right):
-    fields = ("chat_id", "command_id", "own_id", "sender_id", "recipient_id", "amount", "direction", "user_id")
-    return all(left[field] == right[field] for field in fields)
+    fields = ("chat_id", "command_id", "own_id", "sender_id", "recipient_id", "amount_min",
+              "amount_max", "direction", "user_id")
+    return (all(left[field] == right[field] for field in fields)
+            and (left["amount"] is None or right["amount"] is None or left["amount"] == right["amount"]))
 
 
 class SSDRequests:
@@ -182,7 +198,7 @@ class SSDRequests:
             await self._save(items)
             return copy.deepcopy(items.get(key))
 
-    async def bind(self, snapshot, receipt_id):
+    async def bind(self, snapshot, receipt_id, amount=None):
         async with self._lock:
             now = time.time()
             incoming = _snapshot(snapshot, now)
@@ -194,11 +210,18 @@ class SSDRequests:
             previous = items.get(key)
             if previous is None or not _same_request(previous, incoming):
                 return None
+            actual = _amount(amount) if amount is not None else (previous["amount"] or incoming["amount"])
+            if (actual is None
+                    or not Decimal(previous["amount_min"]) <= Decimal(actual) <= Decimal(previous["amount_max"])
+                    or (previous["amount"] is not None and previous["amount"] != actual)
+                    or (incoming["amount"] is not None and incoming["amount"] != actual)):
+                return None
             if any(_source(item) != key and item["chat_id"] == incoming["chat_id"]
                    and item["own_id"] == incoming["own_id"] and receipt in item["receipt_ids"]
                    for item in items.values()):
                 return None
             bound = copy.deepcopy(previous)
+            bound["amount"] = actual
             bound["receipt_ids"] = list(dict.fromkeys([*bound["receipt_ids"], receipt]))[-_MAX_ALIASES:]
             items[key] = bound
             await self._save(items)
@@ -226,7 +249,9 @@ class SSDRequests:
         def matches(item):
             return ((sender is None or sender == item["sender_id"])
                     and (recipient is None or recipient == item["recipient_id"])
-                    and (normalized_amount is None or normalized_amount == item["amount"]))
+                    and (normalized_amount is None or (
+                        Decimal(item["amount_min"]) <= Decimal(normalized_amount) <= Decimal(item["amount_max"])
+                        and (item["amount"] is None or normalized_amount == item["amount"]))))
 
         bound = [item for item in items if receipt in item["receipt_ids"]]
         if bound:
@@ -242,6 +267,8 @@ class SSDRequests:
     @staticmethod
     def _merge(previous, incoming):
         merged = copy.deepcopy(previous)
+        if merged["amount"] is None:
+            merged["amount"] = incoming["amount"]
         merged["confirmation_ids"] = list(dict.fromkeys(
             [*previous["confirmation_ids"], *incoming["confirmation_ids"]]
         ))[-_MAX_ALIASES:]
