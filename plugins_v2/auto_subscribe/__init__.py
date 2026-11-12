@@ -5,7 +5,7 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': 'NextFind 助手',
  'id': 'auto_subscribe',
- 'version': '2.4.0',
+ 'version': '2.4.1',
  'requirements': ['httpx>=0.27', 'beautifulsoup4>=4.12', 'python-multipart>=0.0.20'],
  'author': 'AWdress',
  'description': 'NextFind 资源订阅与本地媒体库联动，支持榜单订阅、缺集补全、缺集自动订阅、资源查询和管理。',
@@ -124,6 +124,10 @@ async def teardown(ctx):
 
 __plugin__["name"] = 'NextFind 助手'
 __plugin__["changelog"] = (
+    'v2.4.1 合并榜单入口与重复作品\n'
+    '- 所有来源统一到影视榜单，豆瓣直采与 RSS 放在同一入口，保留原选择和过滤\n'
+    '- 本轮复用相同查询，按明确作品身份合并重复项，保留类型、年份及动画核验\n'
+    '- 通知合并榜单统计与重复数量，缩短新增片单和异常摘要，详细原因仍保留在日志\n\n'
     'v2.4.0 内置多来源影视榜单\n'
     '- 内置骨朵、豆瓣直采、芒果 TV、剧场、Bangumi、TMDB、B站、MAL、AniList、Trakt\n'
     '- 按分类选择和数量采集，使用平台代理与独立缓存，无需安装 VPS-Widget\n'

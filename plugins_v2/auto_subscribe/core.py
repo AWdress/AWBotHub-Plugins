@@ -28,7 +28,7 @@ from ._charts import DEFAULTS as CHART_DEFAULTS, CATALOG as CHART_CATALOG, SOURC
 __plugin__ = {
     "name": "NextFind 助手",
     "id": "auto_subscribe",
-    "version": "2.4.0",
+    "version": "2.4.1",
     "author": "AWdress",
     "description": "NextFind 资源、订阅与本地媒体库助手，支持榜单订阅、缺集补订、资源查询和管理。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/auto_subscribe/logo.png",
@@ -49,6 +49,10 @@ __plugin__ = {
 }
 
 __plugin__["changelog"] = (
+    "v2.4.1 合并榜单入口与重复作品\n"
+    "- 所有来源统一到影视榜单，豆瓣直采与 RSS 放在同一入口，保留原选择和过滤\n"
+    "- 本轮复用相同查询，按明确作品身份合并重复项，保留类型、年份及动画核验\n"
+    "- 通知合并榜单统计与重复数量，缩短新增片单和异常摘要，详细原因仍保留在日志\n\n"
     "v2.4.0 内置多来源影视榜单\n"
     "- 内置骨朵、豆瓣直采、芒果 TV、剧场、Bangumi、TMDB、B站、MAL、AniList、Trakt\n"
     "- 按分类选择和数量采集，使用平台代理与独立缓存，无需安装 VPS-Widget\n"
@@ -194,7 +198,7 @@ def _notification_outcome(result, missing_subs=None, fill_stats=None, extra_adde
     # complete shows and intentionally filtered works are completed checks.
     # Do not mistake a whole inventory/request attempt for completed work.
     completed = sum(count(st.get(key)) for st in stats.values() for key in (
-        "exists", "in_library", "already_handled", "filtered", "unrecognized"))
+        "exists", "in_library", "already_handled", "duplicate", "filtered", "unrecognized"))
     if not (missing_subs or {}).get("scan_error"):
         completed += sum(count((missing_subs or {}).get(key)) for key in ("complete", "skipped", "tmdb_unavailable"))
         if not ((missing_subs or {}).get("error") or (missing_subs or {}).get("auth_error")):
@@ -228,11 +232,31 @@ def _summary(result, label: str, missing_subs: Optional[dict] = None, fill_stats
     lines.append(f"{state}：新增订阅{outcome['subscribed']}部，补缺触发{outcome['triggered']}部，失败{outcome['failed']}项")
     if getattr(result, "auth_error", ""):
         lines.extend([f"❌ {result.auth_error}", "请更新 NextFind API 密钥后重试。"])
-    for src, st in getattr(result, "stats", {}).items():
-        parts = [f"{STATUS_LABELS.get(k, k)}{v}" for k, v in st.items() if v]
-        lines.append(f"[{SOURCE_NAMES.get(src, src)}] " + ("，".join(parts) if parts else "无产出"))
-    for src, err in getattr(result, "errors", {}).items():
-        lines.append(f"⚠️ {SOURCE_NAMES.get(src, src)} 抓取失败：{one_line(err)}")
+    stats = getattr(result, "stats", {}) or {}
+    rank_stats = {}
+    for src, st in stats.items():
+        if src == "restore":
+            parts = [f"{STATUS_LABELS.get(k, k)}{v}" for k, v in st.items() if v]
+            lines.append("[退订恢复] " + ("，".join(parts) if parts else "无产出"))
+        else:
+            for status, count in st.items():
+                rank_stats[status] = rank_stats.get(status, 0) + count
+    if any(src != "restore" for src in stats):
+        parts = [f"{STATUS_LABELS.get(k, k)}{rank_stats[k]}" for k in (
+            "subscribed", "exists", "in_library", "duplicate", "already_handled",
+            "filtered", "unrecognized", "error",
+        ) if rank_stats.get(k)]
+        lines.append("[影视榜单] " + ("，".join(parts) if parts else "无产出"))
+    errors = {}
+    for src, err in (getattr(result, "errors", {}) or {}).items():
+        family = "douban" if src == "charts_douban" else src
+        errors.setdefault(family, []).append(one_line(err))
+    for src, reasons in list(errors.items())[:3]:
+        detail = "；".join(dict.fromkeys(reasons))
+        line = f"⚠️ {SOURCE_NAMES.get(src, src)} 抓取失败：{detail}"
+        lines.append(line if len(line) <= 120 else line[:119] + "…")
+    if len(errors) > 3:
+        lines.append(f"另有{len(errors) - 3}个来源异常，完整原因请查看运行日志。")
 
     if missing_subs is not None:
         m_parts = []
@@ -285,9 +309,19 @@ def _summary(result, label: str, missing_subs: Optional[dict] = None, fill_stats
     if extra_added:
         all_added.extend(extra_added)
 
-    if all_added:
-        shown = "、".join(all_added[:15])
-        more = f" 等 {len(all_added)} 部" if len(all_added) > 15 else ""
+    titles = []
+    prefixes = {name + "·" for name in SOURCE_NAMES.values()} | {"缺集·", "缺集订阅·"}
+    for raw in all_added:
+        title = str(raw or "").strip()
+        for prefix in prefixes:
+            if title.startswith(prefix):
+                title = title[len(prefix):].strip()
+                break
+        if title and title not in titles:
+            titles.append(title)
+    if titles:
+        shown = "、".join(title if len(title) <= 36 else title[:35] + "…" for title in titles[:5])
+        more = f" 等 {outcome['subscribed']} 部" if outcome["subscribed"] > 5 else ""
         lines.append(f"✅ 新增订阅：{shown}{more}")
     elif outcome["subscribed"]:
         lines.append(f"✅ 本轮新增订阅{outcome['subscribed']}部")

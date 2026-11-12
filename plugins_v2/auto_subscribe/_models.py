@@ -64,6 +64,7 @@ STATUS_IN_LIBRARY = "in_library"            # 媒体库已存在（跳过）
 STATUS_UNRECOGNIZED = "unrecognized"        # NextFind 搜不到
 STATUS_FILTERED = "filtered"                # 被过滤
 STATUS_ALREADY = "already_handled"          # 本插件历史已处理（跳过）
+STATUS_DUPLICATE = "duplicate"              # 本轮榜单重复作品已合并
 STATUS_ERROR = "error"                      # 异常
 
 # 状态中文标签（通知汇总用）。
@@ -74,6 +75,7 @@ STATUS_LABELS = {
     STATUS_UNRECOGNIZED: "未识别",
     STATUS_FILTERED: "已过滤",
     STATUS_ALREADY: "已处理",
+    STATUS_DUPLICATE: "重复已合并",
     STATUS_ERROR: "失败",
 }
 

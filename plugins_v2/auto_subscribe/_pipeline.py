@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from dataclasses import replace
 from datetime import datetime
@@ -21,7 +22,7 @@ from ._base import get_provider
 # 导入各来源模块以触发 @register 自注册。
 from . import _douban, _maoyan, _mikan, _netflix, _charts  # noqa: F401
 from ._models import (
-    STATUS_ALREADY, STATUS_ERROR, STATUS_FILTERED, STATUS_IN_LIBRARY,
+    STATUS_ALREADY, STATUS_DUPLICATE, STATUS_ERROR, STATUS_FILTERED, STATUS_IN_LIBRARY,
     STATUS_LABELS, STATUS_SUBSCRIBED, STATUS_SUBSCRIBED_EXISTS, STATUS_UNRECOGNIZED,
     make_history_key, RankMediaItem,
 )
@@ -68,6 +69,54 @@ def _check_cancelled(cfg):
         raise NextFindDeadlineError("本轮运行已超时")
     if event is not None and event.is_set():
         raise NextFindCancelledError("任务已取消，未继续搜索或订阅")
+
+
+def _search_round(client, query, media_type=None, cfg=None):
+    """Reuse only successful search responses within this round.
+
+    Selection still happens for each ranking item: two identical queries can
+    carry different years, fixed TMDB identities or animation requirements.
+    Never turn a failed request into a cached empty result, and never share
+    mutable candidate dictionaries between items.
+    """
+    _check_cancelled(cfg)
+    cache = cfg.setdefault("_round_search_cache", {}) if cfg is not None else None
+    key = (query, media_type)
+    if cache is not None and key in cache:
+        return deepcopy(cache[key])
+    rows = client.search(query, media_type)
+    _check_cancelled(cfg)
+    if cache is not None:
+        cache[key] = deepcopy(rows)
+    return rows
+
+
+def _rank_item_key(item, filters, cfg):
+    """Fingerprint equal inputs, not fuzzy titles or unverified identities.
+
+    Keep every processing hint and the effective source filters. More aliases,
+    another season/year, an animation constraint or a looser source must still
+    get its own chance. Only proven display/provenance fields are omitted.
+    """
+    try:
+        metadata = dict(item.source_meta)
+        for field in ("chart_board", "chart_rank", "chart_date", "rating", "popularity", "vote_count"):
+            metadata.pop(field, None)
+        # Source names matter to the optional AI prompt, but otherwise only
+        # label the history/log entry and must not keep equal charts apart.
+        if not cfg.get("ai_assist_recognition"):
+            metadata.pop("source", None)
+        value = {
+            "title": re.sub(r"\s+", " ", str(item.title or "")).strip(),
+            "year": item.year, "type": item.type_hint, "season": item.season,
+            "douban_id": item.douban_id, "bangumi_id": item.bangumi_id,
+            "metadata": metadata,
+            "filters": [filters.min_year, filters.min_vote, filters.min_popularity, filters.media_type],
+        }
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False)
+    except (AttributeError, TypeError, ValueError):
+        # Unsupported metadata is not evidence that two candidates are equal.
+        return None
 
 
 # 各来源的 options 构建器：从扁平 cfg 取出该来源需要的字段。
@@ -289,7 +338,7 @@ def _search_best(client: NextFindClient, item, cfg=None):
     queries, season = _title_queries(item)
     for query in queries:
         _check_cancelled(cfg)
-        results = client.search(query, item.type_hint)
+        results = _search_round(client, query, item.type_hint, cfg)
         # Only verify viable identity/name candidates, not unrelated search hits.
         remaining = list(results)
         best = _pick_best(remaining, item)
@@ -458,6 +507,18 @@ def _process_item(client: NextFindClient, item, filters: Filters, handled: dict,
             except (ValueError, TypeError):
                 pass
 
+    # A valid fixed identity needs no repeated lookup after this whole work
+    # has already been checked or submitted in the current round. Invalid
+    # source identities still follow normal matching and cannot authorize an
+    # action (nor collide with the other media type's numeric TMDB ID).
+    if item.source_meta.get("tmdb_id") is not None and item.type_hint in ("movie", "tv"):
+        try:
+            fixed_identity = identity(item.source_meta["tmdb_id"], item.type_hint)
+        except NextFindResponseError:
+            fixed_identity = None
+        if fixed_identity is not None and fixed_identity in cfg.get("_round_attempted", ()):
+            return STATUS_DUPLICATE, title, "本轮相同作品已合并，不重复搜索或订阅"
+
     # 解析：NextFind /search。
     best, matched_query, detected_season = _search_best(client, item, cfg)
     assisted_by = ""
@@ -503,7 +564,7 @@ def _process_item(client: NextFindClient, item, filters: Filters, handled: dict,
         return STATUS_FILTERED, title, "已主动取消，不自动订回"
     seen = cfg.setdefault("_round_attempted", set())
     if wanted in seen:
-        return STATUS_ALREADY, title, "本轮已核对或提交，不重复订阅"
+        return STATUS_DUPLICATE, title, "本轮相同作品已合并，不重复订阅"
 
     # 库/订阅判定（来自 /search，无需额外请求）。
     if _true_flag(best.get("is_in_library")):
@@ -595,7 +656,7 @@ def _restore_history(client, result, cfg, log=None):
                         queries.append(record["title"])
                     for query in queries:
                         _check_cancelled(cfg)
-                        rows = client.search(query, media_type)
+                        rows = _search_round(client, query, media_type, cfg)
                         exact = [row for row in rows if row_identity(row, search=True) == wanted]
                         if exact:
                             matches = exact
@@ -661,7 +722,8 @@ def _restore_history(client, result, cfg, log=None):
 def run(cfg: dict, handled: dict, nf_cache: dict, log=None) -> RunResult:
     """执行一轮：遍历启用来源，逐条落地。返回汇总（handled/nf_cache 已更新，供写回 kv）。"""
     result = RunResult(handled=dict(handled or {}), nf_cache=dict(nf_cache or {}))
-    cfg = {**cfg, "_round_attempted": set(cfg.get("_round_attempted") or ())}
+    cfg = {**cfg, "_round_attempted": set(cfg.get("_round_attempted") or ()),
+           "_round_search_cache": {}, "_round_rank_items": set()}
     client = NextFindClient(cfg.get("api_url", ""), cfg.get("api_key", ""),
                             cancel_event=cfg.get("_cancel_event"), deadline=cfg.get("_run_deadline"))
     global_filters = _read_filters(cfg)
@@ -693,7 +755,13 @@ def run(cfg: dict, handled: dict, nf_cache: dict, log=None) -> RunResult:
                     continue
                 title, detail = item.title, ""
                 try:
-                    status, title, detail = _process_item(client, item, filters, result.handled, cfg, log)
+                    item_key = _rank_item_key(item, filters, cfg)
+                    if item_key is not None and item_key in cfg["_round_rank_items"]:
+                        status, detail = STATUS_DUPLICATE, "本轮相同条目与过滤条件已合并"
+                    else:
+                        status, title, detail = _process_item(client, item, filters, result.handled, cfg, log)
+                        if item_key is not None and status != STATUS_ERROR:
+                            cfg["_round_rank_items"].add(item_key)
                 except (NextFindCancelledError, NextFindDeadlineError) as exc:
                     result.interrupted = str(exc)
                     break
