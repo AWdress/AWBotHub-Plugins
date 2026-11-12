@@ -17,19 +17,21 @@ import re
 import tempfile
 import time
 from collections import deque
-from html import escape
 from io import BytesIO
 
 from ._engine import generate, generate_image, classify_error
+from ._reply import (
+    DEFAULT_EXPLAIN_REPLY_TEMPLATE, DEFAULT_REPLY_TEMPLATE, build_reply, send_reply,
+)
 
 __plugin__ = {
     "name": "AI 助手",
     "id": "ai",
-    "version": "1.3.6",
+    "version": "2.1.0",
     "author": "AWdress",
-    "description": "私聊/群@你时 AI 人形对话（带记忆）；支持主动搭话、/ai 图文解释，以及通过平台统一 AI 使用 /生图 或 /draw 生成图片。自带 Vue 配置界面。",
+    "description": "私聊/群@你时 AI 人形对话，支持主动搭话、/ai 图文解释和平台 AI 生图；默认原生富文本回复，非会员自动降级，支持引用、代码块、表格、完整链接与自定义回复模板。自带 Vue 配置界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/ai.png",
-    "changelog": "v1.3.6 修复 /ai 解释格式显示\n- 编辑解释消息时显式启用 Telegram HTML 解析\n- 问题与回答继续进行 HTML 转义，避免内容注入标签\n- HTML 编辑失败时使用不解析格式的纯文本降级\n\nv1.3.5 修复 /ai 空响应解析失败\n- 上游偶发返回空正文或非 JSON 时退避重试一次\n- 连续异常时返回接口地址、模型兼容性和上游状态提示\n\nv1.3.3 修复平台 AI 调用\n- 清理遗留的插件 API Key 校验，不再误报未配置 API Key\n- 对话、解释、主动搭话和生图均按平台统一 AI 能力判断\n- 清理前端与后端遗留的旧接口配置字段\n\nv1.3.2 修复插件解析失败\n- 修复版本日志中的未转义引号导致 __init__.py 语法错误\n- 插件更新后可正常重新加载\n\nv1.3.1 前端移除自带 API 配置字段\n- 删除接口分组，移除 api_key/base_url/model 配置界面\n- 移除生图模型字段和测试连接功能\n- 配置界面仅保留功能开关和业务参数\n\nv1.3.0 改为仅使用平台统一 AI\n- 移除插件自带 OpenAI 配置的回退逻辑，仅调用平台统一 AI\n- 不再需要配置 api_key/base_url/model，统一由平台管理\n- 代码精简，去除 openai 库直接依赖\n\nv1.2.0 接入平台统一 AI 能力\n- 优先使用平台统一配置的 AI 服务（管理员在「系统设置→AI 服务」配置一次，所有插件共享）\n- 平台 AI 不可用时自动回退到插件自带的 OpenAI 配置\n- 无需为每个插件重复填写服务地址和密钥\n\nv1.1.0 新增 AI 生图\n- 新增独立生图模型、尺寸与质量配置，支持任意 OpenAI 兼容生图模型\n- 新增 /生图、.生图、/draw、.draw 命令，生成后直接发送图片到当前会话\n- 兼容接口返回 base64、data URL 或普通图片 URL\n\nv1.0.7 修复异常捕获\n- 修复解析回复时未捕获 ValueError 导致偶发报错中断\n\nv1.0.6 更新插件 Logo\n- 使用 AI 助手专属图片作为插件卡片与市场图标\n\nv1.0.5 修复主动搭话定时任务\n- 未启用主动搭话时不再注册每分钟检查任务",
+    "changelog": "v2.1.0 富文本回复与模板\n- 默认原生富文本，非会员或原生能力不可用时自动降级\n- 引用、代码块、表格、完整链接与自定义回复模板；长回答安全分段\n- 保留原有设置和平台 AI 路由，不新增搜索接口\n\nv1.3.6 修复 /ai 解释格式显示\n- 编辑解释消息时显式启用 Telegram HTML 解析\n- 问题与回答继续进行 HTML 转义，避免内容注入标签\n- HTML 编辑失败时使用不解析格式的纯文本降级\n\nv1.3.5 修复 /ai 空响应解析失败\n- 上游偶发返回空正文或非 JSON 时退避重试一次\n- 连续异常时返回接口地址、模型兼容性和上游状态提示\n\nv1.3.3 修复平台 AI 调用\n- 清理遗留的插件 API Key 校验，不再误报未配置 API Key\n- 对话、解释、主动搭话和生图均按平台统一 AI 能力判断\n- 清理前端与后端遗留的旧接口配置字段\n\nv1.3.2 修复插件解析失败\n- 修复版本日志中的未转义引号导致 __init__.py 语法错误\n- 插件更新后可正常重新加载\n\nv1.3.1 前端移除自带 API 配置字段\n- 删除接口分组，移除 api_key/base_url/model 配置界面\n- 移除生图模型字段和测试连接功能\n- 配置界面仅保留功能开关和业务参数\n\nv1.3.0 改为仅使用平台统一 AI\n- 移除插件自带 OpenAI 配置的回退逻辑，仅调用平台统一 AI\n- 不再需要配置 api_key/base_url/model，统一由平台管理\n- 代码精简，去除 openai 库直接依赖\n\nv1.2.0 接入平台统一 AI 能力\n- 优先使用平台统一配置的 AI 服务（管理员在「系统设置→AI 服务」配置一次，所有插件共享）\n- 平台 AI 不可用时自动回退到插件自带的 OpenAI 配置\n- 无需为每个插件重复填写服务地址和密钥\n\nv1.1.0 新增 AI 生图\n- 新增独立生图模型、尺寸与质量配置，支持任意 OpenAI 兼容生图模型\n- 新增 /生图、.生图、/draw、.draw 命令，生成后直接发送图片到当前会话\n- 兼容接口返回 base64、data URL 或普通图片 URL\n\nv1.0.7 修复异常捕获\n- 修复解析回复时未捕获 ValueError 导致偶发报错中断\n\nv1.0.6 更新插件 Logo\n- 使用 AI 助手专属图片作为插件卡片与市场图标\n\nv1.0.5 修复主动搭话定时任务\n- 未启用主动搭话时不再注册每分钟检查任务",
     "scope": "user",
     "default_enabled": False,
     "render_mode": "vue",
@@ -38,6 +40,9 @@ __plugin__ = {
 # vue 模式无 config_schema：配置默认值集中在此，供后端读取（前端 Config.vue 用同一套默认
 # 初始化表单）。后端各处 ctx.config.get(key, 默认) 已带默认值，此处仅作文档/单点参考。
 DEFAULTS = {
+    "enable_rich_reply": True,
+    "reply_template": DEFAULT_REPLY_TEMPLATE,
+    "explain_reply_template": DEFAULT_EXPLAIN_REPLY_TEMPLATE,
     "enable_image_generation": True,
     "image_size": "1024x1024", "image_quality": "auto",
     "enable_private_chat": True, "enable_group_chat": True, "group_chat_ids": "",
@@ -162,23 +167,21 @@ def _ai_available(ctx, capability: str) -> bool:
     return bool(ctx.ai.is_available(capability))
 
 
-async def _edit_explanation(message, content: str, response: str):
-    """使用显式 HTML 模式渲染解释，失败时降级为不解析格式的纯文本。"""
-    try:
-        return await message.edit(
-            "<b>消息解释</b>\n"
-            f"<blockquote><b>Q：</b> {escape(content)}</blockquote>\n"
-            f"<blockquote><b>A：</b> {escape(response)}</blockquote>",
-            parse_mode="html",
-        )
-    except Exception:  # noqa: BLE001
-        try:
-            return await message.edit(
-                f"解释\nQ: {content}\n\nA: {response}",
-                parse_mode=None,
-            )
-        except Exception:  # noqa: BLE001
-            return None
+def _reply_system(system: str, cfg) -> str:
+    """仅补充输出格式约定，不改变人设、触发条件或平台 AI 路由。"""
+    if not cfg.get("enable_rich_reply", True):
+        return system
+    return (
+        system + "\n\n输出格式：仅在内容需要时使用 Markdown 粗体、引用、代码块或表格，"
+        "不要为了排版增加篇幅，仍遵守以上长度与角色要求。不要输出 HTML 标签。"
+        "引用资料时保留完整链接；没有实际资料时不要编造来源，也不要声称已联网搜索。"
+    )
+
+
+def _render_reply(cfg, answer: str, *, question: str = "", explain: bool = False):
+    default = DEFAULT_EXPLAIN_REPLY_TEMPLATE if explain else DEFAULT_REPLY_TEMPLATE
+    key = "explain_reply_template" if explain else "reply_template"
+    return build_reply(answer, question=question, template=cfg.get(key) or default)
 
 
 async def setup(ctx):
@@ -304,7 +307,7 @@ async def setup(ctx):
             system_prompt = cfg.get("system_prompt") or "你是一个有用的助手。"
             # 取历史
             history = state.get(_hist_key(chat_id), []) if max_hist > 0 else []
-            messages = [{"role": "system", "content": system_prompt}]
+            messages = [{"role": "system", "content": _reply_system(system_prompt, cfg)}]
             messages.extend(history)
             messages.append({"role": "user", "content": text})
 
@@ -316,7 +319,10 @@ async def setup(ctx):
             if not reply:
                 return
 
-            await client.send_message(chat_id, reply)
+            await send_reply(
+                client, chat_id, _render_reply(cfg, reply, question=text),
+                rich=cfg.get("enable_rich_reply", True),
+            )
 
             # 更新历史（裁剪到 max_hist 条 user/assistant）
             if max_hist > 0:
@@ -370,7 +376,7 @@ async def setup(ctx):
             code_msg = message
 
         messages = [
-            {"role": "system", "content": _EXPLAIN_SYSTEM},
+            {"role": "system", "content": _reply_system(_EXPLAIN_SYSTEM, cfg)},
             {"role": "user", "content": prompt},
         ]
         try:
@@ -382,8 +388,33 @@ async def setup(ctx):
         if not response:
             return await _edit_autodel(code_msg, "AI 未返回内容（检查模型/密钥/接口）")
 
-        await _edit_explanation(code_msg, content, response)
-        ctx.create_task(_auto_del(code_msg, 60), name="ai-auto-delete")
+        # 原生富文本只能发送新消息。确认投递成功后才删除原命令，
+        # 发送结果不明确时不重发，避免同一回答重复出现。
+        cleanup_scheduled = set()
+
+        def cleanup_part(part):
+            # 每个已确认分段立即安排清理，后续分段失败也不遗留消息。
+            marker = id(part)
+            if marker not in cleanup_scheduled:
+                cleanup_scheduled.add(marker)
+                ctx.create_task(_auto_del(part, 60), name="ai-auto-delete")
+
+        try:
+            sent = await send_reply(
+                client, event.chat_id, _render_reply(cfg, response, question=content, explain=True),
+                rich=cfg.get("enable_rich_reply", True),
+                reply_to=getattr(reply, "id", None),
+                on_sent=cleanup_part,
+            )
+        except Exception as exc:  # noqa: BLE001
+            ctx.log.warning("[AI] /ai 回答投递未完成，未重发: %r", exc)
+            return await _edit_autodel(code_msg, "回答投递未完成，请检查 Telegram 连接；未自动重发")
+        try:
+            await code_msg.delete()
+        except Exception:  # noqa: BLE001
+            ctx.create_task(_auto_del(code_msg, 60), name="ai-auto-delete-status")
+        for part in sent:
+            cleanup_part(part)
 
     # ── 功能 3：随机主动搭话 ──
     # 3a. 记录「主动搭话群组」里群友的近期消息，作为搭话候选。
@@ -446,7 +477,7 @@ async def setup(ctx):
             target = random.choice(cands)
             system_prompt = cfg.get("system_prompt") or "你是一个有用的助手。"
             messages = [
-                {"role": "system", "content": f"{system_prompt}\n\n{_PROACTIVE_SYSTEM}"},
+                {"role": "system", "content": _reply_system(f"{system_prompt}\n\n{_PROACTIVE_SYSTEM}", cfg)},
                 {"role": "user", "content": target["text"]},
             ]
             try:
@@ -457,7 +488,10 @@ async def setup(ctx):
             if not opener:
                 return
             try:
-                await client.send_message(chat_id, opener, reply_to=target["msg_id"])
+                await send_reply(
+                    client, chat_id, _render_reply(cfg, opener, question=target["text"]),
+                    rich=cfg.get("enable_rich_reply", True), reply_to=target["msg_id"],
+                )
             except Exception as e:  # noqa: BLE001
                 ctx.log.warning("[AI] 主动搭话发送失败 group=%s (%s): %r",
                                 _chat_names.get(chat_id, str(chat_id)), chat_id, e)

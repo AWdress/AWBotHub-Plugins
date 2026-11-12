@@ -2,8 +2,8 @@ const currentImports = {};
       const exportSet = new Set(['Module', '__esModule', 'default', '_export_sfc']);
       let moduleMap = {
 "./Config":()=>{
-      dynamicLoadingCss(["__federation_expose_Config-CxMyEeqF.css"], false, './Config');
-      return __federation_import('/api/plugins/ai/fe/assets/__federation_expose_Config-BYPUrAQs.js').then(module =>Object.keys(module).every(item => exportSet.has(item)) ? () => module.default : () => module)},};
+      dynamicLoadingCss(["__federation_expose_Config-BgvlvROW.css"], false, './Config');
+      return __federation_import('/api/plugins/ai/fe/assets/__federation_expose_Config-C-NQplZq.js').then(module =>Object.keys(module).every(item => exportSet.has(item)) ? () => module.default : () => module)},};
       const seen = {};
       const dynamicLoadingCss = (cssFilePaths, dontAppendStylesToHead, exposeItemName) => {
         const metaUrl = import.meta.url;
@@ -44,7 +44,7 @@ const currentImports = {};
          }
          
           if (dontAppendStylesToHead) {
-            const key = 'css__awbotnest_ai__' + exposeItemName;
+            const key = 'css__awbothub_ai__' + exposeItemName;
             window[key] = window[key] || [];
             window[key].push(href);
             return;
