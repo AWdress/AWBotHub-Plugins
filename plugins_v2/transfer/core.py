@@ -44,7 +44,7 @@ from . import _leaderboard as lb
 __plugin__ = {
     "name": "多站点转账",
     "id": "transfer",
-    "version": "2.0.6",
+    "version": "2.0.8",
     "author": "AWdress",
     "scope": "user",
     "default_enabled": False,
@@ -53,6 +53,14 @@ __plugin__ = {
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/transfer.png",
     "changelog": "v2.0.6 修复 SSD 确认与 ZmPT 延迟\n- SSD 大额确认改用 Telethon 原生按钮坐标并按按钮文字选择单次或 5 分钟确认\n- 恢复 ZmPT 电力致谢与榜单发送前固定等待约 11 秒\n\nv2.0.3 修复普通 Telegram HTML 显示\n- 群内致谢、文字排行榜和图片说明显式启用 HTML 解析\n- 不再显示 <b>、<blockquote>、<i> 等原始标签\n\nv1.0.30 美化 Premium 富文本排行榜\n- 表格启用 Telegram 原生边框与斑马纹\n- 排名、用户、次数和累计金额按内容统一对齐\n- 前三名用户与名次加粗突出，累计金额右对齐显示\n\nv1.0.29 修复 Premium 富文本发送参数\n- 移除 Kurigram 2.2.24 不支持的 reply_to_message_id 参数\n- 富文本排行榜改为独立消息发送，确保原生表格正常显示\n- 文本回退仍保持回复原消息的行为\n\nv1.0.28 接入平台原生 Rich Message\n- 使用 ctx.user.send_rich() 发送 Premium 富文本表格\n- 发送前通过 supports_native_rich() 检查当前用户账号能力\n- 排行榜命令成功发送富文本后自动删除原命令消息\n- 普通账号或发送失败时继续回退排版文本榜\n\nv1.0.27 修复富文本表格被静默降级\n- 不再把 Rich Message HTML 误发到普通消息接口\n- 当前 Kurigram 未提供用户账号 Rich Message 接口时直接回退正常文本榜\n- 配置页补充 Premium 与平台能力要求\n\nv1.0.26 新增 Premium 富文本表格\n- 排行榜输出新增 Kurigram HTML 富文本表格模式\n- 自动致谢榜与排行榜命令均支持表格输出\n- 表格发送失败时自动回退文本榜\n- 配置页明确标注仅 Telegram Premium 会员可用\n\nv1.0.25 修复文本排行榜不发送\n- 群内致谢与打赏榜/赏赐榜改为独立开关，单独开启排行榜也会正常发送\n- 文本模式可仅发送排行榜，不再依赖群内致谢开关\n- 图片模式与图片失败回退文本同样支持仅排行榜输出\n\nv1.0.24 修复 hdsky 转账解析\n- 修复无条件取发送者导致对手方识别错误，改为仅在缺对手方时回退取发送者\n\nv1.0.23 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示\n\nv1.0.22 修复用户名前导空白占位\n- 排行榜、通知、致谢和日志展示用户名时先移除首尾空白，再执行长度截断\n- 全空白用户名统一显示为未知用户\n\nv1.0.21 移除 Telegram 原生表格\n- 原生表格只能通过 Bot API 发送，无法使用监听账号在站点群输出，因此移除该选项及相关发送逻辑\n- 已保存原生表格选项的旧配置自动回退为文本排行榜\n\nv1.0.20 优化超长用户名显示\n- 日志、通知、致谢和各类排行榜中的超长用户名统一截断并以 ... 省略\n- 完整用户名仍保留在内部记录中，不影响用户聚合\n\nv1.0.19 优化原生表格不可用时的回退\n- 修复分配 Bot 不在目标群时反复请求并刷出 chat not found 警告\n- 首次失败明确提示 Bot 入群要求，后续直接回退文本\n\nv1.0.18 新增 Telegram 原生表格输出\n- 排行榜输出形式新增 Bot API Rich Message 原生表格\n- 原生表格使用边框和斑马纹，支持群内致谢榜及排行榜命令\n- Bot 不在目标群、无权限或服务端不支持时自动回退文本\n\nv1.0.17 完善多站点转账与排行榜\n- 修复站点转账识别、排行榜渲染与管理面板兼容问题",
 }
+
+__plugin__["changelog"] = (
+    "v2.0.8 修复 SSD 新版确认与提前记账\n"
+    "- 兼容新版确认转账提示，只按官方机器人明确的按钮文字自动确认\n"
+    "- 待确认、税费预览和取消消息不记账，仅在明确成功回执后更新排行榜\n"
+    "- SSD 按原始转账请求持久去重，避免延迟编辑、多条回执和重启后重复入账\n\n"
+    + __plugin__["changelog"]
+)
 
 # vue 模式无 config_schema：配置默认值集中此处备查（后端各处 ctx.config.get(k, 默认) 已带默认，
 # 前端 Config.vue 用同一套默认初始化表单）。站点默认标签见 _sites._BUILTIN_SITES 的 default_on。
@@ -82,6 +90,8 @@ async def setup(ctx):
     # hdsky 专用：缓存「别人回复我的 +金额」的发送者（含真实 uid），供转入方向取对手方 uid。
     # 每条 (金额, uid, name, 单调时间戳)，广播到达时按金额匹配最近一条。
     hdsky_get_senders: list[tuple[float, int, str, float]] = []
+    # 同一确认提示只提交一次，包括新消息/编辑消息并发以及点击结果超时。
+    ssd_confirmation_attempts: set[tuple[int, int]] = set()
 
     def _sites():
         """根据每站点开关构建 {chat_id: [SiteConfig]}（群组/bot 内置写死）。"""
@@ -242,43 +252,51 @@ async def setup(ctx):
                 return
             if event.chat_id not in _ssd_groups():
                 return
+            sender = getattr(message, "_v2_sender", None)
+            if not any(s.site_name == "springsunday" and sender
+                       and sender.id == s.bot_id
+                       for s in _sites().get(event.chat_id, ())):
+                return
             # 必须是转账bot 回复「我」发出的消息
             rtm = getattr(message, "_v2_reply", None)
             if not (rtm and getattr(rtm, "_v2_sender", None)
                     and getattr(rtm._v2_sender, "is_self", False)):
                 return
-            text = message.text or getattr(message, "caption", "") or ""
-            if "转账金额过大" not in text and "请确认你的转账" not in text:
+            if not extract_plus_amount(getattr(rtm, "text", None)):
                 return
-            markup = getattr(message, "reply_markup", None)
-            # Pyrogram exposes ``inline_keyboard`` while Telethon exposes
-            # ReplyInlineMarkup.rows[].buttons[].  Accept both layouts; the
-            # previous Pyrogram-only lookup silently skipped every SSD prompt.
-            kb = getattr(markup, "inline_keyboard", None) if markup else None
-            if kb is None and markup is not None:
-                kb = [list(getattr(row, "buttons", ()) or ())
-                      for row in (getattr(markup, "rows", ()) or ())]
-            kb = [list(row or ()) for row in (kb or ()) if row]
-            if not kb:
+            prompt_text = message.text or getattr(message, "caption", "") or ""
+            if any(marker in prompt_text for marker in (
+                "失败", "错误", "余额不足", "已取消", "取消成功", "转账成功", "转赠成功",
+                "转账完成", "转赠完成", "已成功",
+            )):
                 return
+            if not _ssd_confirmation_pending(message):
+                return
+            kb = _inline_keyboard(message)
             position = _ssd_button_position(kb, mode)
             if position is None:
                 ctx.log.warning("SSD大额确认消息没有匹配 %s 的按钮，已跳过", mode)
                 return
             row, col = position
+            confirmation_key = (event.chat_id, message.id)
+            if confirmation_key in ssd_confirmation_attempts:
+                return
+            ssd_confirmation_attempts.add(confirmation_key)
             await asyncio.sleep(0.5)
             try:
                 # Telethon 的 Message.click 使用 i/j；旧版的 x/y 是 Pyrogram
                 # 参数，迁移后会直接抛 TypeError，导致配置看似生效却从未点击。
                 await asyncio.wait_for(message.click(i=row, j=col), timeout=10)
                 label = str(getattr(kb[row][col], "text", "") or mode).strip()
-                ctx.log.info("SSD大额转账确认成功，点击了 %s（第 %d 行第 %d 列）", label, row + 1, col + 1)
+                ctx.log.info("SSD已点击 %s，等待机器人成功回执（第 %d 行第 %d 列）", label, row + 1, col + 1)
             except (TimeoutError, asyncio.TimeoutError):
                 ctx.log.warning("SSD转账确认超时")
             except Exception as e:
                 ctx.log.error("SSD转账确认失败: %s", e)
         except Exception as e:
             ctx.log.error("处理SSD大额确认出错: %s", e)
+
+    ctx.on_edited_message()(ssd_confirm_click)
 
     # ── 前端(Config.vue)用的后端接口 ──
     @ctx.on_api("/sites", methods=["GET"])
@@ -349,11 +367,67 @@ async def teardown(ctx):
 _TRANSFER_SKIP_KEYWORDS = (
     "转账金额过大", "余额不足", "转账失败", "请确认你的转账", "确认你的转账",
     "请确认憨豆转赠", "请输入正确数量", "限额", "失败", "不足", "错误",
+    "请确认转账", "转账金额较大", "预计税费", "预计到账", "等待确认", "待确认",
+    "取消转账", "转账已取消", "已取消转账", "未成功", "未完成", "尚未",
 )
 
 
+def _inline_keyboard(message) -> list[list]:
+    """保留原始行列坐标，兼容 Telethon 与旧版内联键盘。"""
+    markup = getattr(message, "reply_markup", None)
+    kb = getattr(markup, "inline_keyboard", None) if markup else None
+    if kb is None and markup is not None:
+        kb = [getattr(row, "buttons", ()) or ()
+              for row in (getattr(markup, "rows", ()) or ())]
+    return [list(row or ()) for row in (kb or ())]
+
+
+def _ssd_confirmation_pending(message) -> bool:
+    text = getattr(message, "text", None) or getattr(message, "caption", None) or ""
+    if any(marker in text for marker in (
+        "请确认转账", "请确认你的转账", "确认你的转账", "转账金额过大", "转账金额较大",
+    )):
+        return True
+    keyboard = _inline_keyboard(message)
+    return (_ssd_button_position(keyboard, "once") is not None
+            or _ssd_button_position(keyboard, "5min") is not None)
+
+
+def _plus_transfer_succeeded(message) -> bool:
+    """+金额仅是请求；必须有机器人明确的最终转账成功回执才记账。"""
+    text = getattr(message, "text", None) or getattr(message, "caption", None) or ""
+    if _ssd_confirmation_pending(message) or any(k in text for k in _TRANSFER_SKIP_KEYWORDS):
+        return False
+    # 不以单独“成功”或昵称中的字样判断；不认识的状态保守跳过。
+    return bool(re.search(
+        r"(?:^|[\r\n。！!])\s*(?:[^\w\u3400-\u9fff]\s*)*"
+        r"(?:本次)?(?:(?:转[账帐]|转赠|赠送)(?:已)?(?:成功|完成)|"
+        r"(?:您|你)?(?:已)?成功(?:转[账帐]|转出|转入|转赠|赠送|到账))"
+        r"(?=$|[\s：:，,。！!（(\d])",
+        text,
+    ))
+
+
+def _plus_transfer_source_key(message, site, direction: str) -> str | None:
+    """按原始请求而非回执/金额去重；缺少可核实来源时不猜测。"""
+    command = plus_amount_message(message, direction)
+    own_message = command if direction == "out" else getattr(command, "_v2_reply", None)
+    own_sender = getattr(own_message, "_v2_sender", None)
+    if not own_sender or not getattr(own_sender, "is_self", False):
+        return None
+    try:
+        own_id = int(getattr(own_sender, "id", 0) or 0)
+        chat_id = int(getattr(message, "chat_id", 0) or 0)
+        source_id = int(getattr(command, "id", 0) or 0)
+    except (TypeError, ValueError):
+        return None
+    if own_id <= 0 or chat_id == 0 or source_id <= 0:
+        return None
+    return f"{site.site_name}:{own_id}:{chat_id}:{source_id}"
+
+
 def _ssd_button_position(keyboard, mode: str) -> tuple[int, int] | None:
-    """按按钮文字选择 SSD 确认方式；旧版固定行号只作为最后兜底。"""
+    """仅选择已知确认按钮；布局未知时绝不按固定行号猜测。"""
     wanted = {
         "once": ("单次", "一次", "本次", "once"),
         "5min": ("5分钟", "五分钟", "5min", "5 min"),
@@ -363,11 +437,19 @@ def _ssd_button_position(keyboard, mode: str) -> tuple[int, int] | None:
     for row_index, row in enumerate(keyboard or ()):
         for col_index, button in enumerate(row or ()):
             label = re.sub(r"\s+", "", str(getattr(button, "text", "") or "")).lower()
-            if any(marker.replace(" ", "") in label for marker in wanted):
+            if (not (getattr(button, "data", None) or getattr(button, "callback_data", None))
+                    or getattr(button, "url", None)
+                    or any(marker in label for marker in (
+                        "取消", "返回", "拒绝", "不确认", "不确定", "暂不", "放弃", "cancel",
+                    ))):
+                continue
+            if mode == "once" and any(marker in label for marker in ("5分钟", "五分钟", "5min")):
+                continue
+            if mode == "once" and label in ("确认", "确定", "确认转账", "确定转账"):
                 return row_index, col_index
-    fallback_row = 0 if mode == "once" else 1
-    if fallback_row < len(keyboard) and keyboard[fallback_row]:
-        return fallback_row, 0
+            if (("确认" in label or "确定" in label or "confirm" in label)
+                    and any(marker.replace(" ", "") in label for marker in wanted)):
+                return row_index, col_index
     return None
 
 
@@ -387,7 +469,14 @@ async def _handle_generic(ctx, store, client, message, site, rank_size_fn):
     # 失败/确认提示 → 不是成功转账，跳过
     if any(k in bot_text for k in _TRANSFER_SKIP_KEYWORDS):
         return
+    source_key = None
     if site.parser == "plus":
+        if not _plus_transfer_succeeded(message):
+            return
+        source_key = _plus_transfer_source_key(message, site, direction)
+        if source_key is None:
+            ctx.log.debug("[%s] 成功回执缺少可核实的原始转账请求，未记账", site.site_name)
+            return
         # springsunday/mock：金额取回复链里的「+金额」消息
         plus_msg = plus_amount_message(message, direction)
         amount_str = extract_plus_amount(getattr(plus_msg, "text", None))
@@ -408,7 +497,7 @@ async def _handle_generic(ctx, store, client, message, site, rank_size_fn):
     target = cp_msg or message
 
     await _record_and_notify(ctx, store, client, message, target, site, direction,
-                             user_id, user_name, amount, rank_size_fn)
+                             user_id, user_name, amount, rank_size_fn, source_key=source_key)
 
 
 # ─── hdsky 专用处理（广播式转账，严格对齐原项目 self_received/self_mentioned）──
@@ -548,12 +637,17 @@ def user_identity_from_user(fu) -> tuple[int, str]:
 #   - 图片模式：致谢正文 + <i>附注</i> 作为图片 caption；发图失败回退精修版文字榜。
 #   - 文字模式/无图能力：致谢正文 + <blockquote>精修版文字榜</blockquote>。
 async def _record_and_notify(ctx, store, client, message, target, site, direction,
-                             user_id, user_name, amount, rank_size_fn):
+                             user_id, user_name, amount, rank_size_fn, *, source_key=None):
+    if source_key and store.is_source_duplicate(site.site_name, source_key):
+        return
     # 去重（防 bot 消息 + 编辑双触发）
     if store.is_duplicate(site.site_name, direction, message.chat_id, message.id, amount):
         return
 
-    stat = store.record(site.site_name, direction, user_id, user_name, amount)
+    stat = store.record(site.site_name, direction, user_id, user_name, amount,
+                        source_key=source_key)
+    if stat is None:
+        return
     display_name = lb._short_name(user_name)
     ctx.log.info("[%s] 记录转账 dir=%s user=%s amount=%s", site.site_name,
                  direction, display_name, amount)

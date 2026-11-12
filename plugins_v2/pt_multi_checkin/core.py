@@ -163,7 +163,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.11",
+    "version": "2.7.12",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg",
@@ -210,6 +210,10 @@ __plugin__ = {
 __plugin__["changelog"] = "v2.7.10 增加猪猪服务器登录超时诊断\n- 超时时自动记录页面类别、表单/日历可见性、会话和账号匹配状态，无需查看浏览器窗口\n- 汇总关键请求的固定网络错误分类，不记录网址、响应正文、密码或 Token\n- 仅增强排查信息，不增加登录/签到点击，不改变成功判定与等待时限\n\nv2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 __plugin__["changelog"] = (
+    "v2.7.12 加固猪猪居中验证窗口识别\n"
+    "- 等待原生居中遮罩与验证控件加载，窗口未关闭时不重复提交签到\n"
+    "- 只选择唯一可见控件及其官方 iframe，跳过隐藏旧节点和不明确的目标\n"
+    "- 操作前重新核对位置，弹窗移动或缩放时等待，保留当天签到记录的严格判定\n\n"
     "v2.7.11 自动处理猪猪规则阅读确认\n"
     "- 登录后遇站点规则阅读页，仅对已识别的原生“确认已阅读”按钮点击一次，再继续进入日历\n"
     "- 确认前核对站点、账号、提示与按钮，控件禁用或页面未加载时等待，不误点其他协议\n"
@@ -471,10 +475,16 @@ def _prepare_runtime_dependencies(selected_keys: list[str]) -> list[str]:
             # 正常 launch 会由平台选择代理、License Key、兼容内核和免费会话队列；
             # 成功返回即表示该通道所需内核已经可以启动。
             browser = cloakbrowser.launch(headless=True, release_channel=channel)
-            info = _cloakbrowser_binary_details(cloakbrowser, channel)
-            binaries.append(
-                f"{channel} Chromium {info.get('version') or '未知'}（{info.get('tier') or '未知'}）"
-            )
+            actual_version = getattr(browser, "version", "")
+            if isinstance(actual_version, str) and re.fullmatch(r"\d+(?:\.\d+){2,4}", actual_version):
+                # 平台可选内部内核；SDK binary_info 可能仍返回默认缓存内核。
+                # 预检既然已启动，应记录真实会话版本，不把缓存信息当实际内核。
+                binaries.append(f"{channel} Chromium {actual_version}（已启动核验）")
+            else:
+                info = _cloakbrowser_binary_details(cloakbrowser, channel)
+                binaries.append(
+                    f"{channel} Chromium {info.get('version') or '未知'}（{info.get('tier') or '未知'}）"
+                )
         finally:
             if browser is not None:
                 browser.close()
@@ -701,7 +711,7 @@ def _piggo_log_login_timeout(page, ctx, username, observation) -> None:
                 calendar: !!document.querySelector('.cal-page .cal-att'),
                 calendarVisible: visible('.cal-page .cal-att'),
                 dialogVisible: visible('[role="dialog"], dialog[open]'),
-                captchaVisible: visible('.site-cap[role="dialog"][aria-label="人机验证"], .captcha-row, .site-captcha, input[name="otp"], input[name="totp"]'),
+                captchaVisible: visible('.site-cap-root, .site-cap[role="dialog"][aria-label="人机验证"], .captcha-row, .site-captcha, input[name="otp"], input[name="totp"]'),
                 locked: text.includes('页面已锁定') && text.includes('空闲过久'),
                 hasSession: session,
                 userReadable: userReadable,
@@ -761,8 +771,7 @@ def _piggo_confirm_wiki_reading(page, ctx, guard, username, reading, deadline) -
         if "".join(hint.inner_text().split()) != "阅读完毕后请确认，才能继续使用站点。" \
                 or button.inner_text().strip() != "确认已阅读":
             raise RuntimeError("猪猪规则阅读确认内容已变化，本轮未自动点击其他确认或协议")
-        verification = page.locator('.site-cap[role="dialog"][aria-label="人机验证"], .captcha-row, .site-captcha')
-        if any(verification.nth(index).is_visible() for index in range(verification.count())):
+        if _piggo_captcha_visible(page):
             raise RuntimeError("猪猪规则阅读确认出现人机验证，本轮未自动点击")
         return True
 
@@ -2654,6 +2663,49 @@ def _piggo_calendar_signed(page) -> bool:
     return False
 
 
+def _piggo_captcha_visible(page) -> bool:
+    """识别原生验证遮罩（包括控件仍在加载的居中窗口），不按屏幕位置判断。"""
+    candidates = page.locator(
+        '.site-cap-root, .site-cap[role="dialog"][aria-label="人机验证"], '
+        '.site-captcha, .captcha-row'
+    )
+    return any(candidates.nth(index).is_visible() for index in range(candidates.count()))
+
+
+def _piggo_captcha_widget(page):
+    """只取原生验证窗口内唯一可见的控件，跳过遗留的隐藏节点。"""
+    candidates = page.locator(
+        '.site-cap-root .ts-box, '
+        '.site-cap[role="dialog"][aria-label="人机验证"] .ts-box'
+    )
+    visible = [candidates.nth(index) for index in range(candidates.count())
+               if candidates.nth(index).is_visible()]
+    return visible[0] if len(visible) == 1 else None
+
+
+def _piggo_frame_in_widget(frame, widget) -> bool:
+    """官方 iframe 必须属于当前可见控件；只读 DOM，兼容 shadow host。"""
+    element = None
+    try:
+        element = frame.frame_element()
+        if not element.is_visible():
+            return False
+        return widget.evaluate("""(widget, frame) => {
+            for (let node = frame; node; node = node.parentElement || node.getRootNode()?.host) {
+                if (node === widget) return true;
+            }
+            return false;
+        }""", element) is True
+    except Exception:
+        return False
+    finally:
+        if element is not None:
+            try:
+                element.dispose()
+            except Exception:
+                pass
+
+
 def _piggo_turnstile_checkbox_point(image: bytes, width: float, height: float) -> tuple[float, float] | None:
     """只定位已显示的空复选框；加载动画、勾选状态或不明图像不执行点击。"""
     try:
@@ -2968,8 +3020,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
             pass
 
     def captcha_visible():
-        dialogs = page.locator('.site-cap[role="dialog"][aria-label="人机验证"]')
-        return any(dialogs.nth(index).is_visible() for index in range(dialogs.count()))
+        return _piggo_captcha_visible(page)
 
     submission_attempted = False
     try:
@@ -3029,8 +3080,9 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                         retry_button.click(timeout=max(1, min(10_000, int((deadline - time.monotonic()) * 1000))))
                     except Exception as exc:
                         _runtime_log(ctx, f"第二次签到按钮操作未确认（{type(exc).__name__}），只回查结果，不再点击", level="warning", site="猪猪")
+            widget = _piggo_captcha_widget(page) if visible_now else None
             if captcha_opened and not captcha_click_attempted and time.monotonic() < deadline \
-                    and captcha_visible() and page.locator(".site-cap .ts-box").count():
+                    and captcha_visible() and widget is not None:
                 # 只操作官网已打开控件内的真实复选框；令牌与重放仍由官网生成。
                 for frame in getattr(page, "frames", []):
                     try:
@@ -3039,7 +3091,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                             and parsed.port in {None, 443} and parsed.username is None and parsed.password is None
                     except ValueError:
                         trusted_frame = False
-                    if not trusted_frame:
+                    if not trusted_frame or not _piggo_frame_in_widget(frame, widget):
                         continue
                     try:
                         checkbox = frame.locator('input[type="checkbox"]').first
@@ -3071,7 +3123,6 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                     point = None
                     probe_started = time.monotonic()
                     try:
-                        widget = page.locator(".site-cap .ts-box").first
                         candidate = widget.bounding_box(timeout=1_000)
                         if candidate and 280 <= candidate["width"] <= 360 and 60 <= candidate["height"] <= 100 \
                                 and page.evaluate("() => typeof window.turnstile?.render === 'function'") is True:
@@ -3079,13 +3130,25 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                                                                    candidate["width"], candidate["height"])
                             if point is not None:
                                 box = widget.bounding_box(timeout=1_000)
-                                if not box or abs(box["width"] - candidate["width"]) > 1 \
-                                        or abs(box["height"] - candidate["height"]) > 1:
+                                if not box or any(abs(box[key] - candidate[key]) > 1
+                                                  for key in ("x", "y", "width", "height")):
                                     box = None
                     except Exception:
                         pass  # 官网控件可能刚被原生回调关闭；下一轮继续核对当天记录。
                     if box:
                         _runtime_log(ctx, f"官网验证空复选框已出现，本次检查耗时 {int((time.monotonic() - probe_started) * 1000)}ms", site="猪猪")
+                        guard()
+                        if _piggo_calendar_signed(page):
+                            return {"status": "success", "message": "签到成功"}
+                        if not captcha_visible():
+                            continue
+                        current_widget = _piggo_captcha_widget(page)
+                        if current_widget is None:
+                            continue
+                        latest_box = current_widget.bounding_box(timeout=1_000)
+                        if not latest_box or any(abs(latest_box[key] - box[key]) > 1
+                                                 for key in ("x", "y", "width", "height")):
+                            continue  # 居中弹窗仍在移动/重排时，不点击截图中的旧位置。
                         guard()
                         if _piggo_calendar_signed(page):
                             return {"status": "success", "message": "签到成功"}

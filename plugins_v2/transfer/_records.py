@@ -11,6 +11,8 @@
 #       每条 {site,direction,user_id,user_name,amount,ts}
 #   - 去重：内存 8 秒窗口，按 (site,direction,chat_id,msg_id,amount) 去重，
 #     对应原项目 do_transfer 的 dedupe 逻辑（防 bot 消息+编辑双触发）。
+#     SSD/plus 另把原始请求来源键保存在 agg 的 _confirmed_sources 中，
+#     与统计同一次持久化，防止延迟编辑、另发回执或重启后的重复入账。
 #
 # kv value 必须 JSON-able：金额用 float，时间用 ISO 字符串。
 # =============================================================================
@@ -67,6 +69,11 @@ class RecordStore:
         self._tasks.clear()
 
     # ── 去重 ──────────────────────────────────────────────────────────────
+    def is_source_duplicate(self, site: str, source_key: str) -> bool:
+        """稳定请求来源已成功入账；旧数据没有来源索引时保持兼容。"""
+        confirmed = self._load_agg(site).get("_confirmed_sources", {})
+        return isinstance(confirmed, dict) and source_key in confirmed
+
     def is_duplicate(self, site: str, direction: str, chat_id: int,
                      msg_id: int, amount: float) -> bool:
         """8 秒窗口内的重复转账确认返回 True（并刷新时间戳）。"""
@@ -84,10 +91,12 @@ class RecordStore:
 
     # ── 写入 ──────────────────────────────────────────────────────────────
     def record(self, site: str, direction: str, user_id: int, user_name: str,
-               amount: float) -> dict:
+               amount: float, *, source_key: str | None = None) -> dict | None:
         """记录一笔转账，更新聚合表与流水。返回该用户在该方向的累计 {total,count,rank}。"""
         amount = abs(float(amount))
         agg = self._load_agg(site)
+        if source_key and self.is_source_duplicate(site, source_key):
+            return None
         side = agg.setdefault(direction, {})
         uid = _agg_key(user_id, user_name)
         entry = side.get(uid) or {"name": user_name, "total": 0.0, "count": 0}
@@ -95,6 +104,12 @@ class RecordStore:
         entry["total"] = round(float(entry["total"]) + amount, 4)
         entry["count"] = int(entry["count"]) + 1
         side[uid] = entry
+        if source_key:
+            confirmed = agg.get("_confirmed_sources")
+            if not isinstance(confirmed, dict):
+                confirmed = {}
+                agg["_confirmed_sources"] = confirmed
+            confirmed[source_key] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         self._save_agg(site, agg)
 
         self._append_recent({
