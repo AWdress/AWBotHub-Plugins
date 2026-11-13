@@ -35,84 +35,85 @@ const _hoisted_9 = {
   "aria-labelledby": "ssd-lottery-title"
 };
 const _hoisted_10 = { class: "section-head" };
-const _hoisted_11 = { class: "toggle" };
-const _hoisted_12 = {
+const _hoisted_11 = { class: "ssd-lottery-toggle" };
+const _hoisted_12 = { class: "ssd-lottery-toggle-state" };
+const _hoisted_13 = {
   class: "field range-field",
   role: "group",
   "aria-labelledby": "ssd-lottery-delay-label"
 };
-const _hoisted_13 = { class: "number-field" };
-const _hoisted_14 = {
+const _hoisted_14 = { class: "number-field" };
+const _hoisted_15 = {
   class: "section",
   "aria-labelledby": "ssd-transfer-title"
 };
-const _hoisted_15 = { class: "control-line" };
-const _hoisted_16 = {
+const _hoisted_16 = { class: "control-line" };
+const _hoisted_17 = {
   class: "field",
   for: "ssd-transfer-mode"
 };
-const _hoisted_17 = ["value"];
-const _hoisted_18 = {
+const _hoisted_18 = ["value"];
+const _hoisted_19 = {
   class: "field",
   for: "ssd-confirm-delay"
 };
-const _hoisted_19 = { class: "number-field" };
-const _hoisted_20 = {
+const _hoisted_20 = { class: "number-field" };
+const _hoisted_21 = {
   key: 0,
   class: "warning",
   role: "note"
 };
-const _hoisted_21 = { class: "savebar" };
-const _hoisted_22 = {
+const _hoisted_22 = { class: "savebar" };
+const _hoisted_23 = {
   key: 0,
   class: "error",
   role: "alert"
 };
-const _hoisted_23 = {
+const _hoisted_24 = {
   key: 1,
   class: "save-result",
   role: "status"
 };
-const _hoisted_24 = ["disabled"];
-const _hoisted_25 = {
+const _hoisted_25 = ["disabled"];
+const _hoisted_26 = {
   key: 1,
   class: "history-pane"
 };
-const _hoisted_26 = { class: "toolbar" };
-const _hoisted_27 = {
+const _hoisted_27 = { class: "toolbar" };
+const _hoisted_28 = {
   class: "filter",
   for: "ssd-history-filter"
 };
-const _hoisted_28 = ["disabled"];
-const _hoisted_29 = {
+const _hoisted_29 = ["disabled"];
+const _hoisted_30 = {
   key: 0,
   class: "tip"
 };
-const _hoisted_30 = {
+const _hoisted_31 = {
   key: 1,
   class: "muted",
   role: "status"
 };
-const _hoisted_31 = {
+const _hoisted_32 = {
   key: 2,
   class: "error",
   role: "alert"
 };
-const _hoisted_32 = {
+const _hoisted_33 = {
   key: 3,
   class: "empty"
 };
-const _hoisted_33 = {
+const _hoisted_34 = {
   key: 4,
   class: "records"
 };
-const _hoisted_34 = { class: "record-head" };
-const _hoisted_35 = {
+const _hoisted_35 = { class: "record-head" };
+const _hoisted_36 = {
   key: 0,
   class: "lottery-id"
 };
-const _hoisted_36 = { class: "record-detail" };
-const _hoisted_37 = { class: "record-meta" };
+const _hoisted_37 = { class: "record-detail" };
+const _hoisted_38 = { class: "record-meta" };
 
 const {computed,onMounted,reactive,ref,watch} = await importShared('vue');
 
@@ -278,21 +279,27 @@ return (_ctx, _cache) => {
                   }, [
                     _createElementVNode("section", _hoisted_9, [
                       _createElementVNode("div", _hoisted_10, [
-                        _cache[8] || (_cache[8] = _createElementVNode("h3", { id: "ssd-lottery-title" }, "自动参与抽奖", -1)),
+                        _cache[9] || (_cache[9] = _createElementVNode("h3", { id: "ssd-lottery-title" }, "自动参与抽奖", -1)),
                         _createElementVNode("label", _hoisted_11, [
                           _withDirectives(_createElementVNode("input", {
                             "onUpdate:modelValue": _cache[2] || (_cache[2] = $event => ((cfg.lottery_enabled) = $event)),
+                            class: "ssd-lottery-toggle-input",
                             type: "checkbox",
+                            role: "switch",
                             "aria-label": "开启自动参与抽奖"
                           }, null, 512), [
                             [_vModelCheckbox, cfg.lottery_enabled]
                           ]),
-                          _createElementVNode("span", null, _toDisplayString(cfg.lottery_enabled ? '开启' : '关闭'), 1)
+                          _cache[8] || (_cache[8] = _createElementVNode("span", {
+                            class: "ssd-lottery-toggle-track",
+                            "aria-hidden": "true"
+                          }, null, -1)),
+                          _createElementVNode("span", _hoisted_12, _toDisplayString(cfg.lottery_enabled ? '开启' : '关闭'), 1)
                         ])
                       ]),
-                      _createElementVNode("div", _hoisted_12, [
-                        _cache[11] || (_cache[11] = _createElementVNode("span", { id: "ssd-lottery-delay-label" }, "参与前随机等待", -1)),
-                        _createElementVNode("span", _hoisted_13, [
+                      _createElementVNode("div", _hoisted_13, [
+                        _cache[12] || (_cache[12] = _createElementVNode("span", { id: "ssd-lottery-delay-label" }, "参与前随机等待", -1)),
+                        _createElementVNode("span", _hoisted_14, [
                           _withDirectives(_createElementVNode("input", {
                             "onUpdate:modelValue": _cache[3] || (_cache[3] = $event => ((cfg.lottery_delay_min_seconds) = $event)),
                             type: "number",
@@ -309,7 +316,7 @@ return (_ctx, _cache) => {
                               { number: true }
                             ]
                           ]),
-                          _cache[9] || (_cache[9] = _createElementVNode("span", null, "～", -1)),
+                          _cache[10] || (_cache[10] = _createElementVNode("span", null, "～", -1)),
                           _withDirectives(_createElementVNode("input", {
                             "onUpdate:modelValue": _cache[4] || (_cache[4] = $event => ((cfg.lottery_delay_max_seconds) = $event)),
                             type: "number",
@@ -326,19 +333,19 @@ return (_ctx, _cache) => {
                               { number: true }
                             ]
                           ]),
-                          _cache[10] || (_cache[10] = _createElementVNode("span", null, "秒", -1))
+                          _cache[11] || (_cache[11] = _createElementVNode("span", null, "秒", -1))
                         ])
                       ]),
-                      _cache[12] || (_cache[12] = _createElementVNode("p", {
+                      _cache[13] || (_cache[13] = _createElementVNode("p", {
                         id: "ssd-lottery-help",
                         class: "tip"
                       }, "发送一次参与口令，发完即结束。", -1))
                     ]),
-                    _createElementVNode("section", _hoisted_14, [
-                      _cache[16] || (_cache[16] = _createElementVNode("h3", { id: "ssd-transfer-title" }, "自动确认转账", -1)),
-                      _createElementVNode("div", _hoisted_15, [
-                        _createElementVNode("label", _hoisted_16, [
-                          _cache[13] || (_cache[13] = _createElementVNode("span", null, "确认方式", -1)),
+                    _createElementVNode("section", _hoisted_15, [
+                      _cache[17] || (_cache[17] = _createElementVNode("h3", { id: "ssd-transfer-title" }, "自动确认转账", -1)),
+                      _createElementVNode("div", _hoisted_16, [
+                        _createElementVNode("label", _hoisted_17, [
+                          _cache[14] || (_cache[14] = _createElementVNode("span", null, "确认方式", -1)),
                           _withDirectives(_createElementVNode("select", {
                             id: "ssd-transfer-mode",
                             "onUpdate:modelValue": _cache[5] || (_cache[5] = $event => ((cfg.ssd_click_mode) = $event)),
@@ -348,15 +355,15 @@ return (_ctx, _cache) => {
                               return _createElementVNode("option", {
                                 key: mode.value,
                                 value: mode.value
-                              }, _toDisplayString(mode.label), 9, _hoisted_17)
+                              }, _toDisplayString(mode.label), 9, _hoisted_18)
                             }), 64))
                           ], 512), [
                             [_vModelSelect, cfg.ssd_click_mode]
                           ])
                         ]),
-                        _createElementVNode("label", _hoisted_18, [
-                          _cache[15] || (_cache[15] = _createElementVNode("span", null, "点击前等待", -1)),
-                          _createElementVNode("span", _hoisted_19, [
+                        _createElementVNode("label", _hoisted_19, [
+                          _cache[16] || (_cache[16] = _createElementVNode("span", null, "点击前等待", -1)),
+                          _createElementVNode("span", _hoisted_20, [
                             _withDirectives(_createElementVNode("input", {
                               id: "ssd-confirm-delay",
                               "onUpdate:modelValue": _cache[6] || (_cache[6] = $event => ((cfg.confirm_delay_seconds) = $event)),
@@ -373,20 +380,20 @@ return (_ctx, _cache) => {
                                 { number: true }
                               ]
                             ]),
-                            _cache[14] || (_cache[14] = _createElementVNode("span", null, "秒", -1))
+                            _cache[15] || (_cache[15] = _createElementVNode("span", null, "秒", -1))
                           ])
                         ])
                       ]),
-                      _cache[17] || (_cache[17] = _createElementVNode("p", {
+                      _cache[18] || (_cache[18] = _createElementVNode("p", {
                         id: "ssd-transfer-help",
                         class: "tip"
                       }, "只确认本人转账，不发起转账。", -1)),
                       (cfg.ssd_click_mode === '5min')
-                        ? (_openBlock(), _createElementBlock("p", _hoisted_20, "后续 5 分钟转账可能不再提示确认。"))
+                        ? (_openBlock(), _createElementBlock("p", _hoisted_21, "后续 5 分钟转账可能不再提示确认。"))
                         : _createCommentVNode("", true)
                     ])
                   ], 8, _hoisted_8),
-                  _cache[18] || (_cache[18] = _createElementVNode("details", { class: "help" }, [
+                  _cache[19] || (_cache[19] = _createElementVNode("details", { class: "help" }, [
                     _createElementVNode("summary", null, "使用说明"),
                     _createElementVNode("div", { class: "help-content" }, [
                       _createElementVNode("p", null, "使用平台已登录的 Telegram 用户账号，不是 Bot。仅监听 SSD 两个内置群（-1002014253433、-1001173590111）的官方机器人（752250569），无需填写凭据。"),
@@ -396,26 +403,26 @@ return (_ctx, _cache) => {
                       _createElementVNode("p", null, "参与前默认随机等待 2～5 秒（范围 0～60 秒）；确认等待默认 0.5 秒（0～10 秒）。")
                     ])
                   ], -1)),
-                  _createElementVNode("div", _hoisted_21, [
+                  _createElementVNode("div", _hoisted_22, [
                     (formError.value)
-                      ? (_openBlock(), _createElementBlock("p", _hoisted_22, _toDisplayString(formError.value), 1))
-                      : (_openBlock(), _createElementBlock("p", _hoisted_23, _toDisplayString(saveResult.value), 1)),
+                      ? (_openBlock(), _createElementBlock("p", _hoisted_23, _toDisplayString(formError.value), 1))
+                      : (_openBlock(), _createElementBlock("p", _hoisted_24, _toDisplayString(saveResult.value), 1)),
                     _createElementVNode("button", {
                       type: "submit",
                       class: "btn primary",
                       disabled: saving.value || !ready.value || !!formError.value
-                    }, _toDisplayString(saving.value ? '正在保存…' : '保存配置'), 9, _hoisted_24)
+                    }, _toDisplayString(saving.value ? '正在保存…' : '保存配置'), 9, _hoisted_25)
                   ])
                 ], 32))
         ]))
-      : (_openBlock(), _createElementBlock("div", _hoisted_25, [
-          _createElementVNode("div", _hoisted_26, [
-            _createElementVNode("label", _hoisted_27, [
-              _cache[20] || (_cache[20] = _createElementVNode("span", null, "记录类型", -1)),
+      : (_openBlock(), _createElementBlock("div", _hoisted_26, [
+          _createElementVNode("div", _hoisted_27, [
+            _createElementVNode("label", _hoisted_28, [
+              _cache[21] || (_cache[21] = _createElementVNode("span", null, "记录类型", -1)),
               _withDirectives(_createElementVNode("select", {
                 id: "ssd-history-filter",
                 "onUpdate:modelValue": _cache[7] || (_cache[7] = $event => ((historyFilter).value = $event))
-              }, [...(_cache[19] || (_cache[19] = [
+              }, [...(_cache[20] || (_cache[20] = [
                 _createElementVNode("option", { value: "all" }, "全部", -1),
                 _createElementVNode("option", { value: "lottery" }, "自动参与抽奖", -1),
                 _createElementVNode("option", { value: "transfer" }, "自动确认转账", -1)
@@ -428,40 +435,40 @@ return (_ctx, _cache) => {
               class: "btn",
               disabled: historyLoading.value,
               onClick: loadHistory
-            }, _toDisplayString(historyLoading.value ? '读取中…' : '刷新记录'), 9, _hoisted_28)
+            }, _toDisplayString(historyLoading.value ? '读取中…' : '刷新记录'), 9, _hoisted_29)
           ]),
-          _cache[21] || (_cache[21] = _createElementVNode("p", { class: "tip" }, "最近 100 条；结果以官方机器人为准。", -1)),
+          _cache[22] || (_cache[22] = _createElementVNode("p", { class: "tip" }, "最近 100 条；结果以官方机器人为准。", -1)),
           (runtime.value)
-            ? (_openBlock(), _createElementBlock("p", _hoisted_29, "运行中：抽奖" + _toDisplayString(runtime.value.lottery_enabled ? '开启' : '关闭') + " · 转账" + _toDisplayString(runtime.value.ssd_click_mode === 'off' ? '关闭' : MODES.find(item => item.value === runtime.value.ssd_click_mode)?.label || '未知'), 1))
+            ? (_openBlock(), _createElementBlock("p", _hoisted_30, "运行中：抽奖" + _toDisplayString(runtime.value.lottery_enabled ? '开启' : '关闭') + " · 转账" + _toDisplayString(runtime.value.ssd_click_mode === 'off' ? '关闭' : MODES.find(item => item.value === runtime.value.ssd_click_mode)?.label || '未知'), 1))
             : _createCommentVNode("", true),
           (historyLoading.value)
-            ? (_openBlock(), _createElementBlock("p", _hoisted_30, "正在读取执行记录…"))
+            ? (_openBlock(), _createElementBlock("p", _hoisted_31, "正在读取执行记录…"))
             : (historyError.value)
-              ? (_openBlock(), _createElementBlock("p", _hoisted_31, _toDisplayString(historyError.value), 1))
+              ? (_openBlock(), _createElementBlock("p", _hoisted_32, _toDisplayString(historyError.value), 1))
               : (!visibleHistory.value.length)
-                ? (_openBlock(), _createElementBlock("div", _hoisted_32, [
+                ? (_openBlock(), _createElementBlock("div", _hoisted_33, [
                     _createElementVNode("h3", null, _toDisplayString(history.value.length ? '此类型暂无记录' : '暂无执行记录'), 1),
                     _createElementVNode("p", null, _toDisplayString(history.value.length ? '可切换记录类型查看其他操作。' : '开启功能并收到符合条件的新消息后，执行过程会显示在这里。'), 1)
                   ]))
-                : (_openBlock(), _createElementBlock("ol", _hoisted_33, [
+                : (_openBlock(), _createElementBlock("ol", _hoisted_34, [
                     (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(visibleHistory.value, (item, index) => {
                       return (_openBlock(), _createElementBlock("li", {
                         key: item.key || `${item.kind}-${item.chat_id}-${item.message_id}-${index}`,
                         class: "record"
                       }, [
-                        _createElementVNode("div", _hoisted_34, [
+                        _createElementVNode("div", _hoisted_35, [
                           _createElementVNode("strong", null, [
                             _createTextVNode(_toDisplayString(item.kind === 'lottery' ? '自动参与抽奖' : '自动确认转账'), 1),
                             (item.lottery_id)
-                              ? (_openBlock(), _createElementBlock("span", _hoisted_35, " · " + _toDisplayString(item.lottery_id), 1))
+                              ? (_openBlock(), _createElementBlock("span", _hoisted_36, " · " + _toDisplayString(item.lottery_id), 1))
                               : _createCommentVNode("", true)
                           ]),
                           _createElementVNode("span", {
                             class: _normalizeClass(['record-status', { warning: ['uncertain', 'failed'].includes(item.status) }])
                           }, _toDisplayString(statusText(item)), 3)
                         ]),
-                        _createElementVNode("p", _hoisted_36, _toDisplayString(item.detail || '暂无补充说明'), 1),
-                        _createElementVNode("div", _hoisted_37, [
+                        _createElementVNode("p", _hoisted_37, _toDisplayString(item.detail || '暂无补充说明'), 1),
+                        _createElementVNode("div", _hoisted_38, [
                           _createElementVNode("span", null, "群 " + _toDisplayString(item.chat_id) + " · 消息 " + _toDisplayString(item.message_id), 1),
                           _createElementVNode("time", null, _toDisplayString(formatTime(item.updated_at || item.created_at)), 1)
                         ])
@@ -474,6 +481,6 @@ return (_ctx, _cache) => {
 }
 
 };
-const Config = /*#__PURE__*/_export_sfc(_sfc_main, [['__scopeId',"data-v-c5c84e9a"]]);
+const Config = /*#__PURE__*/_export_sfc(_sfc_main, [['__scopeId',"data-v-9856b500"]]);
 
 export { Config as default };

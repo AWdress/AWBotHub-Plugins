@@ -134,7 +134,7 @@ onMounted(loadConfig)
       <form v-else @submit.prevent="save">
         <fieldset :disabled="!ready || saving">
           <section class="section" aria-labelledby="ssd-lottery-title">
-            <div class="section-head"><h3 id="ssd-lottery-title">自动参与抽奖</h3><label class="toggle"><input v-model="cfg.lottery_enabled" type="checkbox" aria-label="开启自动参与抽奖" /><span>{{ cfg.lottery_enabled ? '开启' : '关闭' }}</span></label></div>
+            <div class="section-head"><h3 id="ssd-lottery-title">自动参与抽奖</h3><label class="ssd-lottery-toggle"><input v-model="cfg.lottery_enabled" class="ssd-lottery-toggle-input" type="checkbox" role="switch" aria-label="开启自动参与抽奖" /><span class="ssd-lottery-toggle-track" aria-hidden="true"></span><span class="ssd-lottery-toggle-state">{{ cfg.lottery_enabled ? '开启' : '关闭' }}</span></label></div>
             <div class="field range-field" role="group" aria-labelledby="ssd-lottery-delay-label"><span id="ssd-lottery-delay-label">参与前随机等待</span><span class="number-field"><input v-model.number="cfg.lottery_delay_min_seconds" type="number" min="0" max="60" step="0.1" aria-label="最短等待" aria-describedby="ssd-lottery-help" /><span>～</span><input v-model.number="cfg.lottery_delay_max_seconds" type="number" min="0" max="60" step="0.1" aria-label="最长等待" aria-describedby="ssd-lottery-help" /><span>秒</span></span></div>
             <p id="ssd-lottery-help" class="tip">发送一次参与口令，发完即结束。</p>
           </section>
@@ -194,8 +194,14 @@ fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 h3 { font-size: 15px; font-weight: 600; margin: 0; }
 .tip, .save-result, .record-meta { color: var(--text-muted, #a3acbb); font-size: 12px; }
 .tip { max-width: 75ch; }
-.toggle { display: flex; align-items: center; gap: 7px; color: var(--text-secondary, #b9c0cc); }
-input[type='checkbox'] { margin: 0; flex: 0 0 auto; accent-color: var(--accent, #6ea8fe); }
+.ssd-lottery-toggle { position: relative; display: inline-flex; align-items: center; flex: 0 0 auto; gap: 8px; min-height: 32px; margin: 0; white-space: nowrap; color: var(--text-secondary, #b9c0cc); cursor: pointer; }
+.ssd-lottery-toggle-input { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ssd-lottery-toggle-track { position: relative; display: inline-block; flex: 0 0 36px; width: 36px; height: 22px; border: 1px solid var(--border-light, #2a2e3a); border-radius: 11px; background: var(--bg-elevated, #1a1d27); }
+.ssd-lottery-toggle-track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+.ssd-lottery-toggle-input:checked + .ssd-lottery-toggle-track { border-color: var(--accent, #6ea8fe); background: var(--accent, #6ea8fe); }
+.ssd-lottery-toggle-input:checked + .ssd-lottery-toggle-track::after { transform: translateX(14px); }
+.ssd-lottery-toggle-input:focus-visible + .ssd-lottery-toggle-track { outline: 2px solid var(--accent, #6ea8fe); outline-offset: 3px; }
+.ssd-lottery-toggle-state { flex: 0 0 auto; white-space: nowrap; }
 .control-line { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 24px; }
 .field { display: flex; align-items: center; gap: 12px; }
 .field > span:first-child { flex: 0 0 76px; color: var(--text-secondary, #b9c0cc); }

@@ -62,6 +62,6 @@ AWBotHub 官方插件仓库。
 | 47 | [VPS-Widget](plugins_v2/vps_widget/README.md) | 0.0.1 | 聚合十类影视榜单并匹配 TMDB，生成受只读密钥保护的 Forward 格式 Widget；Vue 榜单状态、配置与地址页，使用平台网络与存储，无额外 Node 服务，自动更新默认关闭。 |
 | 48 | [Immortal](plugins_v2/immortal/README.md) | 0.0.2 | 源码内置的资源、影片、演员、订阅及下载管理，默认独立 SQLite，无需另配数据库或运行 Immortal 服务；中文分组配置页，使用平台任务和通知，自动功能默认关闭。 |
 | 49 | [开发者助手](plugins_v2/platform_release/README.md) | 0.0.8 | 使用平台 Telegram Bot 发布 AWBotHub 最新版本并置顶，保留旧公告记录，同版本说明变动时编辑原消息；支持群内自然提问、内置手册离线简答、自定义关键词回复到期双删和问题反馈，功能默认关闭。 |
-| 50 | [SSD助手](plugins_v2/ssd_assistant/README.md) | 0.0.1 | 自动参与 SSD 官方口令抽奖，按 ID 持久去重；核实本人请求与金额后单次或五分钟自动确认转账。中文分组设置和操作记录，自动功能默认关闭，不发起转账。 |
+| 50 | [SSD助手](plugins_v2/ssd_assistant/README.md) | 0.0.2 | 自动参与 SSD 官方口令抽奖，按 ID 持久去重；核实本人请求与金额后单次或五分钟自动确认转账。中文分组设置和操作记录，自动功能默认关闭，不发起转账。 |
 
 插件发布目录为 `plugins_v2/`，市场清单为 `manifest_v2.json`。
