@@ -49,7 +49,7 @@ from . import _leaderboard as lb
 __plugin__ = {
     "name": "多站点转账",
     "id": "transfer",
-    "version": "2.0.11",
+    "version": "2.0.12",
     "author": "AWdress",
     "scope": "user",
     "default_enabled": False,
@@ -60,6 +60,10 @@ __plugin__ = {
 }
 
 __plugin__["changelog"] = (
+    "v2.0.12 拆分 SSD 自动确认功能\n"
+    "- SSD 转账自动确认移至独立的 SSD 助手，本插件不再点击确认按钮\n"
+    "- 保留原始请求、确认页实际金额缓存及成功回执记账、致谢和排行榜\n"
+    "- 保留独立回执关联与持久去重，升级不清空历史记录\n\n"
     "v2.0.11 支持 SSD 随机金额转账\n"
     "- 支持 +下限-上限 口令的自动确认与排行榜\n"
     "- 以官方确认页和成功回执的实际转出额记账，不取上下限、税费或到账额\n"
@@ -92,7 +96,7 @@ DEFAULTS = {
     "site_mocktest": [],
     "rank_output": "image", "rank_size": 10, "rank_command": "转账排行",
     "notify_delay_min": 0, "notify_delay_max": 0,
-    "ssd_click_mode": "off", "owner_notify": False,
+    "owner_notify": False,
 }
 
 
@@ -109,8 +113,6 @@ async def setup(ctx):
     # hdsky 专用：缓存「别人回复我的 +金额」的发送者（含真实 uid），供转入方向取对手方 uid。
     # 每条 (金额, uid, name, 单调时间戳)，广播到达时按金额匹配最近一条。
     hdsky_get_senders: list[tuple[float, int, str, float]] = []
-    # 同一确认提示只提交一次，包括新消息/编辑消息并发以及点击结果超时。
-    ssd_confirmation_attempts: set[tuple[int, int]] = set()
 
     def _sites():
         """根据每站点开关构建 {chat_id: [SiteConfig]}（群组/bot 内置写死）。"""
@@ -121,10 +123,6 @@ async def setup(ctx):
             return int(ctx.config.get("rank_size", 10) or 10)
         except (ValueError, TypeError):
             return 10
-
-    def _ssd_groups() -> set[int]:
-        """SpringSunday 大额确认监听的群（内置写死的两个 ssd 群）。"""
-        return {-1002014253433, -1001173590111}
 
     async def _remember_ssd(command, chat_id, confirmation_id=None, actual_amount=None):
         snapshot = _ssd_request_snapshot(command, chat_id, confirmation_id, actual_amount)
@@ -301,75 +299,6 @@ async def setup(ctx):
             await _do_rank_command(ctx, store, message, parts[1:], _rank_size)
         except Exception as e:
             ctx.log.error("处理排行榜命令出错: %s", e)
-
-    # ── handler 4：springsunday 大额转账自动点确认按钮（ssd_click）────────────────
-    # 原项目 transform_ssd.py：转账金额过大时转账bot 回复「请确认你的转账」并附确认按钮，
-    # 按 SPRINGSUNDAY.ssd_click（off/once/5min）自动点。这里复刻该逻辑。
-    # 确认提示是 bot 新发的消息（带按钮），用 on_message 即可点中；点确认后 bot 会「编辑」
-    # 该消息送达成功结果，那条编辑由上面的 on_edited_message 分派记账（本插件 1.0.9+）。
-    @ctx.on_message(incoming=True)
-    async def ssd_confirm_click(event):
-        client = event.client
-        message = await _prepare(event)
-        try:
-            mode = (ctx.config.get("ssd_click_mode") or "off").strip().lower()
-            if mode not in ("once", "5min"):
-                return
-            if event.chat_id not in _ssd_groups():
-                return
-            sender = getattr(message, "_v2_sender", None)
-            if not any(s.site_name == "springsunday" and sender
-                       and sender.id == s.bot_id
-                       for s in _sites().get(event.chat_id, ())):
-                return
-            # 必须是转账bot 回复「我」发出的消息
-            rtm = getattr(message, "_v2_reply", None)
-            if not (rtm and getattr(rtm, "_v2_sender", None)
-                    and getattr(rtm._v2_sender, "is_self", False)):
-                return
-            request = _ssd_request_spec(_transfer_text(rtm))
-            if request is None:
-                return
-            prompt_text = _transfer_text(message)
-            if prompt_text.lstrip().startswith("💸") or any(marker in prompt_text for marker in (
-                "失败", "错误", "余额不足", "已取消", "取消成功", "转账成功", "转赠成功",
-                "转账完成", "转赠完成", "已成功",
-            )):
-                return
-            if not _ssd_confirmation_pending(message):
-                return
-            actual_amount = parse_ssd_confirmation_amount(message)
-            if request["amount"] is None and actual_amount is None:
-                ctx.log.warning("SSD 随机转账确认页未提供明确转出金额，未自动确认")
-                return
-            if await _remember_ssd(rtm, event.chat_id, message.id, actual_amount) is None:
-                ctx.log.warning("SSD 确认金额与原请求不符或关联未保存，未自动确认")
-                return
-            kb = _inline_keyboard(message)
-            position = _ssd_button_position(kb, mode)
-            if position is None:
-                ctx.log.warning("SSD大额确认消息没有匹配 %s 的按钮，已跳过", mode)
-                return
-            row, col = position
-            confirmation_key = (event.chat_id, message.id)
-            if confirmation_key in ssd_confirmation_attempts:
-                return
-            ssd_confirmation_attempts.add(confirmation_key)
-            await asyncio.sleep(0.5)
-            try:
-                # Telethon 的 Message.click 使用 i/j；旧版的 x/y 是 Pyrogram
-                # 参数，迁移后会直接抛 TypeError，导致配置看似生效却从未点击。
-                await asyncio.wait_for(message.click(i=row, j=col), timeout=10)
-                label = str(getattr(kb[row][col], "text", "") or mode).strip()
-                ctx.log.info("SSD已点击 %s，等待机器人成功回执（第 %d 行第 %d 列）", label, row + 1, col + 1)
-            except (TimeoutError, asyncio.TimeoutError):
-                ctx.log.warning("SSD转账确认超时")
-            except Exception as e:
-                ctx.log.error("SSD转账确认失败: %s", e)
-        except Exception as e:
-            ctx.log.error("处理SSD大额确认出错: %s", e)
-
-    ctx.on_edited_message()(ssd_confirm_click)
 
     # ── 前端(Config.vue)用的后端接口 ──
     @ctx.on_api("/sites", methods=["GET"])
