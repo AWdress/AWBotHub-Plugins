@@ -163,7 +163,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.12",
+    "version": "2.7.13",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg",
@@ -210,6 +210,10 @@ __plugin__ = {
 __plugin__["changelog"] = "v2.7.10 增加猪猪服务器登录超时诊断\n- 超时时自动记录页面类别、表单/日历可见性、会话和账号匹配状态，无需查看浏览器窗口\n- 汇总关键请求的固定网络错误分类，不记录网址、响应正文、密码或 Token\n- 仅增强排查信息，不增加登录/签到点击，不改变成功判定与等待时限\n\nv2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 __plugin__["changelog"] = (
+    "v2.7.13 修复猪猪原生验证等待与重复提交\n"
+    "- 验证窗口出现后先等待官网原生处理 30 秒，保留自动验证与签到重放\n"
+    "- 已发出的验证配置请求未返回或本轮已出现验证窗口时，不追加签到\n"
+    "- 区分配置未返回、窗口未显示与验证未完成，仍只以当天签到标记确认成功\n\n"
     "v2.7.12 加固猪猪居中验证窗口识别\n"
     "- 等待原生居中遮罩与验证控件加载，窗口未关闭时不重复提交签到\n"
     "- 只选择唯一可见控件及其官方 iframe，跳过隐藏旧节点和不明确的目标\n"
@@ -2390,6 +2394,9 @@ class _PiggoRealtime:
         self.page = page
         self.ctx = ctx
         self.ready = False
+        self.captcha_requested = False
+        self.captcha_pending = False
+        self.captcha_public_received = False
         self._current = None
         self._authenticated = False
         self._closed = False
@@ -2465,6 +2472,9 @@ class _PiggoRealtime:
         self._current = socket
         self._authenticated = False
         self.ready = False
+        self.captcha_requested = False
+        self.captcha_pending = False
+        self.captcha_public_received = False
         seen = {}
 
         def frame(payload, *, sent):
@@ -2481,10 +2491,19 @@ class _PiggoRealtime:
                     if event == "ws.auth":
                         self._authenticated = True
                         self.ready = False
+                        self.captcha_requested = False
+                        self.captcha_pending = False
+                        self.captcha_public_received = False
+                    elif event == "captcha.ask":
+                        self.captcha_requested = True
+                        self.captcha_pending = True
                 elif event not in {"ws.hello", "ws.ready", "auth.session", "captcha.public"}:
                     return
                 elif event in {"ws.ready", "auth.session"} and self._authenticated:
                     self.ready = True
+                elif event == "captcha.public":
+                    self.captcha_pending = False
+                    self.captcha_public_received = True
                 marker = (sent, event)
                 seen[marker] = seen.get(marker, 0) + 1
                 limit = 3 if event in {"captcha.ask", "captcha.public"} else 1
@@ -2500,6 +2519,9 @@ class _PiggoRealtime:
                 self._current = None
                 self.ready = False
                 self._authenticated = False
+                self.captcha_requested = False
+                self.captcha_pending = False
+                self.captcha_public_received = False
                 _runtime_log(self.ctx, "官网实时通道已断开，等待网站自行恢复", level="warning", site="猪猪")
 
         for event, callback in (("framesent", lambda payload: frame(payload, sent=True)),
@@ -2512,12 +2534,18 @@ class _PiggoRealtime:
                 self._current = None
                 self._authenticated = False
                 self.ready = False
+                self.captcha_requested = False
+                self.captcha_pending = False
+                self.captcha_public_received = False
                 break
 
     def close(self):
         self._closed = True
         self.ready = False
         self._current = None
+        self.captcha_requested = False
+        self.captcha_pending = False
+        self.captcha_public_received = False
         for source, event, callback in [(self.page, "websocket", self._opened),
                                         (self.page, "console", self._console),
                                         (self.page, "response", self._network_response),
@@ -3002,10 +3030,12 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 if marked or reason in ("请完成人机验证", "人机验证失败", "请重新完成人机验证"):
                     needs_captcha = True
                     rejected_request = request
-                    retry_not_before = time.monotonic() + 15
+                    # 新版官网会等待验证配置最多 30 秒；不能仍按旧版 15 秒
+                    # 启动额外提交，已有 captcha.ask 待回时则完全禁止追加。
+                    retry_not_before = time.monotonic() + 35
                     failure_hint = "猪猪官网要求完成人机验证（HTTP 422），签到尚未完成，本轮跳过，不再追加点击"
                     detail = "已携带官方验证标记" if marked else "响应未携带官方验证标记"
-                    _runtime_log(ctx, f"官网要求人机验证（{detail}），先等待原生验证；无弹窗且明确未签到时最多再尝试一次", level="warning", site="猪猪")
+                    _runtime_log(ctx, f"官网要求人机验证（{detail}），先等待官网原生验证与自动重放，不叠加正在进行的验证请求", level="warning", site="猪猪")
         except Exception as exc:
             _runtime_log(ctx, f"官网签到回执解析未完成（{type(exc).__name__}），继续回查当天签到记录", level="warning", site="猪猪")
 
@@ -3041,6 +3071,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
         except Exception as exc:
             _runtime_log(ctx, f"当天签到按钮点击异常（{type(exc).__name__}），仅回查签到结果，不重复提交", level="warning", site="猪猪")
         captcha_opened = False
+        captcha_native_until = 0.0
         captcha_click_attempted = False
         next_captcha_probe = 0.0
         deadline = time.monotonic() + 120
@@ -3052,10 +3083,15 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
             visible_now = captcha_visible()
             if not captcha_opened and visible_now:
                 captcha_opened = True
-                _runtime_log(ctx, "官网人机验证窗口已打开，保留原生会话等待验证（提交后最多等待 120 秒）", site="猪猪")
+                # 官网可自行验证、刷新配置并重放请求。先完整保留 30 秒
+                # 原生处理窗口，避免其自动验证尚在进行时抢先操作复选框。
+                captcha_native_until = time.monotonic() + 30
+                _runtime_log(ctx, "官网人机验证窗口已打开，先等待原生验证 30 秒；提交后最多等待 120 秒", site="猪猪")
             if first_click_confirmed and not retry_attempted and attendance_requests == 1 and needs_captcha \
                     and rejected_request is latest_request and not request_pending and not visible_now \
+                    and not captcha_opened \
                     and realtime is not None and realtime.ready \
+                    and not getattr(realtime, "captcha_pending", False) \
                     and retry_not_before <= time.monotonic() < deadline:
                 # 不是超时重发：首条完整回执已明确拒绝，且当前无官网验证弹窗。
                 # 自动重放或用户手动再次点击产生的请求同样计数，不能再叠加第三次。
@@ -3065,7 +3101,9 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                     # DOM 查询可能分发原生重放事件，查询结束后才核对最新请求身份。
                     return not captcha_visible() and attendance_requests == 1 and latest_request is rejected \
                         and rejected_request is rejected and needs_captcha and not request_pending \
+                        and not captcha_opened \
                         and realtime is not None and realtime.ready \
+                        and not getattr(realtime, "captcha_pending", False) \
                         and time.monotonic() < deadline
 
                 _runtime_log(ctx, "首轮签到明确被拒绝且当前无验证弹窗，重新等待页面稳定后最多再点击一次", level="warning", site="猪猪")
@@ -3080,7 +3118,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                         retry_button.click(timeout=max(1, min(10_000, int((deadline - time.monotonic()) * 1000))))
                     except Exception as exc:
                         _runtime_log(ctx, f"第二次签到按钮操作未确认（{type(exc).__name__}），只回查结果，不再点击", level="warning", site="猪猪")
-            widget = _piggo_captcha_widget(page) if visible_now else None
+            widget = _piggo_captcha_widget(page) if visible_now and time.monotonic() >= captcha_native_until else None
             if captcha_opened and not captcha_click_attempted and time.monotonic() < deadline \
                     and captcha_visible() and widget is not None:
                 # 只操作官网已打开控件内的真实复选框；令牌与重放仍由官网生成。
@@ -3172,6 +3210,13 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 if not retry_attempted and attendance_requests < 2 and not needs_captcha \
                         and not request_pending and not captcha_opened and not visible_now:
                     page.reload(wait_until="domcontentloaded", timeout=60_000)
+        if needs_captcha:
+            if captcha_opened:
+                raise RuntimeError("猪猪官网人机验证尚未完成，今天未确认签到，本轮跳过，不再追加点击")
+            if realtime is not None and getattr(realtime, "captcha_pending", False):
+                raise RuntimeError("猪猪官网验证配置尚未返回，今天未确认签到，本轮跳过，请检查官网实时通道")
+            if realtime is not None and getattr(realtime, "captcha_public_received", False):
+                raise RuntimeError("猪猪官网已返回验证配置但未显示验证窗口，今天未确认签到，本轮跳过")
         if failure_hint:
             raise RuntimeError(failure_hint)
         if not sent:
