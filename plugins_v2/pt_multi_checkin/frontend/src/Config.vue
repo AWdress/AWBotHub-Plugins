@@ -2,10 +2,11 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 const props = defineProps({ pluginId: { type: String, required: true }, host: { type: Object, required: true } })
-const config = reactive({ auto_checkin: true, notify_result: true, headless: true, checkin_hour: 8, checkin_minute: 10, u2_checkin_hour: 9, u2_checkin_minute: 0, retry_count: 2, retry_interval: 20, tjupt_ai_assist: true, tjupt_confirm_timeout: 300, selected_sites: [], custom_sites: [], piggo_username: '', piggo_password: '' })
+const config = reactive({ auto_checkin: true, notify_result: true, headless: true, checkin_hour: 8, checkin_minute: 10, u2_checkin_hour: 9, u2_checkin_minute: 0, retry_count: 2, retry_interval: 20, failed_retry_count: 3, tjupt_ai_assist: true, tjupt_confirm_timeout: 300, selected_sites: [], custom_sites: [], piggo_username: '', piggo_password: '' })
 const sites = ref([]), history = ref([]), logs = ref([]), cookieState = reactive({})
 const status = reactive({ running: false, current: '', phase: '', message: '', completed: 0, total: 0, finished_at: '' })
 const loading = ref(true), loadingError = ref(''), saving = ref(false), checking = ref(false)
+const failedRetryInput = ref(null), failedRetryError = ref('')
 let timer
 const groups = computed(() => Object.entries(sites.value.reduce((all, site) => ((all[site.group] ||= []).push(site), all), {})))
 const progress = computed(() => status.total ? Math.round(status.completed / status.total * 100) : 0)
@@ -47,6 +48,7 @@ async function load() {
       withTimeout(props.host.callApi('/meta'), '读取签到站点'),
     ])
     Object.assign(config, withoutLegacyPiggoToken(meta.defaults), withoutLegacyPiggoToken(saved))
+    if (config.failed_retry_count == null) config.failed_retry_count = 3
     sites.value = meta.sites || []
     if (!Array.isArray(config.selected_sites)) config.selected_sites = sites.value.map(site => site.key)
     const customKeys = sites.value.filter(site => site.group === '通用签到').map(site => site.key)
@@ -58,6 +60,12 @@ async function load() {
 async function save() {
   saving.value = true
   try {
+    if (!Number.isInteger(config.failed_retry_count) || config.failed_retry_count < 0 || config.failed_retry_count > 10) {
+      failedRetryError.value = '失败后补签次数请填写 0～10 的整数，0 表示关闭补签。'
+      failedRetryInput.value?.focus()
+      throw new Error(failedRetryError.value)
+    }
+    failedRetryError.value = ''
     await saveValues({ ...config, piggo_username: config.piggo_username.trim(), selected_sites: [...config.selected_sites] })
     // 保存后重新取一次元数据，拿到后端为通用站点生成的稳定 key，并持久化选择状态。
     const meta = await props.host.callApi('/meta')
@@ -122,8 +130,11 @@ onMounted(load); onBeforeUnmount(() => timer && clearInterval(timer))
       <div class="schedule-fields">
         <label><span>其他站点执行</span><span class="time-field"><input v-model.number="config.checkin_hour" aria-label="其他站点执行小时" type="number" min="0" max="23"><b>:</b><input v-model.number="config.checkin_minute" aria-label="其他站点执行分钟" type="number" min="0" max="59"></span></label>
         <label><span>U2 执行（≥09:00）</span><span class="time-field"><input v-model.number="config.u2_checkin_hour" aria-label="U2 执行小时" type="number" min="9" max="23"><b>:</b><input v-model.number="config.u2_checkin_minute" aria-label="U2 执行分钟" type="number" min="0" max="59"></span></label>
-        <label><span>重试次数</span><input v-model.number="config.retry_count" type="number" min="0" max="5"></label>
-        <label><span>重试间隔</span><span class="unit-field"><input v-model.number="config.retry_interval" type="number" min="5" max="300"><i>秒</i></span></label>
+        <label><span>单站即时重试</span><input v-model.number="config.retry_count" type="number" min="0" max="5"></label>
+        <label><span>即时重试间隔</span><span class="unit-field"><input v-model.number="config.retry_interval" type="number" min="5" max="300"><i>秒</i></span></label>
+        <label><span>失败后补签次数</span><input ref="failedRetryInput" v-model.number="config.failed_retry_count" type="number" min="0" max="10" step="1" :aria-describedby="failedRetryError ? 'failed-retry-help failed-retry-error' : 'failed-retry-help'" :aria-invalid="!!failedRetryError" @input="failedRetryError = ''"></label>
+        <p id="failed-retry-help" class="retry-note">首次签到失败后，每隔 30 分钟只补签仍失败的站点；默认最多 3 次，0 为关闭。成功后不再补签。</p>
+        <p v-if="failedRetryError" id="failed-retry-error" class="retry-note retry-error" role="alert">{{ failedRetryError }}</p>
       </div>
     </section>
 
@@ -204,6 +215,7 @@ onMounted(load); onBeforeUnmount(() => timer && clearInterval(timer))
 /* 数字参数保留完整可读宽度，单位独立占位，避免宿主数字步进按钮遮挡数值。 */
 .schedule-fields>label{flex:0 0 auto;min-width:max-content}.schedule-fields input{flex:0 0 64px;width:64px;min-width:64px}.time-field,.unit-field{flex:0 0 auto;min-width:max-content}.time-field input{flex-basis:50px;width:50px;min-width:50px}.unit-field{position:static;gap:7px}.unit-field input{flex-basis:68px;width:68px;min-width:68px;padding-right:7px}.unit-field i{position:static;flex:0 0 auto;white-space:nowrap}
 @media(max-width:620px){.custom-head{align-items:flex-start;flex-direction:column}.custom-row{grid-template-columns:1fr}.custom-row .link-button{justify-self:start}}
+.schedule-fields>.retry-note{flex:1 0 100%;min-width:0;margin:0;color:var(--muted);font-size:12px;line-height:1.7;overflow-wrap:anywhere}.schedule-fields>.retry-error{color:var(--red)}
 .piggo-login{padding:18px;border-top:1px solid var(--line-soft);color:var(--text);overflow-wrap:anywhere}.piggo-login h3{margin:0;font-size:15px}.piggo-login p{max-width:75ch;margin:8px 0 0;color:#aebdd0;font-size:13px;line-height:1.7}.piggo-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.piggo-login label{display:grid;gap:7px;min-width:0;color:var(--text);font-size:13px}.piggo-login input{box-sizing:border-box;width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid #354c68;border-radius:7px;background:#0d1725;color:var(--text);caret-color:#79b7ff;font:inherit}.piggo-login input::placeholder{color:#9aadc4}.piggo-login input:disabled{opacity:.65;cursor:wait}.piggo-login input:focus-visible{outline:2px solid #79b7ff;outline-offset:3px}.piggo-login ::selection{color:#fff;background:#285a91}
 @media(max-width:620px){.piggo-fields{grid-template-columns:1fr}.piggo-login{padding:16px 12px}}
 </style>

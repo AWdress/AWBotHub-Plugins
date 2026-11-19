@@ -163,7 +163,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.13",
+    "version": "2.7.14",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg",
@@ -210,6 +210,11 @@ __plugin__ = {
 __plugin__["changelog"] = "v2.7.10 增加猪猪服务器登录超时诊断\n- 超时时自动记录页面类别、表单/日历可见性、会话和账号匹配状态，无需查看浏览器窗口\n- 汇总关键请求的固定网络错误分类，不记录网址、响应正文、密码或 Token\n- 仅增强排查信息，不增加登录/签到点击，不改变成功判定与等待时限\n\nv2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 __plugin__["changelog"] = (
+    "v2.7.14 修复猪猪验证失败恢复与可配置补签\n"
+    "- 兼容官网嵌套的人机验证回执，验证期间不提前刷新\n"
+    "- 官网验证失败并自行退出后，连续等待确认无新请求，仅允许一次受限签到恢复\n"
+    "- 失败站点每隔 30 分钟补签，默认最多 3 次，可配置 0～10 次，成功即停止\n"
+    "- 补签尊重站点选择与次数调整，跨日停止，避免并发和重复补签\n\n"
     "v2.7.13 修复猪猪原生验证等待与重复提交\n"
     "- 验证窗口出现后先等待官网原生处理 30 秒，保留自动验证与签到重放\n"
     "- 已发出的验证配置请求未返回或本轮已出现验证窗口时，不追加签到\n"
@@ -259,7 +264,7 @@ SITES = {
 DEFAULTS = {
     "auto_checkin": True, "notify_result": True, "headless": True,
     "checkin_hour": 8, "checkin_minute": 10, "u2_checkin_hour": 9, "u2_checkin_minute": 0,
-    "retry_count": 2, "retry_interval": 20,
+    "retry_count": 2, "retry_interval": 20, "failed_retry_count": 3,
     "tjupt_ai_assist": True, "tjupt_confirm_timeout": 300,
     "selected_sites": list(SITES.keys()), "custom_sites": [],
     "piggo_username": "", "piggo_password": "",
@@ -271,6 +276,8 @@ _active_run_task: asyncio.Task | None = None
 _tasks: set[asyncio.Task] = set()
 _scheduled_tasks: dict[str, asyncio.Task] = {}
 _failed_retry_tasks: dict[str, asyncio.Task] = {}
+_failed_retry_days: dict[str, str] = {}
+_site_success_days: dict[str, str] = {}
 _HISTORY_KEY = "history"
 _LAST_KEY = "last_result"
 _tjupt_pending: dict[str, dict] = {}
@@ -1085,52 +1092,117 @@ async def _run_scheduled(ctx, source: str, selected: list[str]) -> dict:
     return await asyncio.shield(task)
 
 
+def _checkin_day() -> str:
+    return datetime.now(_CHINA_TZ).date().isoformat()
+
+
+def _failed_retry_pending(ctx, keys, day: str, attempt: int) -> list[str]:
+    """Recheck settings after sleep/lock waits, not only when a batch is created."""
+    cfg = _cfg(ctx)
+    if day != _checkin_day() or attempt > _bounded(cfg.get("failed_retry_count"), 3, 0, 10):
+        return []
+    configured = _configured_sites(cfg)
+    selected = cfg.get("selected_sites", list(configured))
+    selected = {str(key) for key in selected} if isinstance(selected, list) else set(configured)
+    return list(dict.fromkeys(
+        str(key) for key in keys
+        if str(key) in configured and str(key) in selected and _site_success_days.get(str(key)) != day
+    ))
+
+
 def _schedule_failed_retry(ctx, failed_keys: list[str]) -> bool:
-    """Schedule one delayed, single-attempt pass for each failed site."""
+    """One bounded worker per failed batch; each delayed pass attempts a site once."""
+    day = _checkin_day()
+    maximum = _bounded(_cfg(ctx).get("failed_retry_count"), 3, 0, 10)
     configured = _configured_sites(_cfg(ctx))
     batch = tuple(dict.fromkeys(
-        str(key) for key in failed_keys
-        if str(key) in configured and not (
+        str(key) for key in _failed_retry_pending(ctx, failed_keys, day, 1)
+        if not (
             _failed_retry_tasks.get(str(key)) is not None
             and not _failed_retry_tasks[str(key)].done()
+            and _failed_retry_days.get(str(key)) == day
         )
     ))
     if not batch:
         _runtime_log(ctx, "没有需要安排补签的有效站点，不重复安排")
         return False
 
-    names = [configured[key]["name"] for key in batch if key in configured]
-    label = "、".join(names) or "、".join(batch)
-
     async def delayed_retry() -> dict:
-        _runtime_log(ctx, f"失败站点将在 30 分钟后仅补签一次：{label}", level="warning")
-        await asyncio.sleep(_FAILED_RETRY_DELAY_SECONDS)
-        _runtime_log(ctx, f"开始失败站点补签，仅处理：{label}")
-        result = await _run(
-            ctx,
-            "失败站点补签",
-            list(batch),
-            schedule_failed_retry=False,
-            wait_for_lock=True,
-            retry_count_override=0,
-        )
+        pending = list(batch)
+        result = {"ok": False, "failed_keys": pending}
+        completed = 0
+        # Capture the initial ceiling: increasing settings does not extend an already
+        # scheduled batch. Reducing/disabling it takes effect before every pass.
+        for attempt in range(1, maximum + 1):
+            pending = _failed_retry_pending(ctx, pending, day, attempt)
+            if not pending:
+                break
+            current_limit = min(maximum, _bounded(_cfg(ctx).get("failed_retry_count"), 3, 0, 10))
+            names = [configured[key]["name"] for key in pending if key in configured]
+            label = "、".join(names) or "、".join(pending)
+            _runtime_log(ctx, f"失败站点将在 30 分钟后进行第 {attempt}/{current_limit} 次补签：{label}", level="warning")
+            await asyncio.sleep(_FAILED_RETRY_DELAY_SECONDS)
+            pending = _failed_retry_pending(ctx, pending, day, attempt)
+            if not pending:
+                break
+            current_limit = min(maximum, _bounded(_cfg(ctx).get("failed_retry_count"), 3, 0, 10))
+            names = [configured[key]["name"] for key in pending if key in configured]
+            label = "、".join(names) or "、".join(pending)
+            _runtime_log(ctx, f"开始第 {attempt}/{current_limit} 次失败站点补签，仅处理：{label}")
+            try:
+                result = await _run(
+                    ctx,
+                    "失败站点补签",
+                    pending,
+                    schedule_failed_retry=False,
+                    wait_for_lock=True,
+                    retry_count_override=0,
+                    failed_retry_guard=(day, attempt),
+                )
+            except Exception as exc:  # noqa: BLE001
+                # A failed pass must not accidentally end the remaining delayed
+                # attempts. Cancellation still propagates for plugin shutdown.
+                _runtime_log(ctx, f"第 {attempt} 次失败站点补签异常：{str(exc).strip() or type(exc).__name__}", level="error")
+                result = {"ok": False, "failed_keys": list(pending)}
+            if not result.get("skipped"):
+                completed += 1
+            if result.get("skipped") or result.get("ok"):
+                break
+            failed = result.get("failed_keys")
+            # Dependency preparation may fail before individual results exist.
+            # Keep only this pass's sites; never add unrelated failures.
+            if isinstance(failed, list):
+                failed_set = {str(key) for key in failed}
+                pending = [key for key in pending if key in failed_set]
+            if not pending:
+                break
         _runtime_log(
             ctx,
-            "失败站点补签已结束，不再继续安排重试",
+            f"失败站点补签已结束：已执行 {completed} 次，不再继续安排重试",
             level="success" if result.get("ok") else "warning",
         )
         return result
 
-    task = ctx.create_task(delayed_retry(), name="PT站失败站点30分钟补签")
+    awaitable = delayed_retry()
+    try:
+        task = ctx.create_task(awaitable, name="PT站失败站点30分钟补签")
+    except Exception as exc:  # noqa: BLE001
+        awaitable.close()
+        _runtime_log(ctx, f"失败站点补签任务提交失败：{str(exc).strip() or type(exc).__name__}", level="error")
+        return False
     for key in batch:
         _failed_retry_tasks[key] = task
+        _failed_retry_days[key] = day
     _tasks.add(task)
 
     def done(finished: asyncio.Task) -> None:
         for key in batch:
             if _failed_retry_tasks.get(key) is finished:
                 _failed_retry_tasks.pop(key, None)
+                _failed_retry_days.pop(key, None)
         _task_done(finished)
+        if not finished.cancelled() and finished.exception() is not None:
+            _runtime_log(ctx, f"失败站点补签异常：{finished.exception()}", level="error")
 
     task.add_done_callback(done)
     return True
@@ -2397,6 +2469,7 @@ class _PiggoRealtime:
         self.captcha_requested = False
         self.captcha_pending = False
         self.captcha_public_received = False
+        self.captcha_revision = 0
         self._current = None
         self._authenticated = False
         self._closed = False
@@ -2470,6 +2543,7 @@ class _PiggoRealtime:
         except Exception:
             return
         self._current = socket
+        self.captcha_revision += 1
         self._authenticated = False
         self.ready = False
         self.captcha_requested = False
@@ -2489,12 +2563,14 @@ class _PiggoRealtime:
                     if event not in {"ws.auth", "captcha.ask"}:
                         return
                     if event == "ws.auth":
+                        self.captcha_revision += 1
                         self._authenticated = True
                         self.ready = False
                         self.captcha_requested = False
                         self.captcha_pending = False
                         self.captcha_public_received = False
                     elif event == "captcha.ask":
+                        self.captcha_revision += 1
                         self.captcha_requested = True
                         self.captcha_pending = True
                 elif event not in {"ws.hello", "ws.ready", "auth.session", "captcha.public"}:
@@ -2502,6 +2578,7 @@ class _PiggoRealtime:
                 elif event in {"ws.ready", "auth.session"} and self._authenticated:
                     self.ready = True
                 elif event == "captcha.public":
+                    self.captcha_revision += 1
                     self.captcha_pending = False
                     self.captcha_public_received = True
                 marker = (sent, event)
@@ -2516,6 +2593,7 @@ class _PiggoRealtime:
 
         def ended(*_):
             if not self._closed and socket is self._current:
+                self.captcha_revision += 1
                 self._current = None
                 self.ready = False
                 self._authenticated = False
@@ -2958,6 +3036,17 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
     rejected_request = None
     retry_not_before = 0.0
     retry_attempted = False
+    captcha_failure_request = None
+    confirmed_captcha_failure = None
+    finished_captcha_failure = None
+    captcha_failures = 0
+    captcha_failure_activity = 0
+
+    def captcha_failure_request_matches(request):
+        parsed = urlparse(request.url)
+        return parsed.scheme == "https" and parsed.hostname in {"piggo.me", "www.piggo.me"} \
+            and parsed.port in {None, 443} and parsed.username is None and parsed.password is None \
+            and parsed.path == "/v1/web/captcha/fail" and request.method == "POST"
 
     def attendance_request(request):
         parsed = urlparse(request.url)
@@ -2969,6 +3058,8 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
         nonlocal sent, request_pending, latest_request
         nonlocal needs_captcha, failure_hint
         nonlocal attendance_requests, rejected_request
+        nonlocal captcha_failure_request, finished_captcha_failure
+        nonlocal captcha_failure_activity
         try:
             if attendance_request(request):
                 sent = True
@@ -2979,6 +3070,11 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 needs_captcha = False
                 failure_hint = ""
                 _runtime_log(ctx, "官网当天签到请求已发出", site="猪猪")
+            elif sent and attendance_requests == 1 and captcha_failure_request_matches(request):
+                # 只观察本轮首次签到之后官网主动报告的验证失败，不读请求正文。
+                captcha_failure_request = request
+                finished_captcha_failure = None
+                captcha_failure_activity += 1
         except Exception:
             pass
 
@@ -2998,9 +3094,14 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
 
     def log_finished(request):
         nonlocal finished_request
+        nonlocal finished_captcha_failure
+        nonlocal captcha_failure_activity
         try:
             if attendance_request(request) and request is latest_request:
                 finished_request = request
+            elif request is captcha_failure_request and captcha_failure_request_matches(request):
+                finished_captcha_failure = request
+                captcha_failure_activity += 1
         except Exception:
             pass
 
@@ -3024,10 +3125,14 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
             if request is not latest_request:
                 return
             if isinstance(payload, dict):
-                reason = payload.get("msg") or payload.get("message")
                 data = payload.get("data")
+                # 官网不同版本会把验证提示放在顶层或 data 内；两种形态都须
+                # 保持原生验证窗口，不能误当普通拒绝后刷新、打断验证。
+                reasons = [payload.get("msg"), payload.get("message")]
+                if isinstance(data, dict):
+                    reasons.extend((data.get("msg"), data.get("message")))
                 marked = payload.get("site_captcha") is True or (isinstance(data, dict) and data.get("site_captcha") is True)
-                if marked or reason in ("请完成人机验证", "人机验证失败", "请重新完成人机验证"):
+                if marked or any(reason in ("请完成人机验证", "人机验证失败", "请重新完成人机验证") for reason in reasons):
                     needs_captcha = True
                     rejected_request = request
                     # 新版官网会等待验证配置最多 30 秒；不能仍按旧版 15 秒
@@ -3038,6 +3143,22 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                     _runtime_log(ctx, f"官网要求人机验证（{detail}），先等待官网原生验证与自动重放，不叠加正在进行的验证请求", level="warning", site="猪猪")
         except Exception as exc:
             _runtime_log(ctx, f"官网签到回执解析未完成（{type(exc).__name__}），继续回查当天签到记录", level="warning", site="猪猪")
+
+    def parse_captcha_failure():
+        nonlocal finished_captcha_failure, captcha_failures
+        nonlocal confirmed_captcha_failure
+        request = finished_captcha_failure
+        finished_captcha_failure = None
+        if request is None or request is not captcha_failure_request:
+            return
+        try:
+            response = request.response()
+            if request is captcha_failure_request and response is not None and int(response.status) == 200:
+                # 200 只代表官网收到失败报告，绝不代表验证或签到成功。
+                captcha_failures += 1
+                confirmed_captcha_failure = request
+        except Exception:
+            pass  # 没有完整失败回执时不放开恢复，也不输出响应正文。
 
     def log_failed(request):
         nonlocal request_pending, failure_hint
@@ -3071,7 +3192,10 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
         except Exception as exc:
             _runtime_log(ctx, f"当天签到按钮点击异常（{type(exc).__name__}），仅回查签到结果，不重复提交", level="warning", site="猪猪")
         captcha_opened = False
+        captcha_was_visible = False
         captcha_native_until = 0.0
+        recovery_quiet_since = None
+        recovery_revision = None
         captcha_click_attempted = False
         next_captcha_probe = 0.0
         deadline = time.monotonic() + 120
@@ -3080,39 +3204,68 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
             if _piggo_calendar_signed(page):
                 return {"status": "success", "message": "签到成功"}
             parse_finished()
+            parse_captcha_failure()
             visible_now = captcha_visible()
-            if not captcha_opened and visible_now:
+            if not captcha_was_visible and visible_now:
                 captcha_opened = True
                 # 官网可自行验证、刷新配置并重放请求。先完整保留 30 秒
                 # 原生处理窗口，避免其自动验证尚在进行时抢先操作复选框。
                 captcha_native_until = time.monotonic() + 30
                 _runtime_log(ctx, "官网人机验证窗口已打开，先等待原生验证 30 秒；提交后最多等待 120 秒", site="猪猪")
+            captcha_was_visible = visible_now
+            revision = (captcha_failures, captcha_failure_activity, getattr(realtime, "captcha_revision", 0))
+            recoverable_exit = captcha_opened and captcha_failures > 0 and not visible_now \
+                and captcha_failure_request is confirmed_captcha_failure \
+                and realtime is not None and realtime.ready and not getattr(realtime, "captcha_pending", False)
+            if recoverable_exit:
+                if recovery_quiet_since is None or recovery_revision != revision:
+                    recovery_quiet_since = time.monotonic()
+                    recovery_revision = revision
+            else:
+                recovery_quiet_since = None
+                recovery_revision = None
+            # 不因窗口暂时隐藏就重试：必须本轮失败回执完整，官网自行退出后
+            # 连续安静 35 秒；再预留 5 秒按钮稳定、最多 10 秒点击和
+            # 至少 30 秒原生结果等待，不延长整轮 120 秒预算。
+            recovery_ready = recoverable_exit and recovery_quiet_since is not None \
+                and time.monotonic() - recovery_quiet_since >= 35 and time.monotonic() + 45 <= deadline
             if first_click_confirmed and not retry_attempted and attendance_requests == 1 and needs_captcha \
                     and rejected_request is latest_request and not request_pending and not visible_now \
-                    and not captcha_opened \
+                    and (not captcha_opened or recovery_ready) \
                     and realtime is not None and realtime.ready \
                     and not getattr(realtime, "captcha_pending", False) \
                     and retry_not_before <= time.monotonic() < deadline:
                 # 不是超时重发：首条完整回执已明确拒绝，且当前无官网验证弹窗。
                 # 自动重放或用户手动再次点击产生的请求同样计数，不能再叠加第三次。
-                retry_attempted = True
                 rejected = rejected_request
+                recovering = captcha_opened
+                quiet_revision = recovery_revision
                 def retry_eligible():
                     # DOM 查询可能分发原生重放事件，查询结束后才核对最新请求身份。
                     return not captcha_visible() and attendance_requests == 1 and latest_request is rejected \
                         and rejected_request is rejected and needs_captcha and not request_pending \
-                        and not captcha_opened \
+                        and (not captcha_opened or (
+                            recovering and captcha_failures > 0 and recovery_quiet_since is not None
+                            and captcha_failure_request is confirmed_captcha_failure
+                            and time.monotonic() - recovery_quiet_since >= 35
+                            and quiet_revision == (captcha_failures, captcha_failure_activity, getattr(realtime, "captcha_revision", 0))
+                            and time.monotonic() + 40 <= deadline)) \
                         and realtime is not None and realtime.ready \
                         and not getattr(realtime, "captcha_pending", False) \
                         and time.monotonic() < deadline
 
-                _runtime_log(ctx, "首轮签到明确被拒绝且当前无验证弹窗，重新等待页面稳定后最多再点击一次", level="warning", site="猪猪")
-                retry_button = _piggo_wait_calendar_ready(page, guard, ctx, deadline=deadline,
+                message = "官网验证失败并自行退出，已连续等待 35 秒无新验证；重新等待页面稳定后最多再点击一次" if recovering \
+                    else "首轮签到明确被拒绝且当前无验证弹窗，重新等待页面稳定后最多再点击一次"
+                _runtime_log(ctx, message, level="warning", site="猪猪")
+                retry_button = _piggo_wait_calendar_ready(page, guard, ctx, deadline=deadline - 40 if recovering else deadline,
                                                           still_eligible=retry_eligible)
                 guard()
                 if _piggo_calendar_signed(page):
                     return {"status": "success", "message": "签到成功"}
                 if retry_button is not None and retry_eligible():
+                    # 等待被原生事件打断不消耗机会；真正操作前才锁定一次，
+                    # 即使随后点击超时也绝不追加第三次。
+                    retry_attempted = True
                     _runtime_log(ctx, "正在第二次点击当天签到按钮，本轮不再追加点击", site="猪猪")
                     try:
                         retry_button.click(timeout=max(1, min(10_000, int((deadline - time.monotonic()) * 1000))))
@@ -3734,6 +3887,7 @@ async def _run(
     schedule_failed_retry: bool = True,
     wait_for_lock: bool = False,
     retry_count_override: int | None = None,
+    failed_retry_guard: tuple[str, int] | None = None,
 ) -> dict:
     global _run_lock, _active_run_task
     if _run_lock is None:
@@ -3747,6 +3901,10 @@ async def _run(
         selected = selected_override if selected_override is not None else cfg.get("selected_sites", list(configured))
         if not isinstance(selected, list):
             selected = list(configured)
+        if failed_retry_guard is not None:
+            selected = _failed_retry_pending(ctx, selected, *failed_retry_guard)
+            if not selected:
+                return {"ok": True, "skipped": True, "message": "补签已停止：已成功、次数已调整、站点已停用或已跨日", "results": [], "failed_keys": []}
         # 新增的通用站点没有旧配置中的 key，首次保存后自动纳入签到；
         # 一旦用户在页面明确勾选/取消，selected_sites 中会保留该 key。
         custom_keys = set(_custom_sites(cfg))
@@ -3780,7 +3938,7 @@ async def _run(
                 "running": False, "finished_at": stamp, "current": "", "phase": "依赖失败", "message": message,
             })
             _runtime_log(ctx, message, level="error")
-            return {"ok": False, "message": message, "results": []}
+            return {"ok": False, "message": message, "results": [], "failed_keys": [key for key, _ in enabled]}
         _runtime_log(ctx, "依赖准备完成：" + "；".join(prepared), level="success")
         _state.update({"phase": "准备", "message": "依赖已就绪，开始签到"})
         _runtime_log(ctx, f"开始{source}签到，共 {len(enabled)} 个站点")
@@ -3794,6 +3952,8 @@ async def _run(
         interval = _bounded(cfg.get("retry_interval"), 20, 5, 300)
         loop = asyncio.get_running_loop()
         for key, site in enabled:
+            if failed_retry_guard is not None and key not in _failed_retry_pending(ctx, [key], *failed_retry_guard):
+                continue
             piggo = _same_site_domain(site["domain"], "piggo.me")
             credential_label = "检查猪猪用户名和密码" if piggo else "读取平台 Cookie"
             _state.update({"current": site["name"], "phase": "读取凭证" if piggo else "读取 Cookie", "message": f"{site['name']}：{credential_label}"})
@@ -3893,6 +4053,7 @@ async def _run(
                         "engine": engine, "message": str((outcome or {}).get("message") or "签到完成"),
                     }
                     _runtime_log(ctx, item["message"], level="success", site=site["name"])
+                    _site_success_days[key] = _checkin_day()
                     break
                 except Exception as exc:  # noqa: BLE001
                     login_expired = "Cookie 已失效" in str(exc) or "网站返回登录页" in str(exc)
@@ -3927,6 +4088,10 @@ async def _run(
                 _runtime_log(ctx, "本站已记录失败，继续处理下一个站点", level="warning", site=site["name"])
             _state["completed"] += 1
 
+        if failed_retry_guard is not None and not results:
+            message = "补签已停止：已成功、次数已调整、站点已停用或已跨日"
+            _state.update({"running": False, "current": "", "phase": "完成", "message": message})
+            return {"ok": True, "skipped": True, "message": message, "results": [], "failed_keys": []}
         success = sum(1 for item in results if item["ok"])
         stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         summary = f"{source}签到完成：成功 {success}/{len(results)}"
@@ -3958,7 +4123,8 @@ async def _run(
             and _schedule_failed_retry(ctx, failed_keys)
         )
         if retry_scheduled:
-            retry_message = f"{summary}；失败站点将在 30 分钟后补签一次"
+            retry_limit = _bounded(_cfg(ctx).get("failed_retry_count"), 3, 0, 10)
+            retry_message = f"{summary}；失败站点每隔 30 分钟补签，最多 {retry_limit} 次"
             _state.update({
                 "running": False,
                 "finished_at": stamp,
@@ -3987,6 +4153,8 @@ async def setup(ctx):
     _active_run_task = None
     _scheduled_tasks.clear()
     _failed_retry_tasks.clear()
+    _failed_retry_days.clear()
+    _site_success_days.clear()
     _state.update({"running": False, "started_at": "", "finished_at": "", "current": "", "phase": "", "message": "", "completed": 0, "total": 0})
     _runtime_logs.clear()
     _storage_state.clear()
@@ -4140,6 +4308,8 @@ async def teardown(ctx):
     _tasks.clear()
     _scheduled_tasks.clear()
     _failed_retry_tasks.clear()
+    _failed_retry_days.clear()
+    _site_success_days.clear()
     if _storage_tasks:
         await asyncio.gather(*list(_storage_tasks), return_exceptions=True)
     _storage_tasks.clear()
