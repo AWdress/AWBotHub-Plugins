@@ -5,7 +5,7 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': 'PT站自动签到',
  'id': 'pt_multi_checkin',
- 'version': '2.7.15',
+ 'version': '2.7.16',
  'author': 'AWdress',
  'description': '多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg',
@@ -264,6 +264,10 @@ __plugin__ = {'name': 'PT站自动签到',
  'plugin_api_version': 2}
 
 __plugin__["changelog"] = (
+    "v2.7.16 修复有 Cookie 站点的表单与回执兼容\n"
+    "- 彩虹岛与 U2 HTTP 提交保留各自签到表单的全部隐藏字段和实际提交地址，不混用其他表单令牌\n"
+    "- 天空和猫站使用顶层 JSON 状态判定；错误码或普通失败不再误报已签到\n"
+    "- U2 未知回执只读回查当天状态，不再把普通 HTTP 200、脚本模板、嵌套状态或历史答题记录当作签到成功\n\n"
     "v2.7.15 修复皇后签到表单与验证码识别\n"
     "- HTTP 与浏览器提交保留官网 CSRF 等隐藏字段，验证码与表单来自同一会话\n"
     "- 放大小尺寸验证码后调用平台 AI，校验图片响应并兼容 JSON 回执格式\n"

@@ -164,7 +164,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.15",
+    "version": "2.7.16",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg",
@@ -211,6 +211,10 @@ __plugin__ = {
 __plugin__["changelog"] = "v2.7.10 增加猪猪服务器登录超时诊断\n- 超时时自动记录页面类别、表单/日历可见性、会话和账号匹配状态，无需查看浏览器窗口\n- 汇总关键请求的固定网络错误分类，不记录网址、响应正文、密码或 Token\n- 仅增强排查信息，不增加登录/签到点击，不改变成功判定与等待时限\n\nv2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 __plugin__["changelog"] = (
+    "v2.7.16 修复有 Cookie 站点的表单与回执兼容\n"
+    "- 彩虹岛与 U2 HTTP 提交保留各自签到表单的全部隐藏字段和实际提交地址，不混用其他表单令牌\n"
+    "- 天空和猫站使用顶层 JSON 状态判定；错误码或普通失败不再误报已签到\n"
+    "- U2 未知回执只读回查当天状态，不再把普通 HTTP 200、脚本模板、嵌套状态或历史答题记录当作签到成功\n\n"
     "v2.7.15 修复皇后签到表单与验证码识别\n"
     "- HTTP 与浏览器提交保留官网 CSRF 等隐藏字段，验证码与表单来自同一会话\n"
     "- 放大小尺寸验证码后调用平台 AI，校验图片响应并兼容 JSON 回执格式\n"
@@ -1403,11 +1407,31 @@ def _hhan_result_state(html: str) -> tuple[str, str] | None:
 def _u2_result_state(text: str, *, submitted: bool = False) -> tuple[str, str] | None:
     """识别 U2 的最终签到状态；不把未签到时的 Show Up 菜单当成成功。"""
     raw = text or ""
+    try:
+        payload = json.loads(raw.lstrip("\ufeff"))
+    except (TypeError, ValueError):
+        payload = None
+    if isinstance(payload, dict):
+        # JSON 只读取顶层状态，错误正文中的示例或嵌套状态不作为签到回执。
+        state = payload.get("status")
+        if state == "error" or payload.get("success") is False:
+            return "failed", "U2 未接受本次签到验证答案"
+        if state == "already":
+            return "already", "今天已经签到"
+        if (isinstance(state, str) and state in {"success", "ok"}) or payload.get("success") is True:
+            return "success", "签到成功"
+        return None
+    if payload is not None:
+        return None
     visible = _html_visible_text(raw)
     compact = re.sub(r"\s+", "", visible).lower()
     # U2 的验证题答错仍会完成当日签到并发放 1 UCoin。
     # 必须在 Wrong answer 等通用错误词之前识别这类成功回执。
     challenge_form_present = bool(re.search(r'name\s*=\s*["\']req["\']', raw, re.IGNORECASE))
+    if challenge_form_present:
+        # showup.php 同时展示答题表单与往日“回答正确/错误”记录。
+        # 表单页不是当日凭据；调用方会只读核对首页顶部的当天标记。
+        return None
     award_match = re.search(r"(\d+(?:\.\d+)?)\s*ucoin", compact, re.IGNORECASE)
     correct_answer = bool(re.search(
         r"(?:回答|答案)(?:正确|正確)\s*[!！]", visible, re.IGNORECASE
@@ -1426,25 +1450,23 @@ def _u2_result_state(text: str, *, submitted: bool = False) -> tuple[str, str] |
     )
     if wrong_but_awarded:
         return "success", f"签到成功（回答错误，获得 {award_match.group(1)} UCoin）"
-    if submitted and actual_wrong_answer:
+    if submitted and actual_wrong_answer and not challenge_form_present:
         return "success", "签到成功（回答错误，获得 1 UCoin）"
     if any(marker in compact for marker in (
         "签到失败", "簽到失敗", "验证失败", "驗證失敗", "invalidcaptcha", "captchaexpired",
         "请求已过期", "請求已過期", "操作频繁", "操作頻繁", "请稍后再试", "請稍後再試",
-    )) or actual_wrong_answer or re.search(r'"status"\s*:\s*"error"', raw, re.IGNORECASE):
+    )) or actual_wrong_answer:
         return "failed", "U2 未接受本次签到验证答案"
     if re.search(r"[\[【]\s*(?:已签到|已簽到)\s*[\]】]", visible, re.IGNORECASE) or any(marker in compact for marker in (
         "感谢，今天已签到", "感謝，今天已簽到", "今天已经签到", "今天已經簽到",
         "今日已签到", "今日已簽到", "已完成签到", "已完成簽到",
         "alreadyshoweduptoday", "alreadycheckedintoday", "youhaveshoweduptoday",
-    )) or re.search(r'"status"\s*:\s*"already"', raw, re.IGNORECASE):
+    )):
         return "already", "今天已经签到"
     if any(marker in compact for marker in (
         "签到成功", "簽到成功", "成功签到", "成功簽到", "showupsuccess", "check-insuccess",
         "thankyouforshowingup", "thanksforshowingup",
-    )) or re.search(r'"status"\s*:\s*"(?:success|ok)"', raw, re.IGNORECASE) \
-            or re.search(r'"success"\s*:\s*true', raw, re.IGNORECASE) \
-            or re.search(r"window\.location(?:\.href)?\s*=\s*['\"]showup\.php", raw, re.IGNORECASE):
+    )):
         return "success", "签到成功"
     return None
 
@@ -1828,6 +1850,64 @@ def _response_result(text: str, *, success: tuple[str, ...], already: tuple[str,
     raise RuntimeError("签到接口返回未识别结果，未计为成功")
 
 
+def _hdsky_response_result(text: str) -> dict:
+    """天空官网以顶层布尔 success 确认完成，错误码不能代替当天状态。"""
+    try:
+        result = json.loads((text or "").lstrip("\ufeff"))
+    except (TypeError, ValueError):
+        result = None
+    if isinstance(result, dict) and result.get("success") is True:
+        return {"status": "success", "message": "签到成功"}
+    if isinstance(result, dict) and result.get("message") == "invalid_imagehash":
+        raise RuntimeError("天空签到验证码校验失败，未确认签到成功")
+    raise RuntimeError("天空签到接口未确认成功，需核对首页当天状态")
+
+
+def _pterclub_response_result(text: str) -> dict:
+    """猫站 status=0 也用于失败，只有明确的当天已签消息才计为已签到。"""
+    try:
+        result = json.loads((text or "").lstrip("\ufeff"))
+    except (TypeError, ValueError):
+        result = None
+    if not isinstance(result, dict):
+        raise RuntimeError("猫站签到接口未返回有效 JSON，未计为成功")
+    status = result.get("status")
+    if type(status) not in {str, int}:
+        raise RuntimeError("猫站签到接口返回未知状态，未计为成功")
+    if status in {"1", 1}:
+        return {"status": "success", "message": "签到成功"}
+    message = result.get("message")
+    if status in {"0", 0} and isinstance(message, str) and any(marker in message for marker in (
+        "今天已经签到", "今天已签到", "今日已签到", "已经签到过", "今天已經簽到", "已經簽到過",
+    )):
+        return {"status": "already", "message": "今天已经签到"}
+    raise RuntimeError("猫站签到接口未确认成功，未计为成功")
+
+
+def _site_hidden_form_data(form) -> dict:
+    """仅保留选定签到表单的隐藏字段，不混用语言切换等表单的令牌。"""
+    values = {}
+    for node in form.select("input[name]"):
+        if node.has_attr("disabled") or str(node.get("type") or "text").lower() != "hidden":
+            continue
+        name = str(node.get("name") or "")
+        if name:
+            values[name] = str(node.get("value") or "")
+    return values
+
+
+def _site_form_url(base: str, action: str, domain: str) -> str:
+    try:
+        target = urlparse(urljoin(base, action))
+        valid = (target.scheme == "https" and _same_site_domain(target.hostname or "", domain)
+                 and target.username is None and target.password is None and target.port in {None, 443})
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError("签到表单包含非预期地址，未提交")
+    return target.geturl()
+
+
 def _opencd_already(html: str) -> bool:
     """只认官网实际显示的已签到入口，不把脚本模板或日志导航当作当天记录。"""
     soup = BeautifulSoup(html or "", "html.parser")
@@ -2085,6 +2165,30 @@ def _quiz_checkin(page, site: dict, ctx, loop) -> dict:
     return _response_result(result.get("text", ""), success=("点魔力值",), already=("今天已经签过到了",))
 
 
+def _chdbits_checkin(page, site: dict, ctx, loop) -> dict:
+    text = _page_text(page)
+    if "今天已经签过到了" in text:
+        return {"status": "already", "message": "今天已经签到"}
+    soup = BeautifulSoup(page.content(), "html.parser")
+    form = soup.select_one('form:has(input[name="questionid"])')
+    if form is None:
+        raise RuntimeError("彩虹岛未找到签到表单，未提交")
+    data = _site_hidden_form_data(form)
+    choices = form.select('input[name="choice[]"]:not([disabled])')
+    if not data.get("questionid") or len(choices) < 2:
+        raise RuntimeError("彩虹岛未解析到签到问题或候选答案，未提交")
+    submit_url = _site_form_url(page.url, str(form.get("action") or ""), site["domain"])
+    question = form.get_text(" ", strip=True).split("请问：", 1)[-1][:500]
+    options = []
+    for node in choices:
+        label = form.find("label", attrs={"for": node.get("id")}) if node.get("id") else None
+        options.append(label.get_text(" ", strip=True) if label else str(node.parent.get_text(" ", strip=True) or node.get("value") or ""))
+    selected = str(choices[_ai_choice(ctx, loop, question, options)].get("value") or "")
+    data.update({"choice[]": selected, "usercomment": "自动签到", "wantskip": "不会"})
+    result = _fetch_same_origin(page, submit_url, method="POST", data=data)
+    return _response_result(result.get("text", ""), success=("点魔力值",), already=("今天已经签过到了",))
+
+
 def _special_checkin(page, key: str, site: dict, ctx, loop) -> dict:
     current_domain = (urlparse(page.url).hostname or "").lower()
     expected = site["domain"].lower()
@@ -2097,8 +2201,10 @@ def _special_checkin(page, key: str, site: dict, ctx, loop) -> dict:
         raise RuntimeError("Cookie 已失效：站点拒绝当前登录会话，请在 CookieCloud 来源浏览器重新登录并同步")
     mode = site.get("mode")
     if mode == "interactive":
-        if key in {"pt52", "chdbits"}:
+        if key == "pt52":
             return _quiz_checkin(page, site, ctx, loop)
+        if key == "chdbits":
+            return _chdbits_checkin(page, site, ctx, loop)
         if key == "hdsky":
             if _hdsky_already(text):
                 return {"status": "already", "message": "今天已经签到"}
@@ -2114,7 +2220,7 @@ def _special_checkin(page, key: str, site: dict, ctx, loop) -> dict:
             result = _fetch_same_origin(page, "https://hdsky.me/showup.php", method="POST", data={"action": "showup", "imagehash": image_hash, "imagestring": captcha})
             body = result.get("text", "")
             try:
-                return _response_result(body, success=('"success":true', '"success": true'), already=("date_unmatch",))
+                return _hdsky_response_result(body)
             except RuntimeError:
                 page.goto("https://hdsky.me", wait_until="domcontentloaded", timeout=60_000)
                 if _hdsky_already(_page_text(page)):
@@ -2236,7 +2342,7 @@ def _special_checkin(page, key: str, site: dict, ctx, loop) -> dict:
             )
             confirmed = page.content()
             final = _u2_result_state(confirmed)
-            if final:
+            if final and final[0] != "failed":
                 return {"status": "success", "message": "签到成功（首页状态已确认）"}
             raise RuntimeError("U2 签到提交后仍未确认已签到")
         raise RuntimeError("暂不支持该站点的自动验证")
@@ -2278,7 +2384,7 @@ def _special_checkin(page, key: str, site: dict, ctx, loop) -> dict:
             return {"status": "success", "message": "签到成功"}
         raise RuntimeError("HDU PT 签到接口返回异常")
     if mode == "pterclub":
-        return _response_result(text, success=('"status":"1"', "签到已成功"), already=('"status":"0"', "已经签到过"))
+        return _pterclub_response_result(text)
     if mode == "ttg":
         initial = _ttg_result_state(html)
         if initial:
@@ -3813,7 +3919,7 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
                 return {"status": "success", "message": "签到成功", "engine": "http"}
             raise RuntimeError("HDU PT 签到接口返回异常")
         if mode == "pterclub":
-            return {**_response_result(text, success=('"status":"1"', "签到已成功"), already=('"status":"0"', "已经签到过")), "engine": "http"}
+            return {**_pterclub_response_result(text), "engine": "http"}
         if mode == "ttg":
             initial = _ttg_result_state(text)
             if initial:
@@ -3849,7 +3955,7 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
                 raise _NeedsBrowser("HTTP 未取得朱雀 CSRF，切换 CloakBrowser")
             _, body = await post("https://zhuque.in/api/gaming/fireGenshinCharacterMagic", json_data={"all": 1, "resetModal": "true"}, extra_headers={"x-csrf-token": csrf})
             return {**_response_result(body, success=("FIRE_GENSHIN_CHARACTER_MAGIC_SUCCESS", '"status":200'), already=("already",)), "engine": "http"}
-        if key in {"pt52", "chdbits"}:
+        if key == "pt52":
             if "今天已经签过到了" in text:
                 return {"status": "already", "message": "今天已经签到", "engine": "http"}
             soup = BeautifulSoup(text, "html.parser")
@@ -3864,6 +3970,27 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
                 options.append(label.get_text(" ", strip=True) if label else str(node.parent.get_text(" ", strip=True) or node.get("value") or ""))
             selected = str(nodes[await _http_ai_choice(ctx, question, options)].get("value") or "")
             _, body = await post(site["url"], data={"questionid": question_id, "choice[]": selected, "usercomment": "自动签到", "wantskip": "不会"})
+            return {**_response_result(body, success=("点魔力值",), already=("今天已经签过到了",)), "engine": "http"}
+        if key == "chdbits":
+            if "今天已经签过到了" in visible_text:
+                return {"status": "already", "message": "今天已经签到", "engine": "http"}
+            soup = BeautifulSoup(text, "html.parser")
+            form = soup.select_one('form:has(input[name="questionid"])')
+            if form is None:
+                raise _NeedsBrowser("HTTP 未找到彩虹岛签到表单，切换 CloakBrowser")
+            data = _site_hidden_form_data(form)
+            nodes = form.select('input[name="choice[]"]:not([disabled])')
+            if not data.get("questionid") or len(nodes) < 2:
+                raise _NeedsBrowser("HTTP 未解析到彩虹岛签到题，切换 CloakBrowser")
+            submit_url = _site_form_url(str(response.url), str(form.get("action") or ""), site["domain"])
+            question = form.get_text(" ", strip=True).split("请问：", 1)[-1][:500]
+            options = []
+            for node in nodes:
+                label = form.find("label", attrs={"for": node.get("id")}) if node.get("id") else None
+                options.append(label.get_text(" ", strip=True) if label else str(node.parent.get_text(" ", strip=True) or node.get("value") or ""))
+            selected = str(nodes[await _http_ai_choice(ctx, question, options)].get("value") or "")
+            data.update({"choice[]": selected, "usercomment": "自动签到", "wantskip": "不会"})
+            _, body = await post(submit_url, data=data)
             return {**_response_result(body, success=("点魔力值",), already=("今天已经签过到了",)), "engine": "http"}
         if key == "hdsky":
             if _hdsky_already(visible_text):
@@ -3881,7 +4008,7 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
             captcha = await _http_ai_ocr(ctx, image_response.content)
             _, body = await post("https://hdsky.me/showup.php", data={"action": "showup", "imagehash": image_hash, "imagestring": captcha})
             try:
-                result = _response_result(body, success=('"success":true', '"success": true'), already=("date_unmatch",))
+                result = _hdsky_response_result(body)
             except RuntimeError:
                 _, confirmed = await get("https://hdsky.me")
                 if _hdsky_already(_html_visible_text(confirmed)):
@@ -3935,14 +4062,17 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
             if datetime.now(_CHINA_TZ).hour < 9:
                 raise RuntimeError("U2 站点规则要求 09:00 后签到")
             soup = BeautifulSoup(text, "html.parser")
-            req, hash_value, form_value = (_soup_value(soup, name) for name in ("req", "hash", "form"))
-            submits = soup.select('input[type="submit"][name]')
-            if not req or not hash_value or not form_value or not submits:
-                raise _NeedsBrowser("HTTP 未解析到 U2 签到表单，切换 CloakBrowser")
-            captcha_node = None
             challenge_form = soup.select_one('form:has(input[name="req"])')
+            if challenge_form is None:
+                raise _NeedsBrowser("HTTP 未解析到 U2 签到表单，切换 CloakBrowser")
+            data = _site_hidden_form_data(challenge_form)
+            submits = challenge_form.select('input[type="submit"][name]:not([disabled])')
+            if not all(data.get(name) for name in ("req", "hash", "form")) or not submits:
+                raise _NeedsBrowser("HTTP 未解析到完整 U2 签到表单，切换 CloakBrowser")
+            submit_url = _site_form_url(str(response.url), str(challenge_form.get("action") or ""), site["domain"])
+            captcha_node = None
             for selector in _U2_CAPTCHA_SELECTORS:
-                captcha_node = (challenge_form or soup).select_one(selector)
+                captcha_node = challenge_form.select_one(selector)
                 if captcha_node is not None:
                     break
             if captcha_node is None and challenge_form is not None:
@@ -3974,9 +4104,9 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
             if choice is None:
                 choice = secrets.randbelow(len(submits))
             submit = submits[choice]
-            post_response, body = await post(
-                "https://u2.dmhy.org/showup.php?action=show",
-                data={"req": req, "hash": hash_value, "form": form_value, "message": "一切随缘~", submit.get("name"): submit.get("value")},
+            data.update({"message": "一切随缘~", str(submit.get("name")): str(submit.get("value") or "")})
+            _, body = await post(
+                submit_url, data=data,
                 extra_headers={"Referer": str(response.url)},
             )
             posted = _u2_result_state(body, submitted=True)
@@ -3984,16 +4114,11 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
                 if posted[0] == "failed":
                     raise RuntimeError(posted[1])
                 return {"status": "success", "message": posted[1], "engine": "http"}
-            response_path = (urlparse(str(post_response.url)).path or "").lower()
-            response_domain = (urlparse(str(post_response.url)).hostname or "").lower()
-            if post_response.status_code < 300 and _same_site_domain(response_domain, site["domain"]):
-                suffix = "提交后跳转已确认" if response_path not in {"/showup.php", "showup.php"} else "站点接受签到表单"
-                return {"status": "success", "message": f"签到成功（{suffix}）", "engine": "http"}
             _, confirmed = await get("https://u2.dmhy.org/")
             final = _u2_result_state(confirmed)
-            if final:
+            if final and final[0] != "failed":
                 return {"status": "success", "message": "签到成功（首页状态已确认）", "engine": "http"}
-            raise _NeedsBrowser("U2 HTTP 提交后未确认最终状态，切换 CloakBrowser 回查")
+            raise RuntimeError("U2 HTTP 提交后未确认当天已签到，未重复提交")
         if site.get("generic"):
             # 通用模式只接受明确的签到/已签到文案；普通 200 页面交由浏览器
             # 识别按钮并回查结果，避免将首页访问误判为成功。
