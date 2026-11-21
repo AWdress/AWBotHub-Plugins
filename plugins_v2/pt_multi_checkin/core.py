@@ -7,6 +7,7 @@ from datetime import datetime
 import hashlib
 import importlib
 import importlib.metadata
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -16,7 +17,7 @@ import shutil
 import subprocess
 import threading
 import time
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 from zoneinfo import ZoneInfo
 from telethon import Button
 
@@ -163,7 +164,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.14",
+    "version": "2.7.15",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg",
@@ -210,6 +211,10 @@ __plugin__ = {
 __plugin__["changelog"] = "v2.7.10 增加猪猪服务器登录超时诊断\n- 超时时自动记录页面类别、表单/日历可见性、会话和账号匹配状态，无需查看浏览器窗口\n- 汇总关键请求的固定网络错误分类，不记录网址、响应正文、密码或 Token\n- 仅增强排查信息，不增加登录/签到点击，不改变成功判定与等待时限\n\nv2.7.9 修复猪猪账号密码签到流程\n- 每轮通过官网表单以账号密码登录，不复用旧 Token、Cookie 或空闲锁定会话\n- 猪猪上下文沿用 CloakBrowser 默认地区、语言和窗口设置，避免重复覆盖\n- 日历加载完成并稳定后才提交，遇明确拒绝且无验证窗口时最多再点击一次\n- 保留官网原生验证与请求重放，严格核对今天的签到标记，不把 HTTP 200 或历史记录当作成功\n- 配置页移除旧 Token 输入，改进登录、公告加载和验证失败诊断，不记录凭据\n\nv2.7.8 修复猪猪自动登录兼容性\n- 登录表单改用拟人浏览器支持的单一 CSS 定位，避免填写或提交失败\n- 等待官网完成 Token 会话恢复，避免用户资料异步加载时重复登录\n- 登录恢复失败时记录官网接口 HTTP 状态，不记录响应正文、密码或 Token\n\nv2.7.7 适配新版猪猪签到与自动登录\n- 猪猪改用新版日历当天签到按钮，严格核对当天记录，不点击补签\n- 支持用户名和密码自动登录，复用登录 Token，失效后自动获取新凭证\n- 密码与 Token 按敏感配置保存；遇验证码或二次验证停止并提示\n\n" + _CHANGELOG_V2_7_6 + _CHANGELOG_V2_7_5 + _CHANGELOG_V2_7_4 + _CHANGELOG_V2_7_3 + _CHANGELOG_V2_7_2 + _CHANGELOG_V2_7_1 + _CHANGELOG_V2_7_0 + _CHANGELOG_V2_6_4 + _CHANGELOG_V2_6_3 + _CHANGELOG_V2_6_2 + _CHANGELOG_V2_6_1 + _CHANGELOG_V2_6_0 + _CHANGELOG_V2_5_55 + _CHANGELOG_V2_0_16 + _CHANGELOG_V2_0_15 + _CHANGELOG_V2_0_14 + _CHANGELOG_V2_0_13 + _CHANGELOG_V2_0_12 + __plugin__["changelog"]
 
 __plugin__["changelog"] = (
+    "v2.7.15 修复皇后签到表单与验证码识别\n"
+    "- HTTP 与浏览器提交保留官网 CSRF 等隐藏字段，验证码与表单来自同一会话\n"
+    "- 放大小尺寸验证码后调用平台 AI，校验图片响应并兼容 JSON 回执格式\n"
+    "- 识别皇后当天签到入口，未知回执只读核对首页，避免误报与重复提交\n\n"
     "v2.7.14 修复猪猪验证失败恢复与可配置补签\n"
     "- 兼容官网嵌套的人机验证回执，验证期间不提前刷新\n"
     "- 官网验证失败并自行退出后，连续等待确认无新请求，仅允许一次受限签到恢复\n"
@@ -1823,6 +1828,92 @@ def _response_result(text: str, *, success: tuple[str, ...], already: tuple[str,
     raise RuntimeError("签到接口返回未识别结果，未计为成功")
 
 
+def _opencd_already(html: str) -> bool:
+    """只认官网实际显示的已签到入口，不把脚本模板或日志导航当作当天记录。"""
+    soup = BeautifulSoup(html or "", "html.parser")
+    for link in soup.select("a[href]"):
+        if any(node.name in {"script", "style", "template", "noscript"}
+               or node.has_attr("hidden") or str(node.get("aria-hidden") or "").lower() == "true"
+               or re.search(r"(?:display\s*:\s*none|visibility\s*:\s*hidden)", str(node.get("style") or ""), re.I)
+               for node in (link, *link.parents) if getattr(node, "attrs", None) is not None):
+            continue
+        target = urlparse(str(link.get("href") or ""))
+        if target.scheme not in {"", "https"} or (target.hostname and not _same_site_domain(target.hostname.lower(), "open.cd")):
+            continue
+        if target.path.lstrip("/") != "plugin_sign-in.php" or parse_qs(target.query).get("cmd") != ["show-log"]:
+            continue
+        label = link.get_text(" ", strip=True) + " " + str(link.get("title") or "")
+        if any(marker in label for marker in ("已签到", "已经签到", "已簽到", "已經簽到", "查看签到记录")):
+            return True
+    return False
+
+
+def _opencd_response_result(text: str) -> dict:
+    """解析顶层 JSON 状态，兼容 PHP 的 Unicode 转义与正常 JSON 空白。"""
+    try:
+        result = json.loads((text or "").lstrip("\ufeff"))
+    except (TypeError, ValueError):
+        result = None
+    if not isinstance(result, dict):
+        raise RuntimeError("皇后签到接口未返回有效 JSON，未计为成功")
+    message = " ".join(str(result.get(name) or "") for name in ("msg", "message")
+                       if isinstance(result.get(name), str))
+    if any(marker in message for marker in ("已签到", "已经签到", "已经签过", "已簽到", "已經簽到")):
+        return {"status": "already", "message": "今天已经签到"}
+    state = result.get("state")
+    if state is True or (isinstance(state, str) and state.strip().lower() in {"success", "true"}):
+        return {"status": "success", "message": "签到成功"}
+    # 不输出原始响应，避免把账号、CSRF 或调试信息写入日志。
+    low = message.lower()
+    if "csrf" in low or any(marker in message for marker in ("令牌", "表单已过期", "表单过期")):
+        raise RuntimeError("皇后签到表单校验失败，未确认签到成功")
+    if any(marker in low for marker in ("验证码", "驗證碼", "captcha", "image code", "imagestring")):
+        raise RuntimeError("皇后签到验证码校验失败，未确认签到成功")
+    raise RuntimeError("皇后签到接口未确认成功，未计为成功")
+
+
+def _opencd_url(base: str, relative: str) -> str:
+    try:
+        target = urlparse(urljoin(base, relative))
+        valid = (target.scheme == "https" and _same_site_domain(target.hostname or "", "open.cd")
+                 and target.username is None and target.password is None and target.port in {None, 443})
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError("皇后签到表单包含非预期地址，未提交")
+    return target.geturl()
+
+
+def _opencd_form_data(form) -> dict:
+    """保留官网隐藏字段（包括 CSRF），验证码必须来自同一份表单。"""
+    values = {}
+    for node in form.select("input[name]"):
+        kind = str(node.get("type") or "hidden").lower()
+        if node.has_attr("disabled") or kind not in {"hidden"}:
+            continue
+        name = str(node.get("name") or "")
+        if name:
+            values[name] = str(node.get("value") or "")
+    if not values.get("imagehash"):
+        raise RuntimeError("皇后签到表单缺少验证码参数，未提交")
+    if "csrf_token" in values and not values["csrf_token"]:
+        raise RuntimeError("皇后签到表单缺少校验令牌，未提交")
+    return values
+
+
+def _opencd_captcha_image(image: bytes) -> bytes:
+    """放大官网低分辨率验证码，保留颜色和干扰线，不修改字符或猜测答案。"""
+    from PIL import Image
+
+    with Image.open(BytesIO(image)) as source:
+        if source.width >= 600 or source.height >= 200:
+            return image
+        enlarged = source.convert("RGB").resize((source.width * 4, source.height * 4), Image.Resampling.LANCZOS)
+        output = BytesIO()
+        enlarged.save(output, format="PNG")
+        return output.getvalue()
+
+
 def _ai_call(ctx, loop, capability: str, *, prompt: str, image: bytes | None = None,
              system: str | None = None) -> str:
     if not _ai_available(ctx, capability):
@@ -2030,17 +2121,37 @@ def _special_checkin(page, key: str, site: dict, ctx, loop) -> dict:
                     return {"status": "success", "message": "签到成功（首页状态已确认）"}
                 raise
         if key == "opencd":
-            if "/plugin_sign-in.php?cmd=show-log" in html:
+            if _opencd_already(html):
                 return {"status": "already", "message": "今天已经签到"}
-            page.goto("https://www.open.cd/plugin_sign-in.php", wait_until="domcontentloaded", timeout=60_000)
+            page.goto(_opencd_url(page.url, "/plugin_sign-in.php"), wait_until="domcontentloaded", timeout=60_000)
+            if _opencd_already(page.content()):
+                return {"status": "already", "message": "今天已经签到"}
+            soup = BeautifulSoup(page.content(), "html.parser")
+            form_node = soup.select_one("#frmSignin")
+            if form_node is None:
+                raise RuntimeError("皇后未找到签到表单，请检查登录状态或网站结构")
+            data = _opencd_form_data(form_node)
+            submit_url = _opencd_url(page.url, str(form_node.get("action") or "?cmd=signin"))
             form = page.locator("#frmSignin")
             image = form.locator("img").first
-            image_hash = form.locator('input[name="imagehash"]').get_attribute("value")
-            if not image_hash or image.count() < 1:
-                raise RuntimeError("OpenCD 未解析到验证码参数")
-            captcha = _ai_ocr(ctx, loop, image.screenshot(), 6)
-            result = _fetch_same_origin(page, "https://www.open.cd/plugin_sign-in.php?cmd=signin", method="POST", data={"imagehash": image_hash, "imagestring": captcha})
-            return _response_result(result.get("text", ""), success=('"state":"success"', '"state":true'), already=("已签到",))
+            if image.count() < 1:
+                raise RuntimeError("皇后未找到签到验证码图片，未提交")
+            captcha = _ai_ocr(ctx, loop, _opencd_captcha_image(image.screenshot()), 6)
+            data["imagestring"] = captcha
+            result = _fetch_same_origin(page, submit_url, method="POST", data=data)
+            try:
+                if not 200 <= int(result.get("status") or 0) < 300:
+                    raise RuntimeError("皇后签到提交未返回成功状态，未确认签到成功")
+                return _opencd_response_result(result.get("text", ""))
+            except RuntimeError as exc:
+                # 只读回查，不在回执未知时重复提交或消耗另一张验证码。
+                try:
+                    page.goto(_opencd_url(page.url, "/"), wait_until="domcontentloaded", timeout=60_000)
+                    if _opencd_already(page.content()):
+                        return {"status": "success", "message": "签到成功（首页状态已确认）"}
+                except Exception:
+                    pass
+                raise exc
         if key == "u2":
             initial = _u2_result_state(html)
             if initial and initial[0] != "failed":
@@ -3779,23 +3890,39 @@ async def _http_checkin(ctx, key: str, site: dict, cookie: str) -> dict:
                     raise
             return {**result, "engine": "http"}
         if key == "opencd":
-            if "/plugin_sign-in.php?cmd=show-log" in text:
+            if _opencd_already(text):
                 return {"status": "already", "message": "今天已经签到", "engine": "http"}
-            _, form_body = await get("https://www.open.cd/plugin_sign-in.php")
+            form_response, form_body = await get(_opencd_url(str(response.url), "/plugin_sign-in.php"))
+            if _opencd_already(form_body):
+                return {"status": "already", "message": "今天已经签到", "engine": "http"}
             soup = BeautifulSoup(form_body, "html.parser")
             form = soup.select_one("#frmSignin")
             image_node = form.select_one("img") if form else None
-            hash_node = form.select_one('input[name="imagehash"]') if form else None
-            if not image_node or not hash_node:
+            if not form or not image_node or not str(image_node.get("src") or "").strip():
                 raise _NeedsBrowser("HTTP 未解析到 OpenCD 验证码，切换 CloakBrowser")
-            image_url = str(response.url.join(str(image_node.get("src") or "")))
+            data = _opencd_form_data(form)
+            submit_url = _opencd_url(str(form_response.url), str(form.get("action") or "?cmd=signin"))
+            image_url = _opencd_url(str(form_response.url), str(image_node.get("src")))
             image_response = await client.get(image_url)
+            if image_response.status_code != 200 or not image_response.headers.get("content-type", "").lower().startswith("image/"):
+                raise _NeedsBrowser("皇后验证码下载未返回图片，切换 CloakBrowser")
             try:
-                captcha = await _http_ai_ocr(ctx, image_response.content)
+                captcha = await _http_ai_ocr(ctx, _opencd_captcha_image(image_response.content))
             except RuntimeError as exc:
                 raise _NeedsBrowser("OpenCD HTTP 验证码无法确认，切换 CloakBrowser 获取新验证码") from exc
-            _, body = await post("https://www.open.cd/plugin_sign-in.php?cmd=signin", data={"imagehash": hash_node.get("value"), "imagestring": captcha})
-            return {**_response_result(body, success=('"state":"success"', '"state":true'), already=("已签到",)), "engine": "http"}
+            data["imagestring"] = captcha
+            _, body = await post(submit_url, data=data)
+            try:
+                result = _opencd_response_result(body)
+            except RuntimeError as exc:
+                try:
+                    _, confirmed = await get(_opencd_url(str(form_response.url), "/"))
+                    if _opencd_already(confirmed):
+                        return {"status": "success", "message": "签到成功（首页状态已确认）", "engine": "http"}
+                except Exception:
+                    pass
+                raise exc
+            return {**result, "engine": "http"}
         if key == "u2":
             initial = _u2_result_state(text)
             if initial and initial[0] != "failed":

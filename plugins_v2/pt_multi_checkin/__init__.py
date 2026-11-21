@@ -5,7 +5,7 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': 'PT站自动签到',
  'id': 'pt_multi_checkin',
- 'version': '2.7.14',
+ 'version': '2.7.15',
  'author': 'AWdress',
  'description': '多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg',
@@ -262,6 +262,14 @@ __plugin__ = {'name': 'PT站自动签到',
  'tags': ['PT站签到', '多站点', 'Cloudflare', 'Cookie'],
  'render_mode': 'vue',
  'plugin_api_version': 2}
+
+__plugin__["changelog"] = (
+    "v2.7.15 修复皇后签到表单与验证码识别\n"
+    "- HTTP 与浏览器提交保留官网 CSRF 等隐藏字段，验证码与表单来自同一会话\n"
+    "- 放大小尺寸验证码后调用平台 AI，校验图片响应并兼容 JSON 回执格式\n"
+    "- 识别皇后当天签到入口，未知回执只读核对首页，避免误报与重复提交\n\n"
+    + __plugin__["changelog"]
+)
 
 async def setup(ctx):
     await _core_setup(ctx)
