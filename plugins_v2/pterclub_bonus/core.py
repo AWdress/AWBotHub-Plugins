@@ -16,11 +16,11 @@ from bs4 import BeautifulSoup
 __plugin__ = {
     "name": "猫站赠粮",
     "id": "pterclub_bonus",
-    "version": "1.0.0",
+    "version": "2.0.4",
     "author": "AWdress",
     "description": "使用平台同步的 PTerClub Cookie，通过用户账号命令单人或批量赠送猫粮。",
     "icon": "https://pterclub.net/favicon.ico",
-    "changelog": "v1.0.0 初始版本\n- 支持 .pm 单人赠粮与 .pms 批量赠粮\n- Cookie 统一从平台 Cookie 同步读取，不在插件配置中保存\n- 按猫站规则校验每份 25–50,000 猫粮并显示 10% 税后到账\n- 支持登录检查、持久化冷却、安全站内跳转和赠送结果解析",
+    "changelog": "v2.0.4 修复缺少 lxml 导致赠粮结果解析失败\n- 登录检查和赠粮回执改用 Python 内置 HTML 解析器，不再需要 lxml 原生依赖\n- 保留现有命令、赠送数量、冷却和结果处理，不自动重发赠粮请求\n\nv1.0.0 初始版本\n- 支持 .pm 单人赠粮与 .pms 批量赠粮\n- Cookie 统一从平台 Cookie 同步读取，不在插件配置中保存\n- 按猫站规则校验每份 25–50,000 猫粮并显示 10% 税后到账\n- 支持登录检查、持久化冷却、安全站内跳转和赠送结果解析",
     "scope": "user",
     "min_platform_version": "1.1.4.0",
     "plugin_api_version": 1,
@@ -33,7 +33,7 @@ __plugin__ = {
         "failure_threshold": 5,
         "recovery_seconds": 60,
     },
-    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12", "lxml>=5.0"],
+    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12"],
     "config_schema": {
         "enabled": {
             "type": "boolean", "default": True, "label": "启用赠粮命令",
@@ -185,7 +185,7 @@ def _feedback(resp: httpx.Response, *, redirected: bool) -> tuple[bool, str]:
     )):
         return False, "站点触发了 Cloudflare 安全验证，请重新同步 Cookie"
 
-    soup = BeautifulSoup(resp.text or "", "lxml")
+    soup = BeautifulSoup(resp.text or "", "html.parser")
     tips = soup.select_one(".tips")
     detail = " ".join(tips.get_text(" ", strip=True).split()) if tips else ""
     error_markers = (
@@ -220,7 +220,7 @@ async def _check_login(ctx) -> tuple[bool, str]:
             return False, f"网站返回 HTTP {resp.status_code}"
         if _looks_like_login(resp):
             return False, "Cookie 已失效，网站返回登录页"
-        soup = BeautifulSoup(resp.text or "", "lxml")
+        soup = BeautifulSoup(resp.text or "", "html.parser")
         option = soup.find("input", attrs={"name": "option", "value": "13"})
         gift = soup.find(attrs={"name": "bonusgift"})
         username = soup.find(attrs={"name": "username"})

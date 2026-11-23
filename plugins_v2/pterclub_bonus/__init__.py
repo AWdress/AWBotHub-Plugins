@@ -27,12 +27,15 @@ def _ensure_config_defaults(ctx) -> None:
 
 __plugin__ = {'name': '猫站赠粮',
  'id': 'pterclub_bonus',
- 'version': '2.0.3',
+ 'version': '2.0.4',
  'plugin_api_version': 2,
  'author': 'AWdress',
  'description': '使用平台同步的 PTerClub Cookie，通过用户账号命令单人或批量赠送猫粮。',
  'icon': 'https://pterclub.net/favicon.ico',
- 'changelog': 'v2.0.3 修复配置默认值显示\n'
+ 'changelog': 'v2.0.4 修复缺少 lxml 导致赠粮结果解析失败\n'
+              '- 登录检查和赠粮回执改用 Python 内置 HTML 解析器，不再需要 lxml 原生依赖\n'
+              '- 保留现有命令、赠送数量、冷却和结果处理，不自动重发赠粮请求\n\n'
+              'v2.0.3 修复配置默认值显示\n'
               '- 仅补齐旧配置中为空的文本默认值，输入框可正常显示 .pm、.pms 和数值\n'
               '- 保留关闭开关、零值和用户已保存的有效配置\n\n'
               'v2.0.2 统一富文本表格通知\n- Cookie 异常通知改为平台结构化表格\n\n'
@@ -59,7 +62,7 @@ __plugin__ = {'name': '猫站赠粮',
                'max_background_tasks': 16,
                'failure_threshold': 5,
                'recovery_seconds': 60},
- 'requirements': ['httpx>=0.27', 'beautifulsoup4>=4.12', 'lxml>=5.0'],
+ 'requirements': ['httpx>=0.27', 'beautifulsoup4>=4.12'],
  'config_schema': {'enabled': {'type': 'boolean',
                                'default': True,
                                'label': '启用赠粮命令',
