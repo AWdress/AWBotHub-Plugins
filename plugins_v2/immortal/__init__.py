@@ -1,11 +1,11 @@
 """Immortal source-embedded integration for AWBotHub."""
 
 __plugin__ = {
-    "id": "immortal", "name": "Immortal", "version": "0.0.2", "author": "AWdress",
+    "id": "immortal", "name": "Immortal", "version": "0.0.3", "author": "AWdress",
     "scope": "standalone", "instance_mode": "shared", "plugin_api_version": 2,
     "render_mode": "vue", "webhook": False,
     "description": "内置 Immortal 资源、影片、演员、订阅和下载管理；无需另行运行 Immortal 服务。",
-    "changelog": "v0.0.2\n- 修复配置页开关行与平台全局样式冲突导致的文字挤压、重叠\n- 改善窄屏帮助文字换行，保留原配置和默认关闭状态\nv0.0.1 首次发布\n- 内置业务源码与管理界面，默认独立 SQLite，安装无需另配数据库\n- 平台管理员接口、平台任务与通知\n- 自动任务及下载默认关闭，不启动独立机器人或 HTTP 服务",
+    "changelog": "v0.0.3 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv0.0.2\n- 修复配置页开关行与平台全局样式冲突导致的文字挤压、重叠\n- 改善窄屏帮助文字换行，保留原配置和默认关闭状态\nv0.0.1 首次发布\n- 内置业务源码与管理界面，默认独立 SQLite，安装无需另配数据库\n- 平台管理员接口、平台任务与通知\n- 自动任务及下载默认关闭，不启动独立机器人或 HTTP 服务",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/immortal/icon.svg",
     "tags": ["资源管理", "订阅", "下载"],
     "requirements": ["SQLAlchemy>=2.0,<2.2", "pyquery>=2,<3", "requests>=2.32,<3",

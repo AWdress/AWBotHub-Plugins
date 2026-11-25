@@ -1,6 +1,6 @@
 {
   "name": "@awbothub-plugins/red_packet_grab-config",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "private": true,
   "type": "module",
   "scripts": { "dev": "vite", "build": "vite build" },

@@ -5,11 +5,11 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': 'AI 助手',
  'id': 'ai',
- 'version': '2.1.0',
+ 'version': '2.1.1',
  'author': 'AWdress',
  'description': '私聊/群@你时 AI 人形对话，支持主动搭话、/ai 图文解释和平台 AI 生图；默认原生富文本回复，非会员自动降级，支持引用、代码块、表格、完整链接与自定义回复模板。自带 Vue 配置界面。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/ai.png',
- 'changelog': 'v2.1.0 富文本回复与模板\n- 默认使用 Telegram 原生富文本，非会员或原生能力不可用时自动降级\n- 支持粗体、引用、代码块、表格与完整链接；普通对话和解释命令可分别自定义回复模板\n- 超长回复安全分段，网络发送失败不重复投递\n- 恢复可重建的 Vue 配置源码，保留原有配置、历史记录与平台 AI 路由；不新增搜索接口\n\nv2.0.4 适配平台正式调度接口\n- 主动搭话改用 schedule_interval 注册，不再调用兼容调度入口\n\nv2.0.3 修复 /ai 解释格式显示\n'
+ 'changelog': 'v2.1.1 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.1.0 富文本回复与模板\n- 默认使用 Telegram 原生富文本，非会员或原生能力不可用时自动降级\n- 支持粗体、引用、代码块、表格与完整链接；普通对话和解释命令可分别自定义回复模板\n- 超长回复安全分段，网络发送失败不重复投递\n- 恢复可重建的 Vue 配置源码，保留原有配置、历史记录与平台 AI 路由；不新增搜索接口\n\nv2.0.4 适配平台正式调度接口\n- 主动搭话改用 schedule_interval 注册，不再调用兼容调度入口\n\nv2.0.3 修复 /ai 解释格式显示\n'
               '- 编辑解释消息时显式启用 Telegram HTML 解析\n'
               '- 问题与回答继续进行 HTML 转义，避免内容注入标签\n'
               '- HTML 编辑失败时使用不解析格式的纯文本降级\n'

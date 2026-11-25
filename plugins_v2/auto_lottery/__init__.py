@@ -9,12 +9,12 @@ except ImportError:
 
 __plugin__ = {'name': '小菜抽奖',
  'id': 'auto_lottery',
- 'version': '2.0.9',
+ 'version': '2.0.10',
  'author': 'AWdress',
  'scope': 'user',
  'description': '自动识别小菜抽奖机器人的抽奖消息并参与，中奖记录与可选自动发奖。自带 Vue 配置界面 + 待发奖管理。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/auto_lottery.jpg',
- 'changelog': 'v2.0.9 修复缩进开奖消息识别\n'
+ 'changelog': 'v2.0.10 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.9 修复缩进开奖消息识别\n'
               '- 抽奖 ID、创建者字段支持缩进、全角空格及中英文冒号\n'
               '- 保留唯一字段和创建者行末 ID 校验，避免昵称数字或重复字段误触发发奖\n\n'
               'v2.0.8 修复自动发奖\n'

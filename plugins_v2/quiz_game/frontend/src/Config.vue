@@ -1,8 +1,9 @@
 <template>
+  <IosSettings>
   <div class="quiz-game-config">
-    <div class="tabs">
-      <button :class="{ active: tab === 'settings' }" @click="tab = 'settings'">⚙️ 设置</button>
-      <button :class="{ active: tab === 'history' }" @click="tab = 'history'">📝 答题记录</button>
+    <div class="tabs" :style="{ '--quiz-tab-index': tab === 'settings' ? 0 : 1 }" aria-label="群答题页面">
+      <button :class="{ active: tab === 'settings' }" :aria-pressed="tab === 'settings'" @click="tab = 'settings'">功能设置</button>
+      <button :class="{ active: tab === 'history' }" :aria-pressed="tab === 'history'" @click="tab = 'history'">答题记录</button>
     </div>
 
     <div class="tab-content">
@@ -45,7 +46,7 @@
 
           <template v-if="cfg.source === 'ai'">
             <p class="tip">使用平台统一 AI 服务（在「系统设置→AI 服务」配置）。</p>
-            <label class="row switch"><input v-model="cfg.ai_image_enabled" type="checkbox" /><span>启用 AI 图文题</span></label>
+            <label class="row switch"><input v-model="cfg.ai_image_enabled" type="checkbox" role="switch" /><span>启用 AI 图文题</span></label>
             <label v-if="cfg.ai_image_enabled" class="row indent"><span>配图题比例</span><div class="range-control"><input v-model.number="cfg.ai_image_ratio" type="range" min="0" max="100" step="10" /><output>{{ cfg.ai_image_ratio }}%</output></div></label>
             <p v-if="cfg.ai_image_enabled" class="tip indent-tip">仅为部分题目生成无文字配图；平台生图不可用或生成失败时自动使用纯文字题。</p>
           </template>
@@ -58,7 +59,7 @@
         <div class="section">
           <h3>奖励设置</h3>
           <label class="row"><span>基础奖励(魔力)</span><input v-model.number="cfg.base_reward" type="number" class="inp" min="1" /></label>
-          <label class="row switch"><input v-model="cfg.streak_enabled" type="checkbox" /><span>启用连胜加成</span></label>
+          <label class="row switch"><input v-model="cfg.streak_enabled" type="checkbox" role="switch" /><span>启用连胜加成</span></label>
           <template v-if="cfg.streak_enabled">
             <label class="row indent"><span>连胜倍率</span><input v-model.number="cfg.streak_multiplier" type="number" class="inp" min="1" step="0.1" /></label>
             <label class="row indent"><span>最大连胜</span><input v-model.number="cfg.max_streak" type="number" class="inp" min="1" /></label>
@@ -80,7 +81,7 @@
           <button @click="loadHistory" class="btn-sm">刷新</button>
           <span class="muted">最近 {{ history.length }} 条</span>
         </div>
-        <table class="tbl">
+        <div class="quiz-table-wrap" tabindex="0" role="region" aria-label="答题记录列表"><table class="tbl">
           <thead><tr><th>时间</th><th>群组</th><th>题目</th><th>答案</th><th>回答者</th><th>奖励</th></tr></thead>
           <tbody>
             <tr v-for="(h, i) in history" :key="i">
@@ -93,14 +94,16 @@
             </tr>
             <tr v-if="!history.length"><td colspan="6" class="empty">暂无答题记录</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   </div>
+</IosSettings>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({
   pluginId: { type: String, required: true },
@@ -163,59 +166,94 @@ async function loadChatNames() {
 </script>
 
 <style scoped>
-.quiz-game-config { display: flex; flex-direction: column; gap: 16px; }
-.tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--border-light, #2a2e3a); }
-.tabs button { background: none; border: none; color: var(--text-secondary, #b9c0cc); padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
-.tabs button.active { color: var(--text-primary, #e8edf5); border-bottom-color: var(--primary, #4a9eff); }
-.tab-content { padding: 16px 0; }
-.section { margin-bottom: 24px; }
-.section h3 { font-size: 14px; color: var(--text-primary, #e8edf5); margin-bottom: 12px; }
-.command-guide { padding: 16px; border: 1px solid var(--border-light, #2a2e3a); border-radius: 10px; background: var(--bg-card, #12141c); }
+/* User-pinned iOS grouped settings; platform tokens own theme and transparency.
+   THESIS: set a group quiz's source, rewards and rules without changing the game.
+   OWN-WORLD: sliding segments, quiet grouped form rows, rounded switches and controls.
+   STORY: read the existing commands, configure the game, save, then inspect answers.
+   FIRST VIEWPORT: two segments above command help and group settings.
+   FORM: the user's established iOS Settings direction; no new visual-world selection.
+   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance */
+.quiz-game-config { display: flex; flex-direction: column; gap: 24px; min-width: 0; color: var(--ios-text); }
+.tabs { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.tabs::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 12px) / 2); border-radius: 11px; background: var(--ios-control); box-shadow: 0 2px 5px rgb(0 0 0 / .08); transform: translateX(calc(var(--quiz-tab-index) * (100% + 4px))); transition: transform var(--ios-duration) var(--ios-ease); z-index: -1; }
+.tabs button { min-width: 0; min-height: 44px; padding: 9px 12px; border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.tabs button.active { color: var(--ios-text); font-weight: 650; }
+.tab-content { min-width: 0; }
+.settings { display: flex; flex-direction: column; gap: 20px; }
+.section { min-width: 0; padding: 4px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.section h3 { margin: 0; padding: 14px 0 16px; color: var(--ios-text); font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
+.command-guide { padding: 20px; }
 .guide-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.guide-heading h3 { margin: 0 0 5px; font-size: 15px; }
-.guide-heading p, .guide-note { margin: 0; color: var(--text-muted, #7a8291); font-size: 12px; line-height: 1.65; }
-.guide-badge { flex: none; padding: 4px 9px; border: 1px solid rgba(74, 158, 255, 0.32); border-radius: 999px; background: rgba(74, 158, 255, 0.1); color: var(--primary, #4a9eff); font-size: 11px; }
-.command-list { margin: 14px 0 10px; border-top: 1px solid var(--border-light, #2a2e3a); }
-.command-item { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--border-light, #2a2e3a); color: var(--text-secondary, #b9c0cc); font-size: 13px; }
-.command-item code { width: fit-content; padding: 4px 8px; border-radius: 5px; background: rgba(74, 158, 255, 0.1); color: var(--text-primary, #e8edf5); font-family: inherit; font-weight: 600; }
-.row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.row > span:first-child { min-width: 130px; font-size: 13px; color: var(--text-secondary, #b9c0cc); }
-.row.switch { gap: 8px; }
+.guide-heading > div { min-width: 0; }
+.guide-heading h3 { padding: 0; margin-bottom: 5px; }
+.guide-heading p, .guide-note { margin: 0; color: var(--ios-secondary); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.guide-badge { flex: none; padding: 4px 9px; border-radius: 8px; background: var(--ios-inset); color: var(--ios-secondary); font-size: 12px; }
+.command-list { margin: 16px 0 12px; border-top: 1px solid var(--ios-line); }
+.command-item { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--ios-line); color: var(--ios-secondary); font-size: 13px; line-height: 1.75; }
+.command-item code { width: fit-content; padding: 4px 8px; border-radius: 8px; background: var(--ios-inset); color: var(--ios-text); font: inherit; font-weight: 600; }
+.row { display: flex; align-items: center; gap: 16px; min-height: 74px; margin: 0; padding: 16px 0; border-top: 1px solid var(--ios-line); }
+.row > span:first-child { flex: 0 0 150px; min-width: 0; color: var(--ios-text); }
+.row.switch { flex-direction: row-reverse; justify-content: space-between; gap: 20px; cursor: pointer; }
 .row.row-top { align-items: flex-start; }
-.row.switch span { min-width: auto; }
-.row.indent { margin-left: 20px; }
-.row.indent > span:first-child { min-width: 110px; }
-.chat-names { margin: -4px 0 12px 142px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
-.chat-label { color: var(--text-muted, #7a8291); }
-.chat-name { color: var(--text-primary, #e8edf0); }
-.secret-field { position: relative; flex: 1; min-width: 0; }.secret-field .inp { width: 100%; box-sizing: border-box; padding-right: 44px; }.secret-field button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted, #7a8291); cursor: pointer; }.secret-field button:hover { color: var(--accent, #6ea8fe); background: var(--accent-dim, #1e3a5f); }.secret-field svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.inp, select.inp { flex: 1; padding: 8px 12px; background: var(--bg-input, #1a1d26); border: 1px solid var(--border-light, #2a2e3a); border-radius: 6px; color: var(--text-primary, #e8edf5); font-size: 13px; }
-.textarea { resize: vertical; min-height: 88px; font-family: inherit; line-height: 1.55; }
-.tip { margin: -3px 0 12px 142px; color: var(--text-muted, #7a8291); font-size: 12px; line-height: 1.6; }
-.indent-tip { margin-left: 162px; }
-.range-control { flex: 1; display: grid; grid-template-columns: minmax(160px, 1fr) 52px; align-items: center; gap: 12px; min-width: 0; }
-.range-control input { width: 100%; accent-color: var(--primary, #4a9eff); }
-.range-control output { color: var(--text-primary, #e8edf5); font-variant-numeric: tabular-nums; text-align: right; }
-.btn, .btn-primary, .btn-sm { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-.btn-primary { background: var(--primary, #4a9eff); color: #fff; }
-.btn { background: var(--bg-card, #12141c); color: var(--text-primary, #e8edf5); border: 1px solid var(--border-light, #2a2e3a); margin-right: 8px; }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn:disabled, .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.muted { color: var(--text-muted, #7a8291); font-size: 12px; }
-.tbl { width: 100%; border-collapse: collapse; }
-.tbl th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border-light, #2a2e3a); color: var(--text-secondary, #b9c0cc); font-size: 12px; font-weight: normal; }
-.tbl td { padding: 10px 12px; border-bottom: 1px solid var(--border-light, #2a2e3a); font-size: 13px; color: var(--text-primary, #e8edf5); }
-.tbl td.muted { color: var(--text-muted, #7a8291); font-size: 12px; }
-.tbl td.empty { text-align: center; color: var(--text-muted, #7a8291); padding: 40px; }
-.tbl td.gold { color: #ffd700; font-weight: bold; }
-@media (max-width: 640px) {
-  .guide-heading { align-items: flex-start; }
-  .command-item { grid-template-columns: 1fr; gap: 6px; }
-  .row { align-items: flex-start; flex-direction: column; }
-  .row > span:first-child { min-width: 0; }
-  .chat-names { margin-left: 0; }
-  .tip, .indent-tip { margin-left: 0; }
+.row.switch span { flex: 1; min-width: 0; line-height: 1.7; }
+.chat-names { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 16px 166px; color: var(--ios-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.chat-name { min-width: 0; }
+.secret-field { position: relative; flex: 1; min-width: 0; }
+.secret-field .inp { width: 100%; padding-right: 52px; }
+.secret-field button { position: absolute; right: 1px; top: 1px; display: grid; place-items: center; width: 44px; height: calc(100% - 2px); border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.secret-field button:hover { color: var(--ios-text); }
+.secret-field svg { width: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.inp { flex: 1; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease; }
+.inp:focus { border-color: var(--accent, #0063dc); }
+.inp[type=number] { flex: 0 0 130px; width: 130px; margin-left: auto; text-align: right; }
+select.inp { cursor: pointer; }
+.textarea { resize: vertical; min-height: 108px; line-height: 1.7; }
+.tip { max-width: 72ch; margin: 0 0 16px 166px; color: var(--ios-secondary); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.range-control { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: center; gap: 16px; min-width: 0; }
+.range-control input { width: 100%; min-width: 0; min-height: 44px; margin: 0; accent-color: var(--ios-accent); cursor: pointer; }
+.range-control output { color: var(--ios-text); font-variant-numeric: tabular-nums; text-align: right; }
+.row.switch input { appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background-color var(--ios-fast) ease; }
+.row.switch input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .2); transition: transform var(--ios-duration) var(--ios-ease); }
+.row.switch input:checked { border-color: transparent; background: var(--ios-accent); }
+.row.switch input:checked::before { transform: translateX(20px); }
+.btn, .btn-primary, .btn-sm { min-height: 44px; padding: 10px 18px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.btn:hover:not(:disabled), .btn-sm:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.btn-primary { align-self: flex-end; min-width: 132px; margin-top: 4px; border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn:disabled, .btn-primary:disabled, .btn-sm:disabled { opacity: .5; cursor: not-allowed; }
+.toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.muted { color: var(--ios-secondary); font-size: 12px; }
+.quiz-table-wrap { max-width: 100%; min-width: 0; overflow: auto; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { padding: 13px 14px; border-bottom: 1px solid var(--ios-line); text-align: left; white-space: nowrap; }
+.tbl th { color: var(--ios-secondary); background: var(--ios-inset); font-size: 12px; font-weight: 500; }
+.tbl td { color: var(--ios-text); }
+.tbl td:nth-child(2), .tbl td:nth-child(3), .tbl td:nth-child(4) { min-width: 100px; max-width: 300px; white-space: normal; overflow-wrap: anywhere; }
+.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl td.muted { color: var(--ios-secondary); font-size: 12px; }
+.tbl td.empty { padding: 40px 20px; color: var(--ios-secondary); text-align: center; }
+.tbl td.gold { color: var(--success, #087758); font-weight: 600; }
+:global(html[data-theme='transparent'] .quiz-game-config .section),
+:global(html[data-theme='transparent'] .quiz-game-config .quiz-table-wrap) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 600px) {
+  .quiz-game-config { gap: 20px; }
+  .section { padding-inline: 16px; }
+  .command-guide { padding: 16px; }
+  .guide-heading { gap: 12px; flex-wrap: wrap; }
+  .command-item { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .row:not(.switch) { flex-direction: column; align-items: stretch; gap: 8px; }
+  .row:not(.switch) > span:first-child { flex: none; }
+  .secret-field { flex: none; width: 100%; }
+  .chat-names, .tip { margin-left: 0; }
+  .inp { font-size: 16px; }
+  .inp[type=number] { flex: none; margin-left: 0; width: 130px; }
+  .settings .btn-primary { width: 100%; margin-top: 4px; }
   .range-control { width: 100%; }
+  .tbl th, .tbl td { padding: 12px; }
+}
+@media (forced-colors: active) {
+  .row.switch input { appearance: auto !important; }
+  .row.switch input::before { display: none; }
+  .tabs::before { border: 2px solid Highlight; }
 }
 </style>

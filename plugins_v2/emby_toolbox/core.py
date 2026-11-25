@@ -37,11 +37,11 @@ from .lock_repair import LockRepair, locked_fields, whole_locked
 __plugin__ = {
     "name": "Emby 工具箱",
     "id": "emby_toolbox",
-    "version": "2.1.7",
+    "version": "2.1.8",
     "author": "AWdress",
     "description": "集成 Emby 剧集校验、Genre 清理/映射、季名刮削、国家语言 Tag、别名写入、STRM 刷新、元数据缺失检查等维护功能。支持定时执行与完整日志。",
     "icon": "https://cdn.simpleicons.org/emby",
-    "changelog": "v2.0.4 优化 Genre 扫描速度与进度日志\n- 先使用媒体库批量结果筛选候选条目，仅对确需修改的条目读取完整详情\n- 增加扫描数量、更新数量和每 50 条进度日志，避免长时间无反馈\n\nv2.0.3 增强别名缓存与 Genre 中文化\n- 别名写入成功后持久化记录，后续扫描命中缓存直接跳过，避免重复请求和更新\n- Genre 映射内置常见英文到中文映射，同时保留自定义 JSON 覆盖\n- 增加 Genre 中文化命中、跳过和更新日志，更新 GenreItems 名称并保留已有 ID\n\nv2.0.2 统一富文本表格通知\n- 定时维护和任务结果改为平台结构化表格\n\nv2.0.1 修复 Emby API 客户端逻辑\n- 使用 VirtualFolders 正确解析媒体库 ID，并兼容旧版 Views 接口\n- 递归展开媒体库文件夹，补齐维护功能所需的元数据字段\n- 统一更新与 PlaybackInfo 请求路径，修复多项功能失败\n- 图标替换为 Emby Logo\n\nv2.0.0 原生 AWBotHub 迁移\n- 使用 Telethon 原生事件、调度、存储与生命周期接口\n- 保留原有功能、配置项和运行数据\n- 移除旧版兼容运行层",
+    "changelog": "v2.1.8 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.4 优化 Genre 扫描速度与进度日志\n- 先使用媒体库批量结果筛选候选条目，仅对确需修改的条目读取完整详情\n- 增加扫描数量、更新数量和每 50 条进度日志，避免长时间无反馈\n\nv2.0.3 增强别名缓存与 Genre 中文化\n- 别名写入成功后持久化记录，后续扫描命中缓存直接跳过，避免重复请求和更新\n- Genre 映射内置常见英文到中文映射，同时保留自定义 JSON 覆盖\n- 增加 Genre 中文化命中、跳过和更新日志，更新 GenreItems 名称并保留已有 ID\n\nv2.0.2 统一富文本表格通知\n- 定时维护和任务结果改为平台结构化表格\n\nv2.0.1 修复 Emby API 客户端逻辑\n- 使用 VirtualFolders 正确解析媒体库 ID，并兼容旧版 Views 接口\n- 递归展开媒体库文件夹，补齐维护功能所需的元数据字段\n- 统一更新与 PlaybackInfo 请求路径，修复多项功能失败\n- 图标替换为 Emby Logo\n\nv2.0.0 原生 AWBotHub 迁移\n- 使用 Telethon 原生事件、调度、存储与生命周期接口\n- 保留原有功能、配置项和运行数据\n- 移除旧版兼容运行层",
     "scope": "standalone",
     "render_mode": "vue",
     "min_platform_version": "1.1.4.0",

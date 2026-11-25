@@ -42,22 +42,21 @@ async function copy() {
 </template>
 
 <style scoped>
-.result { min-width: 0; padding-top: 20px; border-top: 1px solid var(--border-light, #2a3c52); scroll-margin-block: 96px; }
-.result-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.result { min-width: 0; padding: 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); color: var(--ios-text); scroll-margin-block: 24px; }
+.result-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 h4, p { margin: 0; }
-h4 { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.result-error .result-head { color: var(--danger, #ff8e96); }
-.button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border-light, #2a3c52); border-radius: var(--radius-sm, 8px); background: var(--bg-elevated, #172131); color: var(--text-primary, #eef1f7); font: inherit; cursor: pointer; flex-shrink: 0; }
-.button:hover:not(:disabled) { border-color: var(--accent, #82aaff); }
-.button:disabled { opacity: .58; cursor: not-allowed; }
-.result-text { box-sizing: border-box; width: 100%; min-height: 64px; max-height: 320px; border: 1px solid var(--border-light, #2a3c52); border-radius: var(--radius-sm, 8px); background: var(--bg-elevated, #172131); color: var(--text-primary, #eef1f7); padding: 10px 12px; font: inherit; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; resize: vertical; caret-color: var(--accent, #3080f0); scrollbar-color: var(--border-light, #2a3c52) var(--bg-elevated, #172131); scrollbar-width: thin; }
-button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent, #82aaff); outline-offset: 3px; }
-.help { font-size: 13px; line-height: 1.65; margin-top: 7px; color: var(--text-secondary, #b6bdcd); }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
-::selection { background: var(--accent-dim, #243047); color: var(--text-primary, #e8eaf0); }
-@media (max-width: 768px) {
-  .result-head { flex-wrap: wrap; align-items: flex-start; }
+h4 { min-width: 0; font-size: 15px; font-weight: 650; line-height: 1.6; overflow-wrap: anywhere; }
+.result-error .result-head { color: var(--danger, #bd2733); }
+.button { flex-shrink: 0; min-height: 44px; padding: 10px 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font: inherit; font-weight: 500; cursor: pointer; }
+.button:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.button:disabled { opacity: .55; cursor: not-allowed; }
+.result-text { box-sizing: border-box; width: 100%; min-height: 88px; max-height: 360px; padding: 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); font: inherit; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; resize: vertical; caret-color: var(--accent, #0063dc); scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.help { margin-top: 8px; color: var(--ios-secondary); font-size: 12px; line-height: 1.75; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); border: 0; white-space: nowrap; }
+:global(html[data-theme='transparent'] .print-config .result) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 600px) {
+  .result { padding: 16px; }
+  .result-head { flex-wrap: wrap; align-items: flex-start; gap: 12px; }
   .result-text { font-size: 16px; }
-  .help { font-size: 14px; }
 }
 </style>

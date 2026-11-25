@@ -5,12 +5,12 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': 'NextFind 助手',
  'id': 'auto_subscribe',
- 'version': '2.4.2',
+ 'version': '2.4.3',
  'requirements': ['httpx>=0.27', 'beautifulsoup4>=4.12', 'python-multipart>=0.0.20'],
  'author': 'AWdress',
  'description': 'NextFind 资源订阅与本地媒体库联动，支持榜单订阅、缺集补全、缺集自动订阅、资源查询和管理。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/auto_subscribe/logo.png',
- 'changelog': 'v2.0.7 适配平台统一 Cron 编辑器\n- 定时字段声明标准 cron 格式并使用宿主 CronInput\n- 保存时由平台前后端共同校验五段或六段表达式\n\nv2.0.6 补齐敏感字段显示按钮\n'
+ 'changelog': 'v2.4.3 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.7 适配平台统一 Cron 编辑器\n- 定时字段声明标准 cron 格式并使用宿主 CronInput\n- 保存时由平台前后端共同校验五段或六段表达式\n\nv2.0.6 补齐敏感字段显示按钮\n'
               '- API Key 默认隐藏，点击眼睛后显示平台受控读取的真实值\n'
               '- 保存时兼容平台脱敏占位值，避免覆盖已保存密钥\n\n'
               'v2.0.5 修复多行通知显示\n'

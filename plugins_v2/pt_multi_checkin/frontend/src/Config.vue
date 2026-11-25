@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({ pluginId: { type: String, required: true }, host: { type: Object, required: true } })
 const config = reactive({ auto_checkin: true, notify_result: true, headless: true, checkin_hour: 8, checkin_minute: 10, u2_checkin_hour: 9, u2_checkin_minute: 0, retry_count: 2, retry_interval: 20, failed_retry_count: 3, tjupt_ai_assist: true, tjupt_confirm_timeout: 300, selected_sites: [], custom_sites: [], piggo_username: '', piggo_password: '' })
@@ -114,108 +115,254 @@ onMounted(load); onBeforeUnmount(() => timer && clearInterval(timer))
 </script>
 
 <template>
-  <!-- THESIS: Fast PT operations through glanceable controls and tactile checked labels, refusing spreadsheet-like site rows. OWN-WORLD: Ink-blue surfaces, crisp blue selection outlines, compact square checks, quiet cyan status. STORY: Choose sites, confirm platform cookies, save, and run with progress always visible. FIRST VIEWPORT: Title and actions lead; schedule controls sit in one rail; site chips fill grouped fields below. FORM: Compact operator console, seed PT-CHECK-CHIPS-3. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md. -->
-  <main class="console" v-if="!loading && !loadingError">
-    <header class="mast">
-      <div class="title-block"><span class="brand-mark" aria-hidden="true">PT</span><div><h2>多站签到</h2><p>平台 Cookie 自动同步 · 猪猪支持账号登录 · 已选择 <b>{{ config.selected_sites.length }}</b> / {{ sites.length }} 个站点</p></div></div>
-      <div class="mast-actions"><button class="button quiet" :disabled="checking || !config.selected_sites.length" @click="checkCookies"><span class="button-icon" aria-hidden="true"></span>{{ checking ? '正在检查' : '检查凭证' }}</button><button class="button primary" :disabled="status.running || !config.selected_sites.length" @click="run"><span class="play" aria-hidden="true"></span>{{ status.running ? '签到进行中' : '立即签到' }}</button></div>
+  <IosSettings>
+  <main class="pt-ios" v-if="!loading && !loadingError">
+    <header class="pt-ios-mast">
+      <div class="pt-ios-title-block"><span class="pt-ios-brand-mark" aria-hidden="true">PT</span><div><h2>多站签到</h2><p>平台 Cookie 自动同步 · 猪猪支持账号登录 · 已选择 <b>{{ config.selected_sites.length }}</b> / {{ sites.length }} 个站点</p></div></div>
+      <div class="pt-ios-mast-actions"><button type="button" class="pt-ios-button pt-ios-quiet" :disabled="checking || !config.selected_sites.length" @click="checkCookies"><span class="pt-ios-button-icon" aria-hidden="true"></span>{{ checking ? '正在检查' : '检查凭证' }}</button><button type="button" class="pt-ios-button pt-ios-primary" :disabled="status.running || !config.selected_sites.length" @click="run"><span class="pt-ios-play" aria-hidden="true"></span>{{ status.running ? '签到进行中' : '立即签到' }}</button></div>
     </header>
 
-    <section class="control-rail" aria-label="签到设置">
-      <div class="toggles">
-        <label class="toggle"><input v-model="config.auto_checkin" type="checkbox"><i></i><span>自动签到</span></label>
-        <label class="toggle"><input v-model="config.notify_result" type="checkbox"><i></i><span>结果推送</span></label>
-        <label class="toggle"><input v-model="config.headless" type="checkbox"><i></i><span>浏览器静默运行</span></label>
+    <section class="pt-ios-control-rail" aria-label="签到设置">
+      <div class="pt-ios-toggles">
+        <label class="pt-ios-toggle"><input v-model="config.auto_checkin" type="checkbox" role="switch"><i></i><span>自动签到</span></label>
+        <label class="pt-ios-toggle"><input v-model="config.notify_result" type="checkbox" role="switch"><i></i><span>结果推送</span></label>
+        <label class="pt-ios-toggle"><input v-model="config.headless" type="checkbox" role="switch"><i></i><span>浏览器静默运行</span></label>
       </div>
-      <div class="schedule-fields">
-        <label><span>其他站点执行</span><span class="time-field"><input v-model.number="config.checkin_hour" aria-label="其他站点执行小时" type="number" min="0" max="23"><b>:</b><input v-model.number="config.checkin_minute" aria-label="其他站点执行分钟" type="number" min="0" max="59"></span></label>
-        <label><span>U2 执行（≥09:00）</span><span class="time-field"><input v-model.number="config.u2_checkin_hour" aria-label="U2 执行小时" type="number" min="9" max="23"><b>:</b><input v-model.number="config.u2_checkin_minute" aria-label="U2 执行分钟" type="number" min="0" max="59"></span></label>
+      <div class="pt-ios-schedule-fields">
+        <label><span>其他站点执行</span><span class="pt-ios-time-field"><input v-model.number="config.checkin_hour" aria-label="其他站点执行小时" type="number" min="0" max="23"><b>:</b><input v-model.number="config.checkin_minute" aria-label="其他站点执行分钟" type="number" min="0" max="59"></span></label>
+        <label><span>U2 执行（≥09:00）</span><span class="pt-ios-time-field"><input v-model.number="config.u2_checkin_hour" aria-label="U2 执行小时" type="number" min="9" max="23"><b>:</b><input v-model.number="config.u2_checkin_minute" aria-label="U2 执行分钟" type="number" min="0" max="59"></span></label>
         <label><span>单站即时重试</span><input v-model.number="config.retry_count" type="number" min="0" max="5"></label>
-        <label><span>即时重试间隔</span><span class="unit-field"><input v-model.number="config.retry_interval" type="number" min="5" max="300"><i>秒</i></span></label>
+        <label><span>即时重试间隔</span><span class="pt-ios-unit-field"><input v-model.number="config.retry_interval" type="number" min="5" max="300"><i>秒</i></span></label>
         <label><span>失败后补签次数</span><input ref="failedRetryInput" v-model.number="config.failed_retry_count" type="number" min="0" max="10" step="1" :aria-describedby="failedRetryError ? 'failed-retry-help failed-retry-error' : 'failed-retry-help'" :aria-invalid="!!failedRetryError" @input="failedRetryError = ''"></label>
-        <p id="failed-retry-help" class="retry-note">首次签到失败后，每隔 30 分钟只补签仍失败的站点；默认最多 3 次，0 为关闭。成功后不再补签。</p>
-        <p v-if="failedRetryError" id="failed-retry-error" class="retry-note retry-error" role="alert">{{ failedRetryError }}</p>
+        <p id="failed-retry-help" class="pt-ios-retry-note">首次签到失败后，每隔 30 分钟只补签仍失败的站点；默认最多 3 次，0 为关闭。成功后不再补签。</p>
+        <p v-if="failedRetryError" id="failed-retry-error" class="pt-ios-retry-note pt-ios-retry-error" role="alert">{{ failedRetryError }}</p>
       </div>
     </section>
 
-    <section v-if="status.running || status.finished_at" class="run-status" aria-live="polite">
-      <span :class="['pulse', { active: status.running }]"></span><div><b>{{ status.running ? `${status.phase} · ${status.current}` : '最近任务已完成' }}</b><small>{{ status.message || `${status.completed} / ${status.total} 个站点` }}</small></div><strong>{{ progress }}%</strong><div class="progress"><i :style="{ width: `${progress}%` }"></i></div>
+    <section v-if="status.running || status.finished_at" class="pt-ios-run-status" aria-live="polite">
+      <span :class="['pt-ios-pulse', { active: status.running }]"></span><div><b>{{ status.running ? `${status.phase} · ${status.current}` : '最近任务已完成' }}</b><small>{{ status.message || `${status.completed} / ${status.total} 个站点` }}</small></div><strong>{{ progress }}%</strong><div class="pt-ios-progress"><i :style="{ width: `${progress}%` }"></i></div>
     </section>
 
-    <section class="sites-panel">
-      <div class="section-head"><div><h3>选择签到站点</h3><p>点击标签即可勾选。Cookie 由平台读取，猪猪需在下方填写登录凭证。</p></div><div class="section-actions"><button class="link-button" @click="toggleGroup(sites, true)">全选</button><span></span><button class="link-button" @click="toggleGroup(sites, false)">清空</button></div></div>
-      <div v-for="[group, items] in groups" :key="group" class="site-group">
-        <div class="group-title"><span>{{ group }}</span><small>{{ items.filter(site => config.selected_sites.includes(site.key)).length }}/{{ items.length }}</small><button @click="toggleGroup(items, !items.every(site => config.selected_sites.includes(site.key)))">{{ items.every(site => config.selected_sites.includes(site.key)) ? '取消本组' : '选择本组' }}</button></div>
-        <div class="site-chips">
-          <label v-for="site in items" :key="site.key" :class="['site-chip', { selected: config.selected_sites.includes(site.key), checked: cookieState[site.key]?.ok, missing: cookieState[site.key] && !cookieState[site.key].ok }]">
+    <section class="pt-ios-sites-panel">
+      <div class="pt-ios-section-head"><div><h3>选择签到站点</h3><p>点击标签即可勾选。Cookie 由平台读取，猪猪需在下方填写登录凭证。</p></div><div class="pt-ios-section-actions"><button type="button" class="pt-ios-link-button" @click="toggleGroup(sites, true)">全选</button><span></span><button type="button" class="pt-ios-link-button" @click="toggleGroup(sites, false)">清空</button></div></div>
+      <div v-for="[group, items] in groups" :key="group" class="pt-ios-site-group">
+        <div class="pt-ios-group-title"><span>{{ group }}</span><small>{{ items.filter(site => config.selected_sites.includes(site.key)).length }}/{{ items.length }}</small><button type="button" @click="toggleGroup(items, !items.every(site => config.selected_sites.includes(site.key)))">{{ items.every(site => config.selected_sites.includes(site.key)) ? '取消本组' : '选择本组' }}</button></div>
+        <div class="pt-ios-site-chips">
+          <label v-for="site in items" :key="site.key" :class="['pt-ios-site-chip', { selected: config.selected_sites.includes(site.key), checked: cookieState[site.key]?.ok, missing: cookieState[site.key] && !cookieState[site.key].ok }]">
             <input v-model="config.selected_sites" type="checkbox" :value="site.key">
-            <span class="checkmark"><i></i></span>
-            <span class="site-badge">{{ site.name.slice(0, 2).toUpperCase() }}</span>
-            <span class="site-copy"><span class="site-name"><b>{{ site.name }}</b><em v-if="site.status === 'pending'">待适配</em></span><small>{{ site.domain }}</small></span>
-            <span v-if="cookieState[site.key]" class="cookie-dot" :title="cookieState[site.key].message"></span>
+            <span class="pt-ios-checkmark"><i></i></span>
+            <span class="pt-ios-site-badge">{{ site.name.slice(0, 2).toUpperCase() }}</span>
+            <span class="pt-ios-site-copy"><span class="pt-ios-site-name"><b>{{ site.name }}</b><em v-if="site.status === 'pending'">待适配</em></span><small>{{ site.domain }}</small></span>
+            <span v-if="cookieState[site.key]" class="pt-ios-cookie-dot" :title="cookieState[site.key].message"></span>
           </label>
         </div>
       </div>
-      <section v-if="piggoSelected" class="piggo-login" aria-labelledby="piggo-login-title">
+      <section v-if="piggoSelected" class="pt-ios-piggo-login" aria-labelledby="piggo-login-title">
         <h3 id="piggo-login-title">猪猪登录</h3>
         <p id="piggo-login-help">仅填写猪猪网站的用户名和密码。每轮签到使用新的浏览器会话，通过官网登录页面登录，不复用历史登录凭证。</p>
-        <div class="piggo-fields">
+        <div class="pt-ios-piggo-fields">
           <label for="piggo-username">猪猪用户名<input id="piggo-username" v-model="config.piggo_username" :disabled="saving" autocomplete="off" spellcheck="false" aria-describedby="piggo-login-help" placeholder="填写猪猪网站的用户名"></label>
           <label for="piggo-password">猪猪密码<input id="piggo-password" v-model="config.piggo_password" :disabled="saving" type="password" autocomplete="new-password" aria-describedby="piggo-password-help" :placeholder="config.piggo_password === '********' ? '已保存，直接输入可替换' : '填写网站登录密码'"></label>
         </div>
-        <p id="piggo-password-help" class="piggo-note">密码保存后仅显示掩码。遇到验证码或二次验证时按日志提示处理，插件不会反复提交账号密码。登录与签到结果以官网确认为准。</p>
+        <p id="piggo-password-help" class="pt-ios-piggo-note">密码保存后仅显示掩码。遇到验证码或二次验证时按日志提示处理，插件不会反复提交账号密码。登录与签到结果以官网确认为准。</p>
       </section>
-      <div class="custom-sites">
-        <div class="custom-head"><div><h3>任意站点通用签到</h3><p>填写站点名称和地址，插件会优先访问 /attendance.php；Cookie 仍由平台按域名同步。</p></div><button class="link-button" @click="addCustomSite">＋ 添加站点</button></div>
-        <div v-if="config.custom_sites?.length" class="custom-list">
-          <div v-for="(item, index) in config.custom_sites" :key="index" class="custom-row">
+      <div class="pt-ios-custom-sites">
+        <div class="pt-ios-custom-head"><div><h3>任意站点通用签到</h3><p>填写站点名称和地址，插件会优先访问 /attendance.php；Cookie 仍由平台按域名同步。</p></div><button type="button" class="pt-ios-link-button" @click="addCustomSite">添加站点</button></div>
+        <div v-if="config.custom_sites?.length" class="pt-ios-custom-list">
+          <div v-for="(item, index) in config.custom_sites" :key="index" class="pt-ios-custom-row">
             <input v-model="item.name" aria-label="站点名称或账号" placeholder="站点名称 / 账号">
             <input v-model="item.url" aria-label="PT站点地址" placeholder="https://example.com">
-            <button class="link-button danger" @click="removeCustomSite(index)">删除</button>
+            <button type="button" class="pt-ios-link-button pt-ios-danger" @click="removeCustomSite(index)">删除</button>
           </div>
         </div>
-        <div v-else class="custom-empty">尚未添加通用站点</div>
+        <div v-else class="pt-ios-custom-empty">尚未添加通用站点</div>
       </div>
-      <footer class="save-bar"><p><span class="shield" aria-hidden="true"></span>Cookie 只从平台读取，不会保存在插件配置中。</p><button class="button primary" :disabled="saving" @click="save">{{ saving ? '正在保存…' : '保存并应用' }}</button></footer>
+      <footer class="pt-ios-save-bar"><p><span class="pt-ios-shield" aria-hidden="true"></span>Cookie 只从平台读取，不会保存在插件配置中。</p><button type="button" class="pt-ios-button pt-ios-primary" :disabled="saving" @click="save">{{ saving ? '正在保存…' : '保存并应用' }}</button></footer>
     </section>
 
-    <section class="history-panel">
-      <div class="section-head"><div><h3>最近运行</h3><p>保留最近 30 次签到结果。</p></div><button class="link-button danger" :disabled="!history.length" @click="clearHistory">清空记录</button></div>
-      <div class="history" v-if="history.length"><details v-for="item in history" :key="item.time"><summary><span :class="['result-mark', item.ok ? 'success' : 'failed']"></span><b>{{ item.summary }}</b><time>{{ item.time }}</time><span class="chevron"></span></summary><ul><li v-for="site in item.sites" :key="site.key || site.site"><span>{{ site.site }}</span><em :class="site.ok ? 'success-text' : 'failed-text'">{{ site.message }}</em></li></ul></details></div>
-      <div v-else class="empty"><span class="empty-mark"></span><b>等待第一次签到</b><p>运行完成后，站点结果会显示在这里。</p></div>
+    <section class="pt-ios-history-panel">
+      <div class="pt-ios-section-head"><div><h3>最近运行</h3><p>保留最近 30 次签到结果。</p></div><button type="button" class="pt-ios-link-button pt-ios-danger" :disabled="!history.length" @click="clearHistory">清空记录</button></div>
+      <div class="pt-ios-history" v-if="history.length"><details v-for="item in history" :key="item.time"><summary><span :class="['pt-ios-result-mark', item.ok ? 'success' : 'failed']"></span><b>{{ item.summary }}</b><time>{{ item.time }}</time><span class="pt-ios-chevron"></span></summary><ul><li v-for="site in item.sites" :key="site.key || site.site"><span>{{ site.site }}</span><em :class="site.ok ? 'pt-ios-success-text' : 'pt-ios-failed-text'">{{ site.message }}</em></li></ul></details></div>
+      <div v-else class="pt-ios-empty"><span class="pt-ios-empty-mark"></span><b>等待第一次签到</b><p>运行完成后，站点结果会显示在这里。</p></div>
     </section>
 
-    <section class="history-panel log-panel">
-      <div class="section-head"><div><h3>运行日志</h3><p>实时显示本次签到过程，最多保留 200 条。</p></div><button class="link-button danger" :disabled="!logs.length" @click="clearLogs">清空日志</button></div>
-      <div class="runtime-logs" v-if="logs.length"><div v-for="(item, index) in logs" :key="`${item.time}-${index}`" :class="['log-row', item.level]"><time>{{ item.time }}</time><b>{{ item.site || '系统' }}</b><span>{{ item.message }}</span></div></div>
-      <div v-else class="empty"><b>暂无运行日志</b><p>启动签到后，执行过程会实时显示在这里。</p></div>
+    <section class="pt-ios-history-panel pt-ios-log-panel">
+      <div class="pt-ios-section-head"><div><h3>运行日志</h3><p>实时显示本次签到过程，最多保留 200 条。</p></div><button type="button" class="pt-ios-link-button pt-ios-danger" :disabled="!logs.length" @click="clearLogs">清空日志</button></div>
+      <div class="pt-ios-runtime-logs" v-if="logs.length"><div v-for="(item, index) in logs" :key="`${item.time}-${index}`" :class="['pt-ios-log-row', item.level]"><time>{{ item.time }}</time><b>{{ item.site || '系统' }}</b><span>{{ item.message }}</span></div></div>
+      <div v-else class="pt-ios-empty"><b>暂无运行日志</b><p>启动签到后，执行过程会实时显示在这里。</p></div>
     </section>
   </main>
-  <div v-else-if="loading" class="loading">正在读取签到配置…</div>
-  <div v-else class="load-error"><b>签到配置读取失败</b><p>{{ loadingError }}</p><button class="button primary" @click="load">重新加载</button></div>
+  <div v-else-if="loading" class="pt-ios-loading">正在读取签到配置…</div>
+  <div v-else class="pt-ios-load-error"><b>签到配置读取失败</b><p>{{ loadingError }}</p><button type="button" class="pt-ios-button pt-ios-primary" @click="load">重新加载</button></div>
+  </IosSettings>
 </template>
 
 <style scoped>
-.console{--bg:#0b1421;--panel:#101b2a;--panel-2:#142238;--line:#273a54;--line-soft:#1e3047;--text:#edf5ff;--muted:#91a4bc;--blue:#2f89f5;--blue-soft:#173a66;--green:#55d39a;--red:#ff7c88;min-height:100%;padding:22px;border-radius:16px;color:var(--text);background:var(--bg);font:14px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;scrollbar-color:#38516e var(--bg);accent-color:var(--blue);overflow:hidden}.console *{box-sizing:border-box}.console ::selection{color:#fff;background:#226fc9}.mast{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:2px 0 20px}.title-block{display:flex;align-items:center;gap:13px}.brand-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #3978bd;border-radius:12px;color:#80bdff;background:#142945;font-size:13px;font-weight:850;letter-spacing:-.02em}.mast h2,.section-head h3{margin:0;letter-spacing:-.02em}.mast h2{font-size:22px}.mast p,.section-head p{margin:3px 0 0;color:var(--muted)}.mast p b{color:#82bdff}.mast-actions,.section-actions{display:flex;align-items:center;gap:9px}.button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border:1px solid var(--line);border-radius:9px;color:var(--text);background:#142136;font:inherit;font-weight:700;cursor:pointer}.button:hover:not(:disabled){border-color:#4c759f;background:#182944}.button:focus-visible,.link-button:focus-visible,.group-title button:focus-visible,.site-chip:has(input:focus-visible){outline:2px solid #75b6ff;outline-offset:2px}.button:disabled,.link-button:disabled{opacity:.48;cursor:not-allowed}.button.primary{border-color:#3791f7;color:#fff;background:#287fe5;box-shadow:0 8px 22px rgba(19,92,176,.26)}.button.primary:hover:not(:disabled){background:#3692fb}.button.quiet{background:#111d2e}.button-icon{position:relative;width:17px;height:17px;border:1px solid #51759e;border-radius:5px}.button-icon::after,.shield::after,.result-mark.success::after,.empty-mark::after{content:"";display:block;width:8px;height:5px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:translate(3px,4px) rotate(-45deg)}.play{width:9px;height:11px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%)}.control-rail{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:24px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.toggles{display:grid!important;grid-template-columns:repeat(3,minmax(124px,max-content));align-items:center;justify-content:start;gap:12px 18px;min-width:0}.schedule-fields{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:14px 18px}.toggle{display:grid!important;grid-template-columns:36px auto;align-items:center;gap:10px;min-width:124px;margin:0!important;padding:0!important;white-space:nowrap;cursor:pointer}.toggle input,.site-chip input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.toggle>i{position:relative!important;display:block!important;flex:0 0 36px!important;width:36px!important;min-width:36px!important;max-width:36px!important;height:20px!important;min-height:20px!important;margin:0!important;padding:0!important;border:1px solid #3a526e!important;border-radius:10px!important;background:#182638!important;overflow:hidden}.toggle>i::before{content:none!important}.toggle>i::after{content:""!important;position:absolute!important;top:3px!important;left:3px!important;width:12px!important;height:12px!important;margin:0!important;border:0!important;border-radius:50%!important;background:#8193a8!important;transform:none!important}.toggle input:checked+i{border-color:#338bf1!important;background:#216fce!important}.toggle input:checked+i::after{left:19px!important;background:#fff!important}.toggle>span{display:block!important;margin:0!important;padding:0!important;line-height:20px!important}.schedule-fields>label{display:flex;align-items:center;gap:8px;color:var(--muted);white-space:nowrap}.schedule-fields input{width:58px;height:34px;padding:0 7px;border:1px solid #354c68;border-radius:7px;color:var(--text);background:#0d1725;font:inherit;text-align:center;font-variant-numeric:tabular-nums}.time-field,.unit-field{display:flex;align-items:center;gap:3px}.time-field input{width:45px}.time-field b{color:#71859f}.unit-field{position:relative}.unit-field input{padding-right:25px}.unit-field i{position:absolute;right:8px;color:#71859f;font-size:11px;font-style:normal}.run-status{display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:10px;margin-top:12px;padding:12px 16px;border:1px solid #28527f;border-radius:10px;background:#10243d}.run-status>div:first-of-type{display:flex;gap:12px}.run-status small{color:#8fa7c2}.run-status strong{color:#83bfff;font-variant-numeric:tabular-nums}.pulse{width:8px;height:8px;border-radius:50%;background:#668098}.pulse.active{background:var(--green);box-shadow:0 2px 9px rgba(85,211,154,.5)}.progress{grid-column:1/-1;height:3px;overflow:hidden;background:#1c3858}.progress i{display:block;height:100%;background:#51a2ff}.sites-panel,.history-panel{margin-top:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}.section-head{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 19px;border-bottom:1px solid var(--line-soft)}.section-head h3{font-size:16px}.link-button,.group-title button{min-height:auto;padding:3px 0;border:0;color:#72b5ff;background:transparent;font:inherit;font-size:12px;cursor:pointer}.link-button.danger{color:#ff939c}.section-actions span{width:1px;height:13px;background:var(--line)}.site-group{padding:0 18px 17px}.site-group+.site-group{border-top:1px solid var(--line-soft)}.group-title{display:flex;align-items:center;gap:8px;padding:15px 1px 10px;color:#bdcadd}.group-title span{font-weight:750}.group-title small{padding:1px 6px;border-radius:6px;color:#7f94ac;background:#19283c;font-variant-numeric:tabular-nums}.group-title button{margin-left:auto}.site-chips{display:flex;flex-wrap:wrap;gap:9px}.site-chip{position:relative;display:grid;grid-template-columns:17px 29px minmax(70px,1fr) 7px;align-items:center;gap:8px;min-width:174px;min-height:54px;padding:7px 10px;border:1px solid #30445d;border-radius:9px;color:#b8c7d9;background:#111d2d;cursor:pointer;user-select:none}.site-chip:hover{border-color:#4b7098;background:#15243a}.site-chip.selected{border-color:#318af1;color:#eaf5ff;background:#142a47;box-shadow:0 6px 18px rgba(4,13,25,.2)}.checkmark{display:grid;place-items:center;width:16px;height:16px;border:1px solid #526a85;border-radius:4px;background:#0d1724}.selected .checkmark{border-color:#3795ff;background:#2f89f5}.selected .checkmark i{width:8px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:translateY(-1px) rotate(-45deg)}.site-badge{display:grid;place-items:center;width:29px;height:29px;border:1px solid #38516f;border-radius:8px;color:#8ebce9;background:#192a40;font-size:9px;font-weight:850;letter-spacing:-.02em}.selected .site-badge{border-color:#3d75ad;color:#b8dcff;background:#19395f}.site-copy{min-width:0}.site-copy b,.site-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.site-copy b{font-size:13px}.site-copy small{color:#758ba4;font-size:10px}.cookie-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}.site-chip.missing .cookie-dot{background:var(--red)}.save-bar{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 18px;border-top:1px solid var(--line-soft);background:#0d1826}.save-bar p{display:flex;align-items:center;gap:8px;margin:0;color:#8297b0;font-size:12px}.shield{position:relative;width:18px;height:18px;border:1px solid #397d65;border-radius:6px;color:var(--green);background:#112c27}.result-mark{position:relative;width:22px;height:22px;border-radius:7px}.result-mark.success{color:var(--green);background:#123228}.result-mark.failed{color:var(--red);background:#361c27}.result-mark.failed::after{content:"";position:absolute;left:10px;top:5px;width:2px;height:8px;border-radius:1px;background:currentColor;box-shadow:0 10px 0 -0.5px currentColor}.history-panel{overflow:hidden}.history details+details{border-top:1px solid var(--line-soft)}.history summary{display:grid;grid-template-columns:25px 1fr auto 12px;align-items:center;gap:10px;padding:13px 18px;cursor:pointer;list-style:none}.history summary::-webkit-details-marker{display:none}.history time{color:#7389a2;font-size:12px;font-variant-numeric:tabular-nums}.chevron{width:7px;height:7px;border-right:1px solid #8094ab;border-bottom:1px solid #8094ab;transform:rotate(45deg)}details[open] .chevron{transform:rotate(225deg)}.history ul{margin:0;padding:0 18px 13px 53px;list-style:none}.history li{display:flex;justify-content:space-between;gap:20px;padding:5px 0;color:#aebdd0}.history em{font-style:normal;text-align:right}.success-text{color:var(--green)}.failed-text{color:var(--red)}.empty{padding:31px;text-align:center;color:#8295ac}.empty-mark{position:relative;display:block;width:34px;height:34px;margin:0 auto 9px;border:1px solid #345477;border-radius:10px;color:#6aabed;background:#13243a}.empty-mark::after{width:11px;height:7px;transform:translate(10px,10px) rotate(-45deg)}.empty b{display:block;color:#c8d5e5}.empty p{margin:3px 0 0}.loading{padding:36px;color:#8498b0;text-align:center}
-@media(max-width:940px){.control-rail{grid-template-columns:1fr}.schedule-fields{justify-content:flex-start}.site-chip{flex:1 1 180px}}
-@media(max-width:620px){.mast{align-items:stretch;flex-direction:column}.mast-actions .button{flex:1}.control-rail{padding:15px}.toggles,.schedule-fields{align-items:stretch;flex-direction:column;gap:12px}.schedule-fields>label{justify-content:space-between}.section-head{align-items:flex-start}.section-head p{max-width:34ch}.site-group{padding-inline:12px}.site-chip{flex-basis:100%}.save-bar{align-items:stretch;flex-direction:column}.save-bar .button{width:100%}.history summary{grid-template-columns:25px 1fr 12px}.history time{grid-column:2}.history ul{padding-left:53px}.history li{flex-direction:column;gap:2px}.history em{text-align:left}}
-
-/* 平台宿主也使用 .toggle/input/i；这里完全重置本组件开关，避免原生控件与宿主伪元素叠加。 */
-.control-rail .toggles>.toggle{all:unset!important;display:grid!important;grid-template-columns:36px max-content!important;align-items:center!important;gap:10px!important;min-width:124px!important;color:var(--text)!important;font:inherit!important;white-space:nowrap!important;cursor:pointer!important;box-sizing:border-box!important}.control-rail .toggles>.toggle::before,.control-rail .toggles>.toggle::after{content:none!important;display:none!important}.control-rail .toggles>.toggle>input{display:none!important;appearance:none!important;width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;opacity:0!important}.control-rail .toggles>.toggle>i{all:unset!important;position:relative!important;display:block!important;width:36px!important;height:20px!important;border:1px solid #3a526e!important;border-radius:10px!important;background:#182638!important;overflow:hidden!important;box-sizing:border-box!important}.control-rail .toggles>.toggle>i::before{content:none!important;display:none!important}.control-rail .toggles>.toggle>i::after{content:""!important;position:absolute!important;display:block!important;top:3px!important;left:3px!important;width:12px!important;height:12px!important;margin:0!important;padding:0!important;border:0!important;border-radius:50%!important;background:#8193a8!important;box-shadow:none!important;transform:none!important}.control-rail .toggles>.toggle>input:checked+i{border-color:#338bf1!important;background:#216fce!important}.control-rail .toggles>.toggle>input:checked+i::after{left:19px!important;background:#fff!important}.control-rail .toggles>.toggle>span{all:unset!important;display:block!important;color:var(--text)!important;font:inherit!important;line-height:20px!important;white-space:nowrap!important}
-@media(max-width:620px){.control-rail>.toggles{grid-template-columns:1fr!important}.control-rail .toggles>.toggle{min-width:0!important}}
-
-/* 控制栏按可用宽度换行：开关组与参数组永不互相侵占。 */
-.control-rail{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;column-gap:36px!important;row-gap:16px!important}.control-rail>.toggles{flex:0 0 auto!important;min-width:max-content!important}.control-rail>.schedule-fields{flex:1 1 470px!important;min-width:0!important}
-@media(max-width:620px){.control-rail>.toggles{width:100%!important;min-width:0!important}.control-rail>.schedule-fields{flex-basis:100%!important}}
-
-.site-name{display:flex;align-items:center;gap:6px;min-width:0}.site-name>b{min-width:0}.site-name>em{flex:0 0 auto;padding:1px 5px;border:1px solid #9b6b2b;border-radius:5px;color:#ffc56c;background:#302413;font-size:9px;font-style:normal;font-weight:750;line-height:15px}
-.custom-sites{border-top:1px solid var(--line-soft);padding:18px}.custom-head{display:flex;align-items:center;justify-content:space-between;gap:16px}.custom-head h3{margin:0;font-size:15px}.custom-head p{margin:3px 0 0;color:var(--muted);font-size:12px}.custom-list{display:grid;gap:9px;margin-top:13px}.custom-row{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(220px,1.5fr) auto;gap:9px;align-items:center}.custom-row input{width:100%;height:38px;padding:0 10px;border:1px solid #354c68;border-radius:7px;color:var(--text);background:#0d1725;font:inherit}.custom-row input:focus{border-color:#4d9af2;outline:2px solid #244f7f}.custom-empty{margin-top:12px;padding:12px;border:1px dashed #304863;border-radius:8px;color:#7188a1;text-align:center;font-size:12px}
-.runtime-logs{max-height:320px;overflow:auto;font:12px/1.5 ui-monospace,"Cascadia Code",Consolas,monospace}.log-row{display:grid;grid-template-columns:64px 110px 1fr;gap:12px;padding:8px 18px;border-top:1px solid var(--line-soft);color:#aebdd0}.log-row:first-child{border-top:0}.log-row time{color:#7188a1}.log-row b{overflow:hidden;color:#8ebce9;text-overflow:ellipsis;white-space:nowrap}.log-row.success span{color:var(--green)}.log-row.warning span{color:#ffc56c}.log-row.error span{color:var(--red)}.load-error{padding:40px;border:1px solid #713845;border-radius:14px;color:#d9e5f2;background:#101b2a;text-align:center}.load-error b{font-size:17px}.load-error p{margin:8px auto 18px;max-width:620px;color:#ff9da6}.load-error .button{margin:auto}@media(max-width:620px){.log-row{grid-template-columns:58px 80px 1fr;padding-inline:12px;gap:8px}}
-
-/* 数字参数保留完整可读宽度，单位独立占位，避免宿主数字步进按钮遮挡数值。 */
-.schedule-fields>label{flex:0 0 auto;min-width:max-content}.schedule-fields input{flex:0 0 64px;width:64px;min-width:64px}.time-field,.unit-field{flex:0 0 auto;min-width:max-content}.time-field input{flex-basis:50px;width:50px;min-width:50px}.unit-field{position:static;gap:7px}.unit-field input{flex-basis:68px;width:68px;min-width:68px;padding-right:7px}.unit-field i{position:static;flex:0 0 auto;white-space:nowrap}
-@media(max-width:620px){.custom-head{align-items:flex-start;flex-direction:column}.custom-row{grid-template-columns:1fr}.custom-row .link-button{justify-self:start}}
-.schedule-fields>.retry-note{flex:1 0 100%;min-width:0;margin:0;color:var(--muted);font-size:12px;line-height:1.7;overflow-wrap:anywhere}.schedule-fields>.retry-error{color:var(--red)}
-.piggo-login{padding:18px;border-top:1px solid var(--line-soft);color:var(--text);overflow-wrap:anywhere}.piggo-login h3{margin:0;font-size:15px}.piggo-login p{max-width:75ch;margin:8px 0 0;color:#aebdd0;font-size:13px;line-height:1.7}.piggo-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}.piggo-login label{display:grid;gap:7px;min-width:0;color:var(--text);font-size:13px}.piggo-login input{box-sizing:border-box;width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid #354c68;border-radius:7px;background:#0d1725;color:var(--text);caret-color:#79b7ff;font:inherit}.piggo-login input::placeholder{color:#9aadc4}.piggo-login input:disabled{opacity:.65;cursor:wait}.piggo-login input:focus-visible{outline:2px solid #79b7ff;outline-offset:3px}.piggo-login ::selection{color:#fff;background:#285a91}
-@media(max-width:620px){.piggo-fields{grid-template-columns:1fr}.piggo-login{padding:16px 12px}}
+.pt-ios { display: flex; flex-direction: column; gap: 22px; min-width: 0; color: var(--ios-text); }
+.pt-ios *, .pt-ios *::before, .pt-ios *::after { box-sizing: border-box; }
+.pt-ios h2, .pt-ios h3, .pt-ios p { margin: 0; }
+.pt-ios h2 { font-size: 21px; font-weight: 650; letter-spacing: -.02em; }
+.pt-ios h3 { font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
+.pt-ios p { color: var(--ios-secondary); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.pt-ios-mast { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.pt-ios-title-block { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.pt-ios-title-block > div { min-width: 0; }
+.pt-ios-brand-mark { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 13px; background: var(--ios-accent); color: #fff; font-size: 15px; font-weight: 700; }
+.pt-ios-mast p { margin-top: 4px; }
+.pt-ios-mast p b { color: var(--ios-text); font-variant-numeric: tabular-nums; }
+.pt-ios-mast-actions, .pt-ios-section-actions { display: flex; align-items: center; gap: 9px; flex: none; }
+.pt-ios-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font: inherit; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.pt-ios-button:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.pt-ios-button.pt-ios-primary { border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.pt-ios-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.pt-ios-button:disabled, .pt-ios-link-button:disabled { opacity: .5; cursor: not-allowed; }
+.pt-ios-button-icon { position: relative; width: 17px; height: 17px; border: 1px solid currentColor; border-radius: 5px; }
+.pt-ios-button-icon::after, .pt-ios-shield::after, .pt-ios-result-mark.success::after, .pt-ios-empty-mark::after { content: ''; position: absolute; width: 8px; height: 5px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translate(3px, 4px) rotate(-45deg); }
+.pt-ios-play { width: 9px; height: 11px; background: currentColor; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.pt-ios-control-rail { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); overflow: hidden; }
+.pt-ios-toggles { display: flex; flex-direction: column; padding: 5px 18px; border-right: 1px solid var(--ios-line); }
+.pt-ios-toggle { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; margin: 0; cursor: pointer; }
+.pt-ios-toggle + .pt-ios-toggle { border-top: 1px solid var(--ios-line); }
+.pt-ios-toggle > span { order: 1; }
+.pt-ios-toggle input, .pt-ios-site-chip input { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.pt-ios-toggle > i { position: relative; display: block; flex: 0 0 50px; width: 50px; height: 30px; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); order: 2; transition: background var(--ios-fast) ease, border-color var(--ios-fast) ease; }
+.pt-ios-toggle > i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .2); transition: transform var(--ios-duration) var(--ios-ease); }
+.pt-ios-toggle input:checked + i { background: var(--ios-accent); border-color: transparent; }
+.pt-ios-toggle input:checked + i::after { transform: translateX(20px); }
+.pt-ios-toggle input:focus-visible + i { outline: 3px solid var(--accent, #0063dc); outline-offset: 3px; }
+.pt-ios-toggle:active > i::after { transform: scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.pt-ios-toggle:active input:checked + i::after { transform: translateX(20px) scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.pt-ios-schedule-fields { display: flex; flex-direction: column; padding: 0 18px 16px; }
+.pt-ios-schedule-fields > label { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 62px; }
+.pt-ios-schedule-fields > label + label { border-top: 1px solid var(--ios-line); }
+.pt-ios-schedule-fields input { width: 70px; min-width: 70px; min-height: 40px; padding: 7px 10px; border: 1px solid var(--ios-line); border-radius: 11px; background: var(--ios-inset); color: var(--ios-text); text-align: center; font: inherit; font-variant-numeric: tabular-nums; }
+.pt-ios-schedule-fields input[aria-invalid='true'] { border-color: var(--danger, #bd2733); }
+.pt-ios-time-field, .pt-ios-unit-field { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.pt-ios-time-field input { width: 55px; min-width: 55px; }
+.pt-ios-time-field b, .pt-ios-unit-field i { color: var(--ios-secondary); font-style: normal; }
+.pt-ios-schedule-fields > .pt-ios-retry-note { margin-top: 8px; }
+.pt-ios-schedule-fields > .pt-ios-retry-error { color: var(--danger, #bd2733); }
+.pt-ios-run-status { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 16px 18px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); }
+.pt-ios-run-status > div:first-of-type { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.pt-ios-run-status small { color: var(--ios-secondary); }
+.pt-ios-run-status strong { color: var(--accent, #0063dc); font-variant-numeric: tabular-nums; }
+.pt-ios-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--ios-secondary); }
+.pt-ios-pulse.active { background: var(--success, #087758); }
+.pt-ios-progress { grid-column: 1 / -1; height: 4px; overflow: hidden; border-radius: 3px; background: var(--ios-inset); }
+.pt-ios-progress i { display: block; height: 100%; border-radius: inherit; background: var(--ios-accent); transition: width var(--ios-duration) var(--ios-ease); }
+.pt-ios-sites-panel, .pt-ios-history-panel { border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); overflow: hidden; }
+.pt-ios-section-head { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 19px 20px; border-bottom: 1px solid var(--ios-line); }
+.pt-ios-section-head p { margin-top: 4px; }
+.pt-ios-section-head > div { min-width: 0; }
+.pt-ios-link-button, .pt-ios-group-title button { min-height: 36px; padding: 6px 3px; border: 0; border-radius: 6px; background: transparent; color: var(--accent, #0063dc); font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.pt-ios-link-button.pt-ios-danger { color: var(--danger, #bd2733); }
+.pt-ios-section-actions span { width: 1px; height: 13px; background: var(--ios-line); }
+.pt-ios-site-group { padding: 0 20px 20px; }
+.pt-ios-site-group + .pt-ios-site-group { border-top: 1px solid var(--ios-line); }
+.pt-ios-group-title { display: flex; align-items: center; gap: 8px; padding: 15px 0 10px; }
+.pt-ios-group-title > span { font-weight: 600; }
+.pt-ios-group-title small { padding: 2px 6px; border-radius: 6px; background: var(--ios-inset); color: var(--ios-secondary); font-variant-numeric: tabular-nums; }
+.pt-ios-group-title button { margin-left: auto; }
+.pt-ios-site-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); gap: 9px; }
+.pt-ios-site-chip { position: relative; display: grid; grid-template-columns: 18px 30px minmax(0, 1fr) 7px; align-items: center; gap: 8px; min-width: 0; min-height: 62px; padding: 10px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); cursor: pointer; user-select: none; transition: border-color var(--ios-fast), background var(--ios-fast); }
+.pt-ios-site-chip:hover { border-color: var(--accent, #0063dc); }
+.pt-ios-site-chip.selected { border-color: var(--accent, #0063dc); background: var(--accent-dim, #e8f1ff); }
+.pt-ios-checkmark { display: grid; place-items: center; width: 18px; height: 18px; border: 1px solid var(--border-light, #b9bec9); border-radius: 5px; background: var(--ios-inset); }
+.pt-ios-site-chip.selected .pt-ios-checkmark { background: var(--ios-accent); border-color: transparent; }
+.pt-ios-site-chip.selected .pt-ios-checkmark i { width: 9px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateY(-1px) rotate(-45deg); }
+.pt-ios-site-chip:has(input:focus-visible) { outline: 3px solid var(--accent, #0063dc); outline-offset: 3px; }
+.pt-ios-site-badge { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--ios-control); color: var(--ios-secondary); font-size: 10px; font-weight: 650; }
+.pt-ios-site-copy { min-width: 0; }
+.pt-ios-site-copy b, .pt-ios-site-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt-ios-site-copy b { font-size: 13px; }
+.pt-ios-site-copy small { color: var(--ios-secondary); font-size: 11px; }
+.pt-ios-site-name { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.pt-ios-site-name > b { min-width: 0; }
+.pt-ios-site-name > em { flex: none; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--warning, #926100) 10%, transparent); color: var(--warning, #926100); font-size: 9px; font-style: normal; }
+.pt-ios-cookie-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success, #087758); }
+.pt-ios-site-chip.missing .pt-ios-cookie-dot { background: var(--danger, #bd2733); }
+.pt-ios-piggo-login, .pt-ios-custom-sites { padding: 20px; border-top: 1px solid var(--ios-line); overflow-wrap: anywhere; }
+.pt-ios-piggo-login p, .pt-ios-custom-head p { max-width: 75ch; margin-top: 6px; }
+.pt-ios-piggo-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.pt-ios-piggo-fields label { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: 13px; }
+.pt-ios-piggo-fields input, .pt-ios-custom-row input { width: 100%; min-width: 0; min-height: 44px; padding: 9px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); font: inherit; }
+.pt-ios input:focus { border-color: var(--accent, #0063dc); }
+.pt-ios-piggo-fields input:disabled { opacity: .65; cursor: wait; }
+.pt-ios-custom-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pt-ios-custom-list { display: grid; gap: 12px; margin-top: 16px; }
+.pt-ios-custom-row { display: grid; grid-template-columns: minmax(100px, .7fr) minmax(160px, 1.3fr) auto; align-items: center; gap: 10px; }
+.pt-ios-custom-empty { margin-top: 12px; padding: 18px; border-radius: 12px; background: var(--ios-inset); color: var(--ios-secondary); text-align: center; font-size: 12px; }
+.pt-ios-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 20px; border-top: 1px solid var(--ios-line); background: var(--ios-inset); }
+.pt-ios-save-bar p { display: flex; align-items: center; gap: 8px; }
+.pt-ios-shield { position: relative; width: 18px; height: 18px; flex: none; border: 1px solid currentColor; border-radius: 6px; color: var(--success, #087758); }
+.pt-ios-history details + details { border-top: 1px solid var(--ios-line); }
+.pt-ios-history summary { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto 12px; align-items: center; gap: 10px; min-height: 64px; padding: 14px 20px; cursor: pointer; list-style: none; }
+.pt-ios-history summary::-webkit-details-marker { display: none; }
+.pt-ios-history summary b { font-weight: 500; overflow-wrap: anywhere; }
+.pt-ios-history time { color: var(--ios-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.pt-ios-result-mark { position: relative; width: 22px; height: 22px; border-radius: 7px; }
+.pt-ios-result-mark.success { color: var(--success, #087758); background: color-mix(in srgb, var(--success, #087758) 12%, transparent); }
+.pt-ios-result-mark.failed { color: var(--danger, #bd2733); background: var(--danger-dim, #ffebed); }
+.pt-ios-result-mark.failed::after { content: '!'; display: grid; place-items: center; width: 22px; height: 22px; font-size: 14px; font-weight: 700; }
+.pt-ios-chevron { width: 7px; height: 7px; border-right: 1px solid var(--ios-secondary); border-bottom: 1px solid var(--ios-secondary); transform: rotate(45deg); transition: transform var(--ios-duration) var(--ios-ease); }
+.pt-ios-history details[open] .pt-ios-chevron { transform: rotate(225deg); }
+.pt-ios-history ul { margin: 0; padding: 0 20px 16px 54px; list-style: none; }
+.pt-ios-history li { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0; color: var(--ios-secondary); font-size: 13px; overflow-wrap: anywhere; }
+.pt-ios-history em { font-style: normal; text-align: right; }
+.pt-ios-success-text { color: var(--success, #087758); }
+.pt-ios-failed-text { color: var(--danger, #bd2733); }
+.pt-ios-empty { padding: 34px 24px; text-align: center; color: var(--ios-secondary); }
+.pt-ios-empty b { display: block; color: var(--ios-text); font-weight: 600; }
+.pt-ios-empty p { margin-top: 5px; }
+.pt-ios-empty-mark { display: block; position: relative; width: 34px; height: 34px; margin: 0 auto 12px; border: 1px solid var(--ios-line); border-radius: 10px; background: var(--ios-inset); color: var(--accent, #0063dc); }
+.pt-ios-empty-mark::after { width: 11px; height: 7px; transform: translate(10px, 10px) rotate(-45deg); }
+.pt-ios-runtime-logs { max-height: 340px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.pt-ios-log-row { display: grid; grid-template-columns: 66px 100px minmax(0, 1fr); gap: 12px; padding: 11px 20px; font-size: 12px; line-height: 1.7; }
+.pt-ios-log-row + .pt-ios-log-row { border-top: 1px solid var(--ios-line); }
+.pt-ios-log-row time { color: var(--ios-secondary); font-variant-numeric: tabular-nums; }
+.pt-ios-log-row b { overflow: hidden; color: var(--ios-text); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.pt-ios-log-row span { min-width: 0; color: var(--ios-secondary); overflow-wrap: anywhere; }
+.pt-ios-log-row.success span { color: var(--success, #087758); }
+.pt-ios-log-row.warning span { color: var(--warning, #926100); }
+.pt-ios-log-row.error span { color: var(--danger, #bd2733); }
+.pt-ios-loading { padding: 40px 24px; color: var(--ios-secondary); text-align: center; }
+.pt-ios-load-error { padding: 32px 24px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); color: var(--ios-text); text-align: center; }
+.pt-ios-load-error b { font-size: 17px; font-weight: 600; }
+.pt-ios-load-error p { max-width: 75ch; margin: 10px auto 20px; color: var(--danger, #bd2733); overflow-wrap: anywhere; }
+:global(html[data-theme='transparent'] .pt-ios-control-rail),
+:global(html[data-theme='transparent'] .pt-ios-sites-panel),
+:global(html[data-theme='transparent'] .pt-ios-history-panel),
+:global(html[data-theme='transparent'] .pt-ios-run-status) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 760px) {
+  .pt-ios-mast { align-items: stretch; flex-direction: column; gap: 16px; }
+  .pt-ios-mast-actions .pt-ios-button { flex: 1; }
+  .pt-ios-control-rail { grid-template-columns: minmax(0, 1fr); }
+  .pt-ios-toggles { border-right: 0; border-bottom: 1px solid var(--ios-line); }
+  .pt-ios-schedule-fields { padding-top: 3px; }
+}
+@container (max-width: 520px) {
+  .pt-ios { gap: 18px; }
+  .pt-ios-section-head { padding: 16px; align-items: flex-start; gap: 12px; }
+  .pt-ios-site-group { padding-inline: 16px; }
+  .pt-ios-site-chips { grid-template-columns: minmax(0, 1fr); }
+  .pt-ios-piggo-login, .pt-ios-custom-sites { padding: 16px; }
+  .pt-ios-piggo-fields { grid-template-columns: minmax(0, 1fr); }
+  .pt-ios-custom-head { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .pt-ios-custom-row { grid-template-columns: minmax(0, 1fr); padding-top: 12px; }
+  .pt-ios-custom-row + .pt-ios-custom-row { border-top: 1px solid var(--ios-line); }
+  .pt-ios-custom-row .pt-ios-link-button { justify-self: start; }
+  .pt-ios-save-bar { flex-direction: column; align-items: stretch; padding: 16px; gap: 14px; }
+  .pt-ios-history summary { grid-template-columns: 24px minmax(0, 1fr) 12px; padding-inline: 16px; }
+  .pt-ios-history time { grid-column: 2; grid-row: 2; }
+  .pt-ios-history .pt-ios-chevron { grid-column: 3; grid-row: 1; }
+  .pt-ios-history ul { padding-inline: 50px 16px; }
+  .pt-ios-history li { flex-direction: column; gap: 3px; }
+  .pt-ios-history em { text-align: left; }
+  .pt-ios-log-row { grid-template-columns: 66px minmax(0, 1fr); gap: 3px 10px; padding-inline: 16px; }
+  .pt-ios-log-row span { grid-column: 1 / -1; }
+}
+@media (forced-colors: active) {
+  .pt-ios-toggle input, .pt-ios-site-chip input { position: static; width: 22px; height: 22px; clip-path: none; }
+  .pt-ios-toggle > i, .pt-ios-site-chip .pt-ios-checkmark { display: none; }
+}
 </style>

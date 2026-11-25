@@ -161,98 +161,98 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer) })
 </script>
 
 <template>
-  <div class="read-panel">
-    <div v-if="loading" class="skeleton" aria-label="正在加载">
+  <div class="hh-read">
+    <div v-if="loading" class="hh-read-skeleton" aria-label="正在加载">
       <span></span><span></span><span></span>
     </div>
 
     <template v-else>
-      <p v-if="apiError" class="api-error">无法读取消息管理状态：{{ apiError }}。请检查插件是否完整启动。</p>
-      <header class="header">
-        <div class="title-wrap">
-          <svg class="title-icon" viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('inbox')"></svg>
+      <p v-if="apiError" class="hh-read-api-error">无法读取消息管理状态：{{ apiError }}。请检查插件是否完整启动。</p>
+      <header class="hh-read-header">
+        <div class="hh-read-title-wrap">
+          <svg class="hh-read-title-icon" viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('inbox')"></svg>
           <div>
             <h2>消息管理</h2>
             <p>可以将未读消息批量设为已读，或删除收件箱全部消息。</p>
           </div>
         </div>
-        <span class="state" :class="statusTone"><i></i>{{ phaseLabel }}</span>
+        <span class="hh-read-state" :class="statusTone"><i></i>{{ phaseLabel }}</span>
       </header>
 
-      <section class="run-area" aria-labelledby="run-heading">
-        <div class="run-copy">
-          <span id="run-heading" class="section-label">当前任务</span>
+      <section class="hh-read-run-area" aria-labelledby="run-heading">
+        <div class="hh-read-run-copy">
+          <span id="run-heading" class="hh-read-section-label">当前任务</span>
           <strong>{{ status.message }}</strong>
-          <span class="meta">
+          <span class="hh-read-meta">
             <template v-if="status.total_pages">第 {{ status.current_page }}/{{ status.total_pages }} 页 · </template>
             已处理 {{ status.processed }} 条
           </span>
         </div>
-        <div class="actions">
-          <button v-if="!status.running" class="button primary" :disabled="starting || !cfg.enabled" @click="run">
+        <div class="hh-read-actions">
+          <button v-if="!status.running" class="hh-read-button hh-read-primary" :disabled="starting || !cfg.enabled" @click="run">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('play')"></svg>
             {{ starting ? '启动中…' : '开始全部已读' }}
           </button>
-          <button v-if="!status.running" class="button danger" :disabled="deleting || !cfg.enabled" @click="runDelete">
+          <button v-if="!status.running" class="hh-read-button hh-read-danger" :disabled="deleting || !cfg.enabled" @click="runDelete">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('trash')"></svg>
             {{ deleting ? '启动中…' : '删除全部消息' }}
           </button>
-          <button v-else class="button danger" :disabled="stopping || status.stop_requested" @click="stop">
+          <button v-else class="hh-read-button hh-read-danger" :disabled="stopping || status.stop_requested" @click="stop">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('stop')"></svg>
             {{ status.stop_requested ? '等待停止…' : stopping ? '提交中…' : '停止任务' }}
           </button>
-          <button class="button" :disabled="checking || status.running" @click="checkCookie">
+          <button class="hh-read-button" :disabled="checking || status.running" @click="checkCookie">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('shield')"></svg>
             {{ checking ? '检查中…' : '检查 Cookie' }}
           </button>
         </div>
-        <div class="progress" role="progressbar" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+        <div class="hh-read-progress" role="progressbar" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
           <span :style="{ transform: `scaleX(${progress / 100})` }"></span>
         </div>
       </section>
 
-      <div class="content-grid">
-        <section class="settings" aria-labelledby="settings-heading">
-          <div class="section-head">
+      <div class="hh-read-content-grid">
+        <section class="hh-read-settings" aria-labelledby="settings-heading">
+          <div class="hh-read-section-head">
             <div><h3 id="settings-heading">运行设置</h3><p>开始任务时会先自动保存这些设置。</p></div>
-            <button class="button compact" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+            <button class="hh-read-button hh-read-compact" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
           </div>
-          <label class="toggle-row">
+          <label class="hh-read-toggle-row">
             <span><b>启用插件</b><small>关闭后不能启动新任务</small></span>
-            <input v-model="cfg.enabled" type="checkbox" role="switch" />
+            <input v-model="cfg.enabled" type="checkbox" role="switch" /><span class="hh-read-track" aria-hidden="true"><span></span></span>
           </label>
-          <label class="toggle-row">
+          <label class="hh-read-toggle-row">
             <span><b>完成后推送结果</b><small>通过平台通知渠道发送处理汇总</small></span>
-            <input v-model="cfg.notify_result" type="checkbox" role="switch" />
+            <input v-model="cfg.notify_result" type="checkbox" role="switch" /><span class="hh-read-track" aria-hidden="true"><span></span></span>
           </label>
-          <div class="field-grid">
-            <label><span>翻页间隔</span><div class="input-unit"><input v-model.number="cfg.page_delay" type="number" min="0.2" max="10" step="0.1" /><em>秒</em></div></label>
-            <label><span>最多扫描</span><div class="input-unit"><input v-model.number="cfg.max_pages" type="number" min="1" max="1000" /><em>页</em></div></label>
+          <div class="hh-read-field-grid">
+            <label><span>翻页间隔</span><div class="hh-read-input-unit"><input v-model.number="cfg.page_delay" type="number" min="0.2" max="10" step="0.1" /><em>秒</em></div></label>
+            <label><span>最多扫描</span><div class="hh-read-input-unit"><input v-model.number="cfg.max_pages" type="number" min="1" max="1000" /><em>页</em></div></label>
           </div>
-          <p class="notice"><b>全部已读</b>只处理带 <code>icon-unread.svg</code> 标记的消息；<b>删除全部消息</b>会清空当前收件箱中的已读和未读消息，且无法撤销。</p>
+          <p class="hh-read-notice"><b>全部已读</b>只处理带 <code>icon-unread.svg</code> 标记的消息；<b>删除全部消息</b>会清空当前收件箱中的已读和未读消息，且无法撤销。</p>
         </section>
 
-        <section class="history-area" aria-labelledby="history-heading">
-          <div class="section-head">
+        <section class="hh-read-history-area" aria-labelledby="history-heading">
+          <div class="hh-read-section-head">
             <div><h3 id="history-heading">最近运行</h3><p>保留最近 20 次处理结果。</p></div>
-            <div class="head-actions">
-              <button class="icon-button" title="刷新记录" aria-label="刷新记录" @click="loadHistory">
+            <div class="hh-read-head-actions">
+              <button class="hh-read-icon-button" title="刷新记录" aria-label="刷新记录" @click="loadHistory">
                 <svg viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('refresh')"></svg>
               </button>
-              <button class="icon-button danger-text" title="清空记录" aria-label="清空记录" :disabled="clearing || !history.length" @click="clearHistory">
+              <button class="hh-read-icon-button hh-read-danger-text" title="清空记录" aria-label="清空记录" :disabled="clearing || !history.length" @click="clearHistory">
                 <svg viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('trash')"></svg>
               </button>
             </div>
           </div>
-          <div v-if="!history.length" class="empty">
+          <div v-if="!history.length" class="hh-read-empty">
             <svg viewBox="0 0 24 24" aria-hidden="true" v-html="iconPath('inbox')"></svg>
             <b>还没有运行记录</b><span>首次执行后，处理数量和结果会显示在这里。</span>
           </div>
-          <div v-else class="history-list">
-            <article v-for="(item, index) in history" :key="item.time + index" class="history-item">
-              <span class="history-status" :class="item.status">{{ historyStatus(item) }}</span>
+          <div v-else class="hh-read-history-list">
+            <article v-for="(item, index) in history" :key="item.time + index" class="hh-read-history-item">
+              <span class="hh-read-history-status" :class="item.status">{{ historyStatus(item) }}</span>
               <div><b>{{ operationLabel(item) }} · {{ item.processed }} 条消息</b><span>{{ item.detail }}</span></div>
-              <div class="history-meta"><time>{{ item.time }}</time><span>{{ item.pages }} 页</span></div>
+              <div class="hh-read-history-meta"><time>{{ item.time }}</time><span>{{ item.pages }} 页</span></div>
             </article>
           </div>
         </section>
@@ -262,77 +262,99 @@ onBeforeUnmount(() => { if (timer) window.clearInterval(timer) })
 </template>
 
 <style scoped>
-.read-panel {
-  --surface: var(--bg-elevated, #151e2c); --surface-low: var(--bg-card, #0f1825);
-  --border: var(--border-light, #29384b); --text: var(--text-primary, #edf3fb);
-  --muted: var(--text-secondary, #a9b6c8); --quiet: var(--text-muted, #7f8da1);
-  --accent: var(--accent, #4c9aff); --accent-low: var(--accent-dim, #17345a);
-  display: flex; flex-direction: column; gap: 18px; color: var(--text); container-type: inline-size;
+
+.hh-read { display: flex; flex-direction: column; gap: 22px; color: var(--ios-text); container-type: inline-size; }
+.hh-read h2, .hh-read h3, .hh-read p { margin: 0; }
+.hh-read h2 { color: var(--ios-text); font-size: 22px; line-height: 1.4; font-weight: 650; letter-spacing: -.035em; }
+.hh-read h3 { color: var(--ios-text); font-size: 14px; line-height: 1.5; font-weight: 650; }
+.hh-read-api-error { padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--danger, #d94a53) 20%, transparent); border-radius: 15px; background: color-mix(in srgb, var(--danger, #d94a53) 7%, transparent); color: var(--danger, #d94a53); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.hh-read-header, .hh-read-title-wrap, .hh-read-actions, .hh-read-section-head, .hh-read-head-actions, .hh-read-history-meta { display: flex; align-items: center; }
+.hh-read-header { justify-content: space-between; gap: 20px; }
+.hh-read-title-wrap { min-width: 0; gap: 13px; }
+.hh-read-title-icon { flex: 0 0 44px; width: 44px; height: 44px; padding: 10px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-inset); color: var(--ios-accent-text); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hh-read-title-wrap p, .hh-read-section-head p { margin-top: 5px; color: var(--ios-secondary); font-size: 11px; line-height: 1.75; }
+.hh-read-state { display: inline-flex; align-items: center; flex: 0 0 auto; gap: 7px; padding: 7px 12px; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); color: var(--ios-secondary); font-size: 11px; line-height: 1.5; }
+.hh-read-state i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.hh-read-state.active { color: var(--ios-accent-text); border-color: color-mix(in srgb, var(--ios-accent) 20%, transparent); background: color-mix(in srgb, var(--ios-accent) 7%, transparent); }
+.hh-read-state.success { color: var(--success, #28a56a); border-color: color-mix(in srgb, var(--success, #28a56a) 20%, transparent); background: color-mix(in srgb, var(--success, #28a56a) 7%, transparent); }
+.hh-read-state.danger { color: var(--danger, #d94a53); border-color: color-mix(in srgb, var(--danger, #d94a53) 20%, transparent); background: color-mix(in srgb, var(--danger, #d94a53) 7%, transparent); }
+.hh-read-run-area { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 22px; border: 1px solid var(--ios-line); border-radius: 24px; background: var(--ios-surface); }
+.hh-read-run-copy { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.hh-read-section-label { color: var(--ios-secondary); font-size: 10px; font-weight: 600; letter-spacing: .03em; }
+.hh-read-run-copy strong { color: var(--ios-text); font-size: 16px; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
+.hh-read-meta { color: var(--ios-secondary); font-size: 11px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.hh-read-actions { flex-wrap: wrap; justify-content: flex-end; gap: 9px; max-width: 470px; }
+.hh-read-button, .hh-read-icon-button { border: 1px solid var(--ios-line); border-radius: 13px; background: var(--ios-control); color: var(--ios-text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color var(--ios-fast) ease, color var(--ios-fast) ease, background var(--ios-fast) ease; }
+.hh-read-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 9px 14px; }
+.hh-read-button svg, .hh-read-icon-button svg, .hh-read-empty svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hh-read-button:hover:not(:disabled), .hh-read-icon-button:hover:not(:disabled) { color: var(--ios-accent-text); border-color: color-mix(in srgb, var(--ios-accent) 30%, var(--ios-line)); }
+.hh-read-button.hh-read-primary, .hh-read-button.hh-read-primary:hover:not(:disabled) { color: #fff; border-color: transparent; background: var(--ios-accent); }
+.hh-read-button.hh-read-danger { color: var(--danger, #d94a53); border-color: color-mix(in srgb, var(--danger, #d94a53) 25%, var(--ios-line)); background: color-mix(in srgb, var(--danger, #d94a53) 7%, transparent); }
+.hh-read-button.hh-read-compact { min-height: 36px; padding: 7px 13px; }
+.hh-read-button:disabled, .hh-read-icon-button:disabled { opacity: .45; cursor: not-allowed; }
+.hh-read-progress { grid-column: 1 / -1; height: 5px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--ios-text) 9%, transparent); }
+.hh-read-progress span { display: block; width: 100%; height: 100%; transform-origin: left center; border-radius: inherit; background: var(--ios-accent); transition: transform var(--ios-duration) var(--ios-ease); }
+.hh-read-content-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: start; gap: 18px; }
+.hh-read-settings, .hh-read-history-area { min-width: 0; padding: 22px; border: 1px solid var(--ios-line); border-radius: 24px; background: var(--ios-surface); }
+.hh-read-section-head { justify-content: space-between; gap: 13px; padding-bottom: 16px; border-bottom: 1px solid var(--ios-line); }
+.hh-read-head-actions { gap: 6px; flex-shrink: 0; }
+.hh-read-toggle-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 17px; min-height: 76px; padding: 15px 0; border-bottom: 1px solid var(--ios-line); cursor: pointer; }
+.hh-read-toggle-row > span:first-child { display: grid; min-width: 0; gap: 4px; }
+.hh-read-toggle-row b { color: var(--ios-text); font-size: 13px; line-height: 1.5; font-weight: 600; }
+.hh-read-toggle-row small { color: var(--ios-secondary); font-size: 11px; line-height: 1.7; }
+.hh-read-toggle-row > input { position: absolute; inset-inline-end: 0; width: 50px; height: 30px; margin: 0; opacity: 0; z-index: 2; cursor: pointer; }
+.hh-read-track { position: relative; flex: 0 0 50px; width: 50px; height: 30px; padding: 3px; border: 1px solid color-mix(in srgb, var(--ios-text) 5%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--ios-text) 18%, transparent); transition: background var(--ios-duration) var(--ios-ease); }
+.hh-read-track > span { display: block; width: 24px; height: 24px; margin: -1px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px #0002; transition: transform var(--ios-duration) var(--ios-ease); }
+.hh-read-toggle-row > input:checked + .hh-read-track { background: var(--ios-accent); }
+.hh-read-toggle-row > input:checked + .hh-read-track > span { transform: translateX(20px); }
+.hh-read-toggle-row > input:focus-visible + .hh-read-track { outline: 3px solid var(--ios-accent-text); outline-offset: 3px; }
+.hh-read-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding-top: 20px; }
+.hh-read-field-grid label { display: grid; min-width: 0; gap: 8px; color: var(--ios-secondary); font-size: 12px; line-height: 1.5; }
+.hh-read-input-unit { display: flex; align-items: center; min-width: 0; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-control); }
+.hh-read-input-unit:focus-within { outline: 3px solid var(--ios-accent-text); border-color: var(--ios-accent-text); }
+.hh-read-input-unit input { width: 100%; min-width: 0; min-height: 42px; padding: 10px 12px; border: 0; border-radius: inherit; background: transparent; color: var(--ios-text); font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; }
+.hh-read-input-unit em { padding-right: 12px; color: var(--ios-secondary); font-size: 11px; font-style: normal; }
+.hh-read p.hh-read-notice { margin-top: 18px; padding: 13px; border: 1px solid var(--ios-line); border-radius: 13px; background: var(--ios-inset); color: var(--ios-secondary); font-size: 11px; line-height: 1.85; overflow-wrap: anywhere; }
+.hh-read-notice b { color: var(--ios-text); font-weight: 600; }
+.hh-read-notice code { color: var(--ios-text); font-size: 10px; }
+.hh-read-icon-button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 11px; }
+.hh-read-danger-text:hover:not(:disabled) { color: var(--danger, #d94a53); border-color: color-mix(in srgb, var(--danger, #d94a53) 25%, var(--ios-line)); }
+.hh-read-history-list { display: flex; flex-direction: column; max-height: 500px; overflow-y: auto; overscroll-behavior: contain; }
+.hh-read-history-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 7px 12px; padding: 16px 0; border-bottom: 1px solid var(--ios-line); }
+.hh-read-history-item:last-child { border-bottom: 0; padding-bottom: 0; }
+.hh-read-history-item > div:nth-child(2) { display: grid; min-width: 0; gap: 4px; }
+.hh-read-history-item b { color: var(--ios-text); font-size: 12px; line-height: 1.6; font-weight: 600; }
+.hh-read-history-item div > span { color: var(--ios-secondary); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.hh-read-history-status { min-width: 32px; padding-top: 2px; color: var(--ios-secondary); font-size: 10px; line-height: 1.6; }
+.hh-read-history-status.completed { color: var(--success, #28a56a); }
+.hh-read-history-status.failed { color: var(--danger, #d94a53); }
+.hh-read-history-status.stopped { color: var(--warning, #b58118); }
+.hh-read-history-meta { grid-column: 2; justify-content: space-between; gap: 12px; color: var(--ios-secondary); font-size: 10px; line-height: 1.7; font-variant-numeric: tabular-nums; }
+.hh-read-history-meta time { overflow-wrap: anywhere; }
+.hh-read-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 240px; padding: 30px 10px; color: var(--ios-secondary); text-align: center; }
+.hh-read-empty svg { width: 26px; height: 26px; margin-bottom: 5px; opacity: .65; }
+.hh-read-empty b { color: var(--ios-text); font-size: 13px; font-weight: 600; }
+.hh-read-empty span { max-width: 32ch; font-size: 11px; line-height: 1.8; }
+.hh-read-skeleton { display: grid; gap: 17px; }
+.hh-read-skeleton span { display: block; height: 78px; border: 1px solid var(--ios-line); border-radius: 22px; background: var(--ios-inset); opacity: .65; }
+.hh-read-skeleton span:nth-child(2) { height: 130px; }
+.hh-read-skeleton span:nth-child(3) { height: 240px; }
+:global(html[data-theme='transparent'] .hh-read-run-area),
+:global(html[data-theme='transparent'] .hh-read-settings),
+:global(html[data-theme='transparent'] .hh-read-history-area) { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ios-text) 5%, transparent); }
+@container (max-width: 820px) {
+ .hh-read-content-grid { grid-template-columns: minmax(0, 1fr); }
+ .hh-read-run-area { grid-template-columns: minmax(0, 1fr); }
+ .hh-read-actions { max-width: none; justify-content: flex-start; }
 }
-.read-panel * { box-sizing: border-box; }
-.api-error { margin: 0; padding: 11px 13px; border: 1px solid #743b46; border-radius: 9px; color: #ffc2c7; background: #291820; font-size: 12px; line-height: 1.55; }
-.header, .title-wrap, .actions, .section-head, .head-actions, .history-meta { display: flex; align-items: center; }
-.header { justify-content: space-between; gap: 20px; }
-.title-wrap { gap: 12px; min-width: 0; }
-.title-icon { width: 28px; height: 28px; flex: 0 0 auto; color: var(--accent); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-h2, h3, p { margin: 0; }
-h2 { font-size: 18px; line-height: 1.25; font-weight: 680; letter-spacing: -0.01em; }
-h3 { font-size: 14px; line-height: 1.35; font-weight: 650; }
-.title-wrap p, .section-head p { margin-top: 4px; font-size: 12px; color: var(--quiet); line-height: 1.5; }
-.state { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); background: var(--surface-low); border: 1px solid var(--border); }
-.state i { width: 7px; height: 7px; border-radius: 50%; background: var(--quiet); }
-.state.active i { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
-.state.success i { background: #43c98b; }.state.danger i { background: #ef6a70; }
-@keyframes pulse { 50% { opacity: .42; transform: scale(.72); } }
-.run-area { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 18px; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
-.run-copy { display: flex; flex-direction: column; min-width: 0; gap: 5px; }
-.section-label { color: var(--accent); font-size: 11px; font-weight: 650; }
-.run-copy strong { font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
-.meta { color: var(--quiet); font-size: 12px; font-variant-numeric: tabular-nums; }
-.actions { align-self: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.button, .icon-button { border: 1px solid var(--border); background: var(--surface-low); color: var(--muted); cursor: pointer; transition: border-color .18s ease, color .18s ease, background .18s ease; }
-.button { min-height: 38px; padding: 8px 13px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 13px; }
-.button svg, .icon-button svg, .empty svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.button:hover:not(:disabled), .icon-button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.button:focus-visible, .icon-button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.button.primary { color: #f7fbff; border-color: var(--accent); background: var(--accent); }
-.button.primary:hover:not(:disabled) { color: #fff; background: #378bec; }
-.button.danger { color: #ffecef; border-color: #b94d58; background: #8e3440; }
-.button.compact { min-height: 32px; padding: 5px 11px; }
-.button:disabled, .icon-button:disabled { opacity: .48; cursor: not-allowed; }
-.progress { grid-column: 1 / -1; height: 4px; overflow: hidden; background: var(--surface-low); border-radius: 999px; }
-.progress span { display: block; width: 100%; height: 100%; transform-origin: left center; background: var(--accent); border-radius: inherit; transition: transform .22s ease-out; }
-.content-grid { display: grid; grid-template-columns: minmax(250px, .82fr) minmax(320px, 1.18fr); gap: 18px; align-items: start; }
-.settings, .history-area { min-width: 0; }
-.section-head { justify-content: space-between; gap: 12px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
-.head-actions { gap: 6px; }
-.toggle-row { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.toggle-row span { display: flex; flex-direction: column; gap: 3px; }
-.toggle-row b, .field-grid label > span { font-size: 13px; font-weight: 580; }
-.toggle-row small { font-size: 11px; color: var(--quiet); }
-.toggle-row input { width: 38px; height: 21px; flex: 0 0 auto; accent-color: var(--accent); cursor: pointer; }
-.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 14px; }
-.field-grid label { display: flex; flex-direction: column; gap: 7px; }
-.input-unit { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-low); }
-.input-unit:focus-within { border-color: var(--accent); }
-.input-unit input { width: 100%; min-width: 0; padding: 9px 10px; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums; }
-.input-unit em { padding-right: 10px; color: var(--quiet); font-size: 12px; font-style: normal; }
-.notice { margin-top: 14px; color: var(--quiet); font-size: 11px; line-height: 1.65; }
-.notice code { color: var(--muted); }
-.icon-button { width: 34px; height: 34px; padding: 0; border-radius: 9px; display: grid; place-items: center; }
-.danger-text:hover:not(:disabled) { border-color: #ef6a70; color: #ef6a70; }
-.history-list { display: flex; flex-direction: column; }
-.history-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.history-item > div:nth-child(2) { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
-.history-item b { font-size: 13px; }.history-item div > span { overflow: hidden; color: var(--quiet); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.history-status { min-width: 36px; font-size: 11px; color: var(--muted); }.history-status.completed { color: #43c98b; }.history-status.failed { color: #ef6a70; }.history-status.stopped { color: #e6ad55; }
-.history-meta { flex-direction: column; align-items: flex-end; gap: 3px; color: var(--quiet); font-size: 11px; font-variant-numeric: tabular-nums; }
-.empty { min-height: 210px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; text-align: center; color: var(--quiet); }
-.empty svg { width: 24px; height: 24px; }.empty b { color: var(--muted); font-size: 13px; }.empty span { max-width: 34ch; font-size: 11px; line-height: 1.55; }
-.skeleton { display: grid; gap: 14px; }.skeleton span { display: block; height: 72px; border-radius: 12px; background: var(--surface); opacity: .7; animation: shimmer 1.2s ease-in-out infinite alternate; }.skeleton span:nth-child(2) { height: 118px; }.skeleton span:nth-child(3) { height: 220px; }
-@keyframes shimmer { to { opacity: .38; } }
-::selection { background: var(--accent); color: #fff; }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
-@container (max-width: 680px) { .content-grid { grid-template-columns: 1fr; }.run-area { grid-template-columns: 1fr; }.actions { justify-content: flex-start; }.progress { grid-column: 1; } }
-@container (max-width: 420px) { .header { align-items: flex-start; }.title-wrap p { display: none; }.field-grid { grid-template-columns: 1fr; }.history-item { grid-template-columns: auto minmax(0, 1fr); }.history-meta { grid-column: 2; flex-direction: row; justify-content: flex-start; }.actions .button { flex: 1 1 auto; } }
+@container (max-width: 450px) {
+ .hh-read-header { flex-wrap: wrap; gap: 13px; }
+ .hh-read-title-icon { display: none; }
+ .hh-read h2 { font-size: 20px; }
+ .hh-read-run-area, .hh-read-settings, .hh-read-history-area { padding: 18px; border-radius: 21px; }
+ .hh-read-actions .hh-read-button { flex: 1 1 40%; padding-inline: 10px; }
+ .hh-read-field-grid { grid-template-columns: minmax(0, 1fr); }
+ .hh-read-section-head { align-items: flex-start; }
+}
+
 </style>

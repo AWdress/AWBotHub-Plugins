@@ -5,13 +5,13 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': '发红包',
  'id': 'red_packet_send',
- 'version': '2.0.3',
+ 'version': '2.0.4',
  'author': 'AWdress',
  'scope': 'user',
  'requirements': ['Pillow>=10.0'],
  'description': '用你的账号在群里发拼手气红包，支持验证码图片或可复制的文字口令，可选每领取一份后更换口令、旧码立即失效。按拼手气随机分配魔力，自带 Vue 配置页和红包监控。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_redpacket.png',
- 'changelog': 'v2.0.3 文字口令与一次性验证码\n'
+ 'changelog': 'v2.0.4 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.3 文字口令与一次性验证码\n'
               '- 新增文字口令开关，不用图片，点击或长按完整口令复制后参与\n'
               '- 一次性开关支持图片和文字模式，每领取一份更换口令，旧码立即失效\n'
               '- 防止旧码重复生成和并发重复领取，新口令发布失败则结束本轮红包\n'

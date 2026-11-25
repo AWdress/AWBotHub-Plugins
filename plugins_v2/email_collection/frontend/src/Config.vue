@@ -1,5 +1,6 @@
 <script setup>
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({pluginId: String, host: {type: Object, required: true}})
 const providers = [
@@ -145,76 +146,158 @@ onBeforeUnmount(() => clearInterval(timer))
 </script>
 
 <template>
-  <main class="config-shell">
-    <header class="page-head">
+  <IosSettings>
+  <main class="ecl-shell">
+    <header class="ecl-page-head">
       <div>
         <h2>邮件集</h2>
         <p>后台按间隔检查未读邮件；立即检查会回查近期已读和未读邮件。</p>
       </div>
-      <span class="state" :class="{busy: running || checking}">{{ running || checking ? '检查中' : '就绪' }}</span>
+      <span class="ecl-state" :class="{busy: running || checking}">{{ running || checking ? '检查中' : '就绪' }}</span>
     </header>
 
-    <p v-if="loadError" class="alert" role="alert">{{ loadError }}</p>
+    <p v-if="loadError" class="ecl-alert" role="alert">{{ loadError }}</p>
 
     <section aria-labelledby="mailboxes-title">
-      <div class="section-head">
+      <div class="ecl-section-head">
         <div><h3 id="mailboxes-title">邮箱账号</h3><p>每个邮箱单独选择服务商，授权码默认隐藏。</p></div>
-        <button class="secondary" type="button" :disabled="loading" @click="addMailbox">添加邮箱</button>
+        <button class="ecl-secondary" type="button" :disabled="loading" @click="addMailbox">添加邮箱</button>
       </div>
-      <div v-if="loading" class="empty">正在安全读取邮箱配置…</div>
-      <div v-else-if="!form.mailboxes.length" class="empty">尚未添加邮箱，点击“添加邮箱”开始配置。</div>
-      <div v-else class="mailbox-list">
-        <article v-for="(mailbox, index) in form.mailboxes" :key="index" class="mailbox-row">
-          <div class="row-number">{{ index + 1 }}</div>
+      <div v-if="loading" class="ecl-empty">正在安全读取邮箱配置…</div>
+      <div v-else-if="!form.mailboxes.length" class="ecl-empty">尚未添加邮箱，点击“添加邮箱”开始配置。</div>
+      <div v-else class="ecl-mailbox-list">
+        <article v-for="(mailbox, index) in form.mailboxes" :key="index" class="ecl-mailbox-row">
+          <div class="ecl-row-number">{{ index + 1 }}</div>
           <label><span>邮箱类型</span><select v-model="mailbox.provider"><option v-for="provider in providers" :key="provider.value" :value="provider.value">{{ provider.label }}</option></select><small>{{ providerHint(mailbox.provider) }}</small></label>
           <label><span>邮箱地址</span><input v-model.trim="mailbox.email" type="email" autocomplete="username" placeholder="name@example.com"></label>
-          <label><span>授权码或应用密码</span><div class="secret"><input v-model="mailbox.password" :type="visible[index] ? 'text' : 'password'" autocomplete="current-password" placeholder="不是网页登录密码"><button type="button" :aria-label="visible[index] ? '隐藏授权码' : '显示授权码'" @click="visible[index] = !visible[index]"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
-          <button class="remove" type="button" @click="removeMailbox(index)">删除</button>
+          <label><span>授权码或应用密码</span><div class="ecl-secret"><input v-model="mailbox.password" :type="visible[index] ? 'text' : 'password'" autocomplete="current-password" placeholder="不是网页登录密码"><button type="button" :aria-label="visible[index] ? '隐藏授权码' : '显示授权码'" @click="visible[index] = !visible[index]"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
+          <button class="ecl-remove" type="button" @click="removeMailbox(index)">删除</button>
         </article>
       </div>
     </section>
 
     <section aria-labelledby="monitor-title">
       <h3 id="monitor-title">监控与过滤</h3>
-      <div class="switch-grid">
-        <label><span>启用后台监控</span><input v-model="form.enabled" type="checkbox"></label>
+      <div class="ecl-switch-grid">
+        <label><span>启用后台监控</span><input v-model="form.enabled" type="checkbox" role="switch"></label>
         <label>
-          <span class="switch-copy">
+          <span class="ecl-switch-copy">
             <strong>推送所有新邮件</strong>
             <small>开启后忽略关键词和验证码筛选，普通邮件也会推送；通常保持关闭。</small>
           </span>
-          <input v-model="form.push_all" type="checkbox">
+          <input v-model="form.push_all" type="checkbox" role="switch">
         </label>
       </div>
-      <div class="form-grid monitor-grid">
-        <label class="wide"><span>关键词（用 | 分隔）</span><input v-model.trim="form.keywords" type="text" placeholder="验证码|重要通知|账单|订单"></label>
+      <div class="ecl-form-grid ecl-monitor-grid">
+        <label class="ecl-wide"><span>关键词（用 | 分隔）</span><input v-model.trim="form.keywords" type="text" placeholder="验证码|重要通知|账单|订单"></label>
         <label><span>轮询间隔（秒）</span><input v-model.number="form.poll_seconds" type="number" min="10" max="300"></label>
         <label><span>立即检查回查数量</span><input v-model.number="form.manual_check_limit" type="number" min="1" max="500"></label>
-        <label class="wide"><span>IMAP 代理地址（可选）</span><div class="secret"><input v-model.trim="form.imap_proxy_url" :type="proxyVisible ? 'text' : 'password'" autocomplete="off" placeholder="容器无法直连 993 时填写，如 socks5://host:port"><button type="button" :aria-label="proxyVisible ? '隐藏代理地址' : '显示代理地址'" @click="proxyVisible = !proxyVisible"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small>留空时固定使用 IPv4 直连并自动重试；支持 HTTP、SOCKS4 和 SOCKS5 代理。</small></label>
+        <label class="ecl-wide"><span>IMAP 代理地址（可选）</span><div class="ecl-secret"><input v-model.trim="form.imap_proxy_url" :type="proxyVisible ? 'text' : 'password'" autocomplete="off" placeholder="容器无法直连 993 时填写，如 socks5://host:port"><button type="button" :aria-label="proxyVisible ? '隐藏代理地址' : '显示代理地址'" @click="proxyVisible = !proxyVisible"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small>留空时固定使用 IPv4 直连并自动重试；支持 HTTP、SOCKS4 和 SOCKS5 代理。</small></label>
       </div>
     </section>
 
     <section aria-labelledby="ai-title">
       <h3 id="ai-title">AI 处理</h3>
-      <div class="switch-grid">
-        <label><span>AI 验证码识别</span><input v-model="form.ai_verification" type="checkbox"></label>
-        <label><span>AI 邮件概要</span><input v-model="form.ai_summary_enabled" type="checkbox"></label>
+      <div class="ecl-switch-grid">
+        <label><span>AI 验证码识别</span><input v-model="form.ai_verification" type="checkbox" role="switch"></label>
+        <label><span>AI 邮件概要</span><input v-model="form.ai_summary_enabled" type="checkbox" role="switch"></label>
       </div>
-      <div class="form-grid">
-        <label class="wide"><span>验证码提示词</span><textarea v-model="form.verification_prompt" rows="3" placeholder="留空使用内置提示词"></textarea></label>
-        <label class="wide"><span>概要提示词</span><textarea v-model="form.summary_prompt" rows="3" placeholder="留空使用内置提示词"></textarea></label>
+      <div class="ecl-form-grid">
+        <label class="ecl-wide"><span>验证码提示词</span><textarea v-model="form.verification_prompt" rows="3" placeholder="留空使用内置提示词"></textarea></label>
+        <label class="ecl-wide"><span>概要提示词</span><textarea v-model="form.summary_prompt" rows="3" placeholder="留空使用内置提示词"></textarea></label>
         <label><span>AI 超时（秒）</span><input v-model.number="form.ai_timeout" type="number" min="10" max="180"></label>
       </div>
     </section>
 
-    <p v-if="lastResult" class="result" aria-live="polite">{{ lastResult }}</p>
-    <footer class="actions">
-      <button class="secondary" type="button" :disabled="checking || running || saving || loading || !form.mailboxes.length" @click="checkNow">{{ checking || running ? '正在检查…' : '立即检查' }}</button>
-      <button class="primary" type="button" :disabled="saving || checking || loading || !!loadError" @click="save()">{{ saving ? '正在保存…' : '保存配置' }}</button>
+    <p v-if="lastResult" class="ecl-result" aria-live="polite">{{ lastResult }}</p>
+    <footer class="ecl-actions">
+      <button class="ecl-secondary" type="button" :disabled="checking || running || saving || loading || !form.mailboxes.length" @click="checkNow">{{ checking || running ? '正在检查…' : '立即检查' }}</button>
+      <button class="ecl-primary" type="button" :disabled="saving || checking || loading || !!loadError" @click="save()">{{ saving ? '正在保存…' : '保存配置' }}</button>
     </footer>
   </main>
+  </IosSettings>
 </template>
 
 <style scoped>
-*{box-sizing:border-box}.config-shell{color:var(--text-primary,#e8edf5);padding:4px 2px max(18px,env(safe-area-inset-bottom));display:grid;gap:28px;min-width:0}.page-head,.section-head,.actions{display:flex;align-items:center;justify-content:space-between;gap:18px}.page-head{padding-bottom:20px;border-bottom:1px solid var(--border,#263244)}h2,h3,p{margin:0}h2{font-size:22px;letter-spacing:-.02em}h3{font-size:14px;color:var(--accent,#4f9cff);margin-bottom:14px}.page-head p,.section-head p{margin-top:7px;color:var(--text-muted,#9aa6b8);font-size:13px;line-height:1.55}.state{flex:0 0 auto;font-size:12px;color:#9ee2b9;background:#153224;padding:7px 12px;border-radius:999px}.state.busy{color:#b6d3ff;background:#172d4d}.alert,.result{padding:13px 14px;border:1px solid #743b43;border-radius:12px;background:#2b171b;color:#ffc2c9;overflow-wrap:anywhere}.result{border-color:#315c4c;background:#10231f;color:#aee4c7}.switch-grid,.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}.switch-grid label{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:48px;padding:13px 14px;border:1px solid var(--border,#263244);border-radius:12px;background:var(--bg-elevated,#121b28)}.switch-copy{min-width:0;margin:0}.switch-copy strong{display:block;color:var(--text-primary,#e8edf5);font-size:13px;font-weight:600}.switch-copy small{max-width:52ch;margin-top:4px}input[type=checkbox]{flex:0 0 auto;width:20px;height:20px;accent-color:var(--accent,#338cff)}button,input,select,textarea{font:inherit}.secondary,.primary,.remove{min-height:44px;border:1px solid var(--border,#314057);border-radius:10px;padding:9px 14px;color:inherit;background:var(--bg-elevated,#152031);cursor:pointer}.section-head .secondary{flex:0 0 auto;min-width:96px}.primary{background:var(--accent,#287ff0);border-color:var(--accent,#287ff0);color:#fff}.remove{color:#ffadb6;background:transparent;align-self:end}.mailbox-list{display:grid;gap:12px}.mailbox-row{display:grid;grid-template-columns:32px minmax(145px,.7fr) minmax(190px,1fr) minmax(190px,1fr) auto;align-items:start;gap:12px;padding:14px;border:1px solid var(--border,#263244);border-radius:14px;background:var(--bg-elevated,#111a27)}.row-number{margin-top:25px;width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:#1b2b42;color:#9bc3ff;font-variant-numeric:tabular-nums}label>span{display:block;margin-bottom:7px;font-size:12px;color:var(--text-muted,#a2adbc)}label small{display:block;margin-top:6px;color:var(--text-muted,#9aa6b8);font-size:11px;line-height:1.4}input:not([type=checkbox]),select,textarea{width:100%;border:1px solid var(--border,#314057);border-radius:10px;background:var(--bg-input,#0c1420);color:inherit;padding:0 12px;outline:none}input:not([type=checkbox]),select{height:44px}textarea{padding-block:10px;resize:vertical;line-height:1.5}input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{border-color:var(--accent,#338cff);outline:3px solid color-mix(in srgb,var(--accent,#338cff) 24%,transparent);outline-offset:1px}.secret{position:relative}.secret input{padding-right:48px}.secret button{position:absolute;inset-inline-end:0;top:0;width:44px;height:44px;border:0;background:transparent;color:#9aa7b9;cursor:pointer}.secret svg{width:19px;fill:none;stroke:currentColor;stroke-width:1.8}.empty{padding:22px;border:1px dashed var(--border,#314057);border-radius:12px;color:var(--text-muted,#a2adbc);text-align:center}.form-grid label{min-width:0}.form-grid .wide{grid-column:span 2}.actions{padding:16px 0 max(4px,env(safe-area-inset-bottom));justify-content:flex-end}button:disabled{opacity:.5;cursor:not-allowed}@media(hover:hover){button:not(:disabled):hover{border-color:var(--accent,#338cff)}}@media(max-width:820px){.mailbox-row{grid-template-columns:32px 1fr}.mailbox-row label,.mailbox-row .remove{grid-column:2}.mailbox-row .remove{justify-self:start}.row-number{grid-row:1/span 4}.form-grid,.switch-grid{grid-template-columns:1fr}.form-grid .wide{grid-column:auto}}@media(max-width:520px){.config-shell{gap:24px}.page-head,.section-head{align-items:flex-start}.page-head p{max-width:28ch}.mailbox-row{padding:12px;gap:10px}.actions{display:grid;grid-template-columns:1fr 1fr}.actions button{width:100%}}@media(pointer:coarse){.secondary,.primary,.remove,.secret button,input:not([type=checkbox]),select{min-height:48px}}@media(forced-colors:active){button,input,select,textarea,.mailbox-row{border:1px solid CanvasText}}
+/* iOS grouped mailbox settings. Credentials, polling, filters and AI bindings remain untouched. */
+.ecl-shell { display: grid; gap: 28px; min-width: 0; color: var(--ios-text); }
+.ecl-shell h2, .ecl-shell h3, .ecl-shell p { margin: 0; }
+.ecl-page-head, .ecl-section-head, .ecl-actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.ecl-page-head { padding: 4px 0 0; align-items: flex-start; }
+.ecl-page-head h2 { font-size: 22px; font-weight: 650; line-height: 1.4; letter-spacing: -.025em; }
+.ecl-page-head p, .ecl-section-head p { max-width: 70ch; margin-top: 5px; color: var(--ios-secondary); font-size: 13px; line-height: 1.65; }
+.ecl-shell h3 { font-size: 15px; font-weight: 650; line-height: 1.5; }
+.ecl-shell section > h3 { margin: 0 4px 12px; }
+.ecl-section-head { align-items: flex-start; margin: 0 4px 14px; }
+.ecl-section-head .ecl-secondary { flex: 0 0 auto; }
+.ecl-state { flex: 0 0 auto; padding: 5px 9px; border-radius: 8px; color: var(--ios-secondary); background: var(--ios-inset); font-size: 12px; }
+.ecl-state.busy { color: var(--accent, #0063dc); background: var(--accent-dim, #e8f1ff); }
+.ecl-alert, .ecl-result { padding: 14px 18px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); color: var(--danger, #bd2733); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.ecl-result { color: var(--ios-text); }
+.ecl-secondary, .ecl-primary, .ecl-remove { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.ecl-secondary:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.ecl-primary { min-width: 132px; border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.ecl-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.ecl-remove { padding-inline: 12px; border-color: transparent; background: transparent; color: var(--danger, #bd2733); }
+.ecl-remove:hover { background: color-mix(in srgb, var(--danger, #bd2733) 8%, transparent); }
+.ecl-shell button:disabled { opacity: .5; cursor: not-allowed; }
+.ecl-mailbox-list { overflow: hidden; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.ecl-mailbox-row { display: grid; grid-template-columns: 28px minmax(0, .75fr) minmax(0, 1fr) minmax(0, 1fr) auto; align-items: start; gap: 16px; padding: 20px; }
+.ecl-mailbox-row + .ecl-mailbox-row { border-top: 1px solid var(--ios-line); }
+.ecl-mailbox-row .ecl-remove { align-self: start; margin-top: 26px; }
+.ecl-row-number { display: grid; place-items: center; width: 28px; height: 28px; margin-top: 34px; border-radius: 8px; background: var(--ios-inset); color: var(--ios-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ecl-shell label { min-width: 0; }
+.ecl-shell label > span { display: block; margin-bottom: 7px; color: var(--ios-secondary); font-size: 12px; line-height: 1.6; }
+.ecl-shell label small { display: block; margin-top: 7px; max-width: 72ch; color: var(--ios-secondary); font-size: 12px; line-height: 1.65; }
+.ecl-shell input:not([type='checkbox']), .ecl-shell select, .ecl-shell textarea { display: block; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease; }
+.ecl-shell input:not([type='checkbox']):focus, .ecl-shell select:focus, .ecl-shell textarea:focus { border-color: var(--accent, #0063dc); }
+.ecl-shell textarea { min-height: 100px; line-height: 1.7; resize: vertical; }
+.ecl-secret { position: relative; }
+.ecl-shell .ecl-secret input { padding-right: 50px; }
+.ecl-secret button { position: absolute; inset-inline-end: 0; top: 0; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.ecl-secret button:hover { color: var(--ios-text); }
+.ecl-secret svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.ecl-empty { padding: 36px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); color: var(--ios-secondary); font-size: 13px; text-align: center; }
+.ecl-switch-grid { padding: 0 20px; border: 1px solid var(--ios-line); border-bottom: 0; border-radius: 20px 20px 0 0; background: var(--ios-surface); }
+.ecl-switch-grid label { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 66px; padding: 13px 0; cursor: pointer; }
+.ecl-switch-grid label + label { border-top: 1px solid var(--ios-line); }
+.ecl-shell .ecl-switch-grid label > span { flex: 1; min-width: 0; margin: 0; color: var(--ios-text); font-size: 14px; }
+.ecl-switch-copy strong { display: block; color: var(--ios-text); font-size: 14px; font-weight: 600; }
+.ecl-switch-copy small { margin-top: 4px; }
+.ecl-shell input[type='checkbox'] { appearance: none; -webkit-appearance: none; position: relative; display: block; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background-color var(--ios-fast) ease, border-color var(--ios-fast) ease; }
+.ecl-shell input[type='checkbox']::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .18); transition: transform var(--ios-duration) var(--ios-ease); }
+.ecl-shell input[type='checkbox']:checked { border-color: transparent; background: var(--ios-accent); }
+.ecl-shell input[type='checkbox']:checked::before { transform: translateX(20px); }
+.ecl-shell input[type='checkbox']:active::before { transform: scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.ecl-shell input[type='checkbox']:checked:active::before { transform: translateX(20px) scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.ecl-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; min-width: 0; padding: 20px; border: 1px solid var(--ios-line); border-radius: 0 0 20px 20px; background: var(--ios-surface); }
+.ecl-form-grid .ecl-wide { grid-column: 1 / -1; }
+.ecl-actions { justify-content: flex-end; gap: 12px; }
+:global(html[data-theme='transparent'] .ecl-switch-grid),
+:global(html[data-theme='transparent'] .ecl-mailbox-list),
+:global(html[data-theme='transparent'] .ecl-form-grid),
+:global(html[data-theme='transparent'] .ecl-empty),
+:global(html[data-theme='transparent'] .ecl-alert),
+:global(html[data-theme='transparent'] .ecl-result) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 800px) {
+  .ecl-mailbox-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 16px; gap: 14px; }
+  .ecl-row-number { grid-column: 1; grid-row: 1; margin: 0; }
+  .ecl-mailbox-row > label { grid-column: 1 / -1; }
+  .ecl-mailbox-row .ecl-remove { grid-column: 2; grid-row: 1; justify-self: end; margin: 0; }
+}
+@container (max-width: 520px) {
+  .ecl-page-head h2 { font-size: 20px; }
+  .ecl-section-head { flex-wrap: wrap; gap: 12px; }
+  .ecl-form-grid { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .ecl-switch-grid { padding-inline: 16px; }
+  .ecl-shell input:not([type='checkbox']), .ecl-shell select, .ecl-shell textarea { font-size: 16px; }
+}
+@container (max-width: 380px) {
+  .ecl-page-head { flex-wrap: wrap; gap: 10px; }
+  .ecl-actions { flex-direction: column-reverse; align-items: stretch; }
+}
+@media (forced-colors: active) {
+  .ecl-shell input[type='checkbox'] { appearance: auto; -webkit-appearance: auto; }
+  .ecl-shell input[type='checkbox']::before { display: none; }
+}
 </style>

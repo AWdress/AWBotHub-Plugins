@@ -3,6 +3,7 @@
 // 平台注入 props { pluginId, host }；host: getConfig/saveConfig/callApi/toast/token。
 // 两个页签：配置（左侧 11 分组 + 右侧明细）/ 战绩（个人信息 实时查 / 转账榜 / 大劫 / 骰子YDX）。
 import { ref, reactive, onMounted } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({
   pluginId: { type: String, required: true },
@@ -154,12 +155,13 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
 </script>
 
 <template>
+  <IosSettings>
   <div class="zq">
     <div v-if="loading" class="muted">加载配置…</div>
     <template v-else>
-      <div class="tabs">
-        <button :class="['tab', { on: tab === 'settings' }]" @click="switchTab('settings')">⚙ 配置</button>
-        <button :class="['tab', { on: tab === 'data' }]" @click="switchTab('data')">📊 战绩</button>
+      <div class="tabs" :style="{ '--zq-tab-index': tab === 'settings' ? 0 : 1 }" aria-label="朱雀页面">
+        <button :class="['tab', { on: tab === 'settings' }]" :aria-pressed="tab === 'settings'" @click="switchTab('settings')">功能设置</button>
+        <button :class="['tab', { on: tab === 'data' }]" :aria-pressed="tab === 'data'" @click="switchTab('data')">战绩记录</button>
       </div>
 
       <!-- ============ 配置 ============ -->
@@ -167,7 +169,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
         <aside class="sidebar">
           <div class="side-title">功能分组</div>
           <button v-for="g in GROUPS" :key="g.key"
-                  :class="['side-item', { on: group === g.key }]" @click="group = g.key">
+                  :class="['side-item', { on: group === g.key }]" :aria-pressed="group === g.key" @click="group = g.key">
             <span>{{ g.label }}</span>
             <span v-if="g.en && cfg[g.en]" class="dot"></span>
           </button>
@@ -187,7 +189,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'getinfo'">
             <h3 class="det-title">个人查询</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_getinfo" type="checkbox" /><span>启用个人信息查询</span></label>
+              <label class="row switch"><input v-model="cfg.enable_getinfo" type="checkbox" role="switch" /><span>启用个人信息查询</span></label>
               <label v-if="cfg.enable_getinfo" class="row"><span>查询命令词</span><input v-model="cfg.getinfo_command" class="inp" /></label>
             </section>
           </template>
@@ -195,7 +197,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'wheel'">
             <h3 class="det-title">大转盘</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_prizewheel" type="checkbox" /><span>启用大转盘</span></label>
+              <label class="row switch"><input v-model="cfg.enable_prizewheel" type="checkbox" role="switch" /><span>启用大转盘</span></label>
               <template v-if="cfg.enable_prizewheel">
                 <label class="row"><span>大转盘命令词</span><input v-model="cfg.prizewheel_command" class="inp" /><span class="hint">用法 /命令词 次数</span></label>
                 <label class="row"><span>并发任务数</span><input v-model.number="cfg.prize_tasks" class="inp sm" type="number" min="1" max="8" /></label>
@@ -206,7 +208,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'betbonus'">
             <h3 class="det-title">倍投计算</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_betbonus" type="checkbox" /><span>启用倍投起手表</span></label>
+              <label class="row switch"><input v-model="cfg.enable_betbonus" type="checkbox" role="switch" /><span>启用倍投起手表</span></label>
               <label v-if="cfg.enable_betbonus" class="row"><span>倍投命令词</span><input v-model="cfg.betbonus_command" class="inp" /><span class="hint">/命令词 本金 连输次数</span></label>
             </section>
           </template>
@@ -214,7 +216,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'fire'">
             <h3 class="det-title">魔法卡定时释放</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_firegenshin" type="checkbox" /><span>启用魔法卡定时释放（每天一次，失败按间隔重试）</span></label>
+              <label class="row switch"><input v-model="cfg.enable_firegenshin" type="checkbox" role="switch" /><span>启用魔法卡定时释放（每天一次，失败按间隔重试）</span></label>
               <label v-if="cfg.enable_firegenshin" class="row"><span>检查间隔</span><input v-model.number="cfg.firegenshin_interval" class="inp sm" type="number" min="5" max="240" /><span class="hint">分钟</span></label>
             </section>
           </template>
@@ -222,11 +224,11 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'raid'">
             <h3 class="det-title">大劫监听/反击</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_raiding" type="checkbox" /><span>启用大劫监听/反击</span></label>
+              <label class="row switch"><input v-model="cfg.enable_raiding" type="checkbox" role="switch" /><span>启用大劫监听/反击</span></label>
               <template v-if="cfg.enable_raiding">
                 <label class="row"><span>自动反击模式</span><select v-model="cfg.fanda_mode" class="inp"><option v-for="o in FANDA_MODES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
                 <label class="row"><span>反打劫冷却</span><input v-model.number="cfg.raid_cd_minutes" class="inp sm" type="number" min="0" max="1440" /><span class="hint">分钟</span></label>
-                <label class="row switch"><input v-model="cfg.fanxian" type="checkbox" /><span>被打赢时概率返现</span></label>
+                <label class="row switch"><input v-model="cfg.fanxian" type="checkbox" role="switch" /><span>被打赢时概率返现</span></label>
                 <template v-if="cfg.fanxian">
                   <label class="row"><span>返现概率</span><input v-model.number="cfg.fanxian_probability" class="inp sm" type="number" min="0" max="100" /><span class="hint">%</span></label>
                   <label class="row top"><span>返现黑名单</span><textarea v-model="cfg.fanxian_blacklist" class="inp" rows="2" placeholder="逗号分隔的 TGID，这些人不返现"></textarea></label>
@@ -238,7 +240,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'redpocket'">
             <h3 class="det-title">红包雨</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_redpocket" type="checkbox" /><span>启用自动抢红包（监听群内朱雀红包，自动点回调抢灵石）</span></label>
+              <label class="row switch"><input v-model="cfg.enable_redpocket" type="checkbox" role="switch" /><span>启用自动抢红包（监听群内朱雀红包，自动点回调抢灵石）</span></label>
               <label v-if="cfg.enable_redpocket" class="row"><span>最大重试</span><input v-model.number="cfg.redpocket_max_retry" class="inp sm" type="number" min="1" max="50" /></label>
             </section>
           </template>
@@ -246,11 +248,11 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'transform'">
             <h3 class="det-title">灵石转账记录</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_transform" type="checkbox" /><span>启用灵石转账记录（监听群内转入/转出并记录）</span></label>
+              <label class="row switch"><input v-model="cfg.enable_transform" type="checkbox" role="switch" /><span>启用灵石转账记录（监听群内转入/转出并记录）</span></label>
               <template v-if="cfg.enable_transform">
-                <label class="row switch"><input v-model="cfg.transform_notification" type="checkbox" /><span>转账通知（记录后在群里回一条，含累计/排名；关闭则只记录）</span></label>
-                <label class="row switch"><input v-model="cfg.transform_leaderboard" type="checkbox" /><span>转入榜（打赏总榜，需开转账通知）</span></label>
-                <label class="row switch"><input v-model="cfg.transform_payleaderboard" type="checkbox" /><span>转出榜（赏赐总榜，需开转账通知）</span></label>
+                <label class="row switch"><input v-model="cfg.transform_notification" type="checkbox" role="switch" /><span>转账通知（记录后在群里回一条，含累计/排名；关闭则只记录）</span></label>
+                <label class="row switch"><input v-model="cfg.transform_leaderboard" type="checkbox" role="switch" /><span>转入榜（打赏总榜，需开转账通知）</span></label>
+                <label class="row switch"><input v-model="cfg.transform_payleaderboard" type="checkbox" role="switch" /><span>转出榜（赏赐总榜，需开转账通知）</span></label>
                 <p class="tip">榜单数据随时可在「战绩 → 转账」查看，与通知开关无关。</p>
               </template>
             </section>
@@ -259,11 +261,11 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'ydx'">
             <h3 class="det-title">鳄鱼丼 YDX（骰子大小投注）</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_ydx" type="checkbox" /><span>启用鳄鱼丼YDX（依赖bot文案/回调，需实盘校验，谨慎开启）</span></label>
+              <label class="row switch"><input v-model="cfg.enable_ydx" type="checkbox" role="switch" /><span>启用鳄鱼丼YDX（依赖bot文案/回调，需实盘校验，谨慎开启）</span></label>
               <template v-if="cfg.enable_ydx">
-                <label class="row switch"><input v-model="cfg.ydx_dice_reveal" type="checkbox" /><span>记录开奖结果</span></label>
-                <label class="row switch"><input v-model="cfg.ydx_dice_bet" type="checkbox" /><span>自动下注</span></label>
-                <label class="row switch"><input v-model="cfg.ydx_wwd_switch" type="checkbox" /><span>下注二级开关(wwd)：关闭时只计算不实际下注</span></label>
+                <label class="row switch"><input v-model="cfg.ydx_dice_reveal" type="checkbox" role="switch" /><span>记录开奖结果</span></label>
+                <label class="row switch"><input v-model="cfg.ydx_dice_bet" type="checkbox" role="switch" /><span>自动下注</span></label>
+                <label class="row switch"><input v-model="cfg.ydx_wwd_switch" type="checkbox" role="switch" /><span>下注二级开关(wwd)：关闭时只计算不实际下注</span></label>
                 <div class="grid">
                   <label class="row"><span>几连开始下注</span><input v-model.number="cfg.ydx_start_count" class="inp sm" type="number" min="0" max="9" /></label>
                   <label class="row"><span>最大追投次数</span><input v-model.number="cfg.ydx_stop_count" class="inp sm" type="number" min="1" max="10" /></label>
@@ -277,7 +279,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'card'">
             <h3 class="det-title">道具卡回收</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.enable_card" type="checkbox" /><span>启用道具卡回收（.card 换灵石，需实盘校验，默认关）</span></label>
+              <label class="row switch"><input v-model="cfg.enable_card" type="checkbox" role="switch" /><span>启用道具卡回收（.card 换灵石，需实盘校验，默认关）</span></label>
               <template v-if="cfg.enable_card">
                 <label class="row"><span>回收命令词</span><input v-model="cfg.card_command" class="inp" /><span class="hint">/命令词 [卡号] [数量]</span></label>
                 <div class="grid">
@@ -293,7 +295,7 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <template v-else-if="group === 'notify'">
             <h3 class="det-title">通知</h3>
             <section class="card">
-              <label class="row switch"><input v-model="cfg.owner_notify" type="checkbox" /><span>推送给平台主人（抢红包/魔法卡释放/转账等事件）</span></label>
+              <label class="row switch"><input v-model="cfg.owner_notify" type="checkbox" role="switch" /><span>推送给平台主人（抢红包/魔法卡释放/转账等事件）</span></label>
             </section>
           </template>
 
@@ -303,11 +305,11 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
 
       <!-- ============ 战绩 ============ -->
       <div v-show="tab === 'data'" class="pane">
-        <div class="subtabs">
-          <button :class="['stab', { on: view === 'info' }]" @click="switchView('info')">个人信息</button>
-          <button :class="['stab', { on: view === 'transform' }]" @click="switchView('transform')">转账</button>
-          <button :class="['stab', { on: view === 'raids' }]" @click="switchView('raids')">大劫</button>
-          <button :class="['stab', { on: view === 'ydx' }]" @click="switchView('ydx')">骰子YDX</button>
+        <div class="subtabs" :style="{ '--zq-tab-index': ['info','transform','raids','ydx'].indexOf(view) }" aria-label="战绩分类">
+          <button :class="['stab', { on: view === 'info' }]" :aria-pressed="view === 'info'" @click="switchView('info')">个人信息</button>
+          <button :class="['stab', { on: view === 'transform' }]" :aria-pressed="view === 'transform'" @click="switchView('transform')">转账</button>
+          <button :class="['stab', { on: view === 'raids' }]" :aria-pressed="view === 'raids'" @click="switchView('raids')">大劫</button>
+          <button :class="['stab', { on: view === 'ydx' }]" :aria-pressed="view === 'ydx'" @click="switchView('ydx')">骰子YDX</button>
         </div>
 
         <!-- 个人信息 -->
@@ -337,28 +339,28 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
               <div class="lb">
                 <div class="lb-h">打赏榜（转入 TOP{{ transform.get_leaderboard.length }}）</div>
                 <div v-if="!transform.get_leaderboard.length" class="muted">暂无</div>
-                <table v-else class="tbl"><tbody>
+                <div v-else class="zq-table-wrap" tabindex="0"><table class="tbl"><tbody>
                   <tr v-for="(e, i) in transform.get_leaderboard" :key="i"><td class="rank">{{ i+1 }}</td><td>{{ e.name }}</td><td>{{ fmtNum(e.total) }}</td><td class="muted">{{ e.count }}次</td></tr>
-                </tbody></table>
+                </tbody></table></div>
               </div>
               <div class="lb">
                 <div class="lb-h">赏赐榜（转出 TOP{{ transform.pay_leaderboard.length }}）</div>
                 <div v-if="!transform.pay_leaderboard.length" class="muted">暂无</div>
-                <table v-else class="tbl"><tbody>
+                <div v-else class="zq-table-wrap" tabindex="0"><table class="tbl"><tbody>
                   <tr v-for="(e, i) in transform.pay_leaderboard" :key="i"><td class="rank">{{ i+1 }}</td><td>{{ e.name }}</td><td>{{ fmtNum(e.total) }}</td><td class="muted">{{ e.count }}次</td></tr>
-                </tbody></table>
+                </tbody></table></div>
               </div>
             </div>
             <div class="hist-h">最近流水</div>
-            <table class="tbl">
+            <div class="zq-table-wrap" tabindex="0"><table class="tbl">
               <thead><tr><th>方向</th><th>金额</th><th>对方</th><th>时间</th></tr></thead>
               <tbody>
                 <tr v-for="(r, i) in transform.recent" :key="i">
-                  <td><span :style="{ color: r.direction === 'get' ? '#6ee7a8' : '#6ea8fe' }">{{ r.direction === 'get' ? '转入' : '转出' }}</span></td>
+                  <td><span :style="{ color: r.direction === 'get' ? 'var(--success, #087758)' : 'var(--accent, #0063dc)' }">{{ r.direction === 'get' ? '转入' : '转出' }}</span></td>
                   <td>{{ fmtNum(Math.abs(r.amount)) }}</td><td>{{ r.user_name || '—' }}</td><td class="muted">{{ fmtTime(r.ts) }}</td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </template>
         </div>
 
@@ -368,22 +370,22 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
           <div v-if="dataLoading" class="muted">加载中…</div>
           <template v-else-if="raids">
             <div class="cards">
-              <div class="stat"><div class="stat-l">主动打劫·获得</div><div class="stat-n" style="color:#6ee7a8">{{ fmtNum(raids.raiding.gain) }}</div></div>
-              <div class="stat"><div class="stat-l">主动打劫·亏损</div><div class="stat-n" style="color:#ff6b6b">{{ fmtNum(raids.raiding.loss) }}</div></div>
-              <div class="stat"><div class="stat-l">被打劫·获得</div><div class="stat-n" style="color:#6ee7a8">{{ fmtNum(raids.beraided.gain) }}</div></div>
-              <div class="stat"><div class="stat-l">被打劫·亏损</div><div class="stat-n" style="color:#ff6b6b">{{ fmtNum(raids.beraided.loss) }}</div></div>
+              <div class="stat"><div class="stat-l">主动打劫·获得</div><div class="stat-n" style="color:var(--success, #087758)">{{ fmtNum(raids.raiding.gain) }}</div></div>
+              <div class="stat"><div class="stat-l">主动打劫·亏损</div><div class="stat-n" style="color:var(--danger, #bd2733)">{{ fmtNum(raids.raiding.loss) }}</div></div>
+              <div class="stat"><div class="stat-l">被打劫·获得</div><div class="stat-n" style="color:var(--success, #087758)">{{ fmtNum(raids.beraided.gain) }}</div></div>
+              <div class="stat"><div class="stat-l">被打劫·亏损</div><div class="stat-n" style="color:var(--danger, #bd2733)">{{ fmtNum(raids.beraided.loss) }}</div></div>
             </div>
             <div class="hist-h">最近记录</div>
-            <table class="tbl">
+            <div class="zq-table-wrap" tabindex="0"><table class="tbl">
               <thead><tr><th>类型</th><th>金额</th><th>连打</th><th>时间</th></tr></thead>
               <tbody>
                 <tr v-for="(r, i) in raids.recent" :key="i">
                   <td>{{ r.action === 'raiding' ? '主动打劫' : '被打劫' }}</td>
-                  <td :style="{ color: r.amount >= 0 ? '#6ee7a8' : '#ff6b6b' }">{{ fmtNum(r.amount) }}</td>
+                  <td :style="{ color: r.amount >= 0 ? 'var(--success, #087758)' : 'var(--danger, #bd2733)' }">{{ fmtNum(r.amount) }}</td>
                   <td class="muted">{{ r.count }}</td><td class="muted">{{ fmtTime(r.ts) }}</td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </template>
         </div>
 
@@ -396,10 +398,10 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
               <div class="stat"><div class="stat-l">总局数</div><div class="stat-n">{{ ydx.total }}</div></div>
               <div class="stat"><div class="stat-l">大 / 小</div><div class="stat-n">{{ ydx.big }} / {{ ydx.small }}</div></div>
               <div class="stat"><div class="stat-l">下注共</div><div class="stat-n">{{ fmtNum(ydx.bet_total) }}</div></div>
-              <div class="stat"><div class="stat-l">中奖共</div><div class="stat-n" style="color:#6ee7a8">{{ fmtNum(ydx.win_total) }}</div></div>
+              <div class="stat"><div class="stat-l">中奖共</div><div class="stat-n" style="color:var(--success, #087758)">{{ fmtNum(ydx.win_total) }}</div></div>
             </div>
             <div class="hist-h">最近开奖</div>
-            <table class="tbl">
+            <div class="zq-table-wrap" tabindex="0"><table class="tbl">
               <thead><tr><th>点数</th><th>结果</th><th>下注方</th><th>下注</th><th>中奖</th><th>时间</th></tr></thead>
               <tbody>
                 <tr v-for="(r, i) in ydx.recent" :key="i">
@@ -407,81 +409,126 @@ function fmtNum(n) { return Number(n || 0).toLocaleString() }
                   <td>{{ r.lottery_result === 'Big' ? '大' : (r.lottery_result === 'Small' ? '小' : '?') }}</td>
                   <td class="muted">{{ r.bet_side || '—' }}</td>
                   <td>{{ fmtNum(r.bet_amount) }}</td>
-                  <td :style="{ color: r.win_amount > 0 ? '#6ee7a8' : '' }">{{ fmtNum(r.win_amount) }}</td>
+                  <td :style="{ color: r.win_amount > 0 ? 'var(--success, #087758)' : '' }">{{ fmtNum(r.win_amount) }}</td>
                   <td class="muted">{{ fmtTime(r.ts) }}</td>
                 </tr>
               </tbody>
-            </table>
+            </table></div>
           </template>
         </div>
       </div>
     </template>
   </div>
+</IosSettings>
 </template>
 
 <style scoped>
-.zq { display: flex; flex-direction: column; gap: 14px; container-type: inline-size; }
-.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light, #2a2e3a); }
-.tab { padding: 8px 16px; background: none; border: none; cursor: pointer; font-size: 13px; color: var(--text-secondary, #b9c0cc); border-bottom: 2px solid transparent; }
-.tab.on { color: var(--accent, #6ea8fe); border-bottom-color: var(--accent, #6ea8fe); }
-
-.layout { display: flex; gap: 16px; align-items: flex-start; }
-.sidebar { flex: 0 0 130px; display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 10px; background: var(--bg-elevated, #1a1d27); border: 1px solid var(--border-light, #2a2e3a); }
-.side-title { font-size: 11px; color: var(--text-muted, #7a8291); padding: 4px 8px 6px; }
-.side-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px; border-radius: 8px; border: none; cursor: pointer; text-align: left; background: none; color: var(--text-secondary, #b9c0cc); font-size: 13px; }
-.side-item:hover { background: var(--bg-card, #12141c); }
-.side-item.on { background: var(--accent-dim, #1e3a5f); color: var(--accent, #6ea8fe); }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: #6ee7a8; flex: 0 0 auto; }
-.detail { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.det-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary, #e8ebf0); }
-
-.pane { display: flex; flex-direction: column; gap: 14px; }
-.card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 10px; background: var(--bg-elevated, #1a1d27); border: 1px solid var(--border-light, #2a2e3a); }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 20px; }
-.row { display: flex; align-items: center; gap: 10px; }
-.row.top { align-items: flex-start; }
-.row > span:first-child { min-width: 88px; font-size: 13px; color: var(--text-secondary, #b9c0cc); }
-.row.switch span { min-width: 0; }
-.hint { min-width: 0 !important; font-size: 12px; color: var(--text-muted, #7a8291); white-space: nowrap; }
-.tip { margin: 0; font-size: 12px; color: var(--text-muted, #7a8291); line-height: 1.6; }
-.secret-field { position: relative; flex: 1; min-width: 0; }.secret-field .inp { width: 100%; padding-right: 44px; }.secret-field button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted, #7a8291); cursor: pointer; }.secret-field button:hover { color: var(--accent, #6ea8fe); background: var(--accent-dim, #1e3a5f); }.secret-field svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.inp { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 6px; font-size: 13px; background: var(--bg-card, #12141c); color: var(--text-primary, #e8ebf0); border: 1px solid var(--border-light, #2a2e3a); }
-.inp.sm { flex: 0 0 auto; width: 100px; }
-textarea.inp { resize: vertical; font-family: inherit; line-height: 1.5; }
-.btn { padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; background: var(--bg-card, #12141c); color: var(--text-secondary, #b9c0cc); border: 1px solid var(--border-light, #2a2e3a); }
-.btn:hover { border-color: var(--accent, #6ea8fe); color: var(--accent, #6ea8fe); }
-.btn.primary { background: var(--accent-dim, #1e3a5f); border-color: var(--accent, #6ea8fe); color: var(--accent, #6ea8fe); }
-.btn.danger:hover { border-color: #ff6b6b; color: #ff6b6b; }
-.btn.lg { padding: 9px 22px; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.savebar { position: sticky; bottom: 0; display: flex; justify-content: flex-end; padding-top: 4px; }
-
-.subtabs { display: flex; gap: 6px; }
-.stab { padding: 6px 14px; border-radius: 6px; background: var(--bg-card, #12141c); border: 1px solid var(--border-light, #2a2e3a); cursor: pointer; font-size: 12px; color: var(--text-secondary, #b9c0cc); }
-.stab.on { background: var(--accent-dim, #1e3a5f); border-color: var(--accent, #6ea8fe); color: var(--accent, #6ea8fe); }
-.toolbar { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+/* User-pinned iOS grouped settings; shared tokens own theme and material.
+   THESIS: configure each Zhuque feature, then inspect its live results.
+   OWN-WORLD: iOS grouped rows, rounded switches, restrained platform accents.
+   STORY: select a feature, adjust its existing fields, save, then query records.
+   FIRST VIEWPORT: two sliding segments; 150px feature rail and credential group.
+   FORM: the user's established iOS settings direction; no new direction selection.
+   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance */
+.zq { display: flex; flex-direction: column; gap: 24px; min-width: 0; color: var(--ios-text); }
+.tabs, .subtabs { position: relative; isolation: isolate; display: grid; gap: 4px; padding: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tabs::before, .subtabs::before { content: ''; position: absolute; inset: 4px auto 4px 4px; border-radius: 11px; background: var(--ios-control); box-shadow: 0 2px 5px rgb(0 0 0 / .08); transform: translateX(calc(var(--zq-tab-index) * (100% + 4px))); transition: transform var(--ios-duration) var(--ios-ease); z-index: -1; }
+.tabs::before { width: calc((100% - 12px) / 2); }
+.tab, .stab { min-width: 0; min-height: 44px; padding: 9px 12px; border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.tab.on, .stab.on { color: var(--ios-text); font-weight: 650; }
+.layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 24px; align-items: start; min-width: 0; }
+.sidebar { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-inset); }
+.side-title { padding: 6px 10px 8px; color: var(--ios-secondary); font-size: 12px; }
+.side-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 9px 10px; border: 0; border-radius: 12px; background: transparent; color: var(--ios-secondary); text-align: left; cursor: pointer; }
+.side-item:hover { color: var(--ios-text); background: var(--ios-control); }
+.side-item.on { color: var(--ios-text); background: var(--ios-control); font-weight: 600; }
+.dot { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--success, #087758); }
+.detail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.det-title { margin: 0; color: var(--ios-text); font-size: 16px; font-weight: 650; line-height: 1.5; letter-spacing: -.015em; }
+.pane { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.card { display: flex; flex-direction: column; min-width: 0; padding: 4px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; min-height: 74px; padding: 16px 0; }
+.row + .row { border-top: 1px solid var(--ios-line); }
+.row.top { align-items: flex-start; flex-direction: column; gap: 8px; }
+.row > span:first-child { flex: 0 0 114px; min-width: 0; color: var(--ios-text); }
+.row.top > span:first-child { flex: none; }
+.row.switch { flex-direction: row-reverse; flex-wrap: nowrap; justify-content: space-between; gap: 20px; cursor: pointer; }
+.row.switch span { flex: 1; min-width: 0; line-height: 1.7; }
+.hint { min-width: 0 !important; color: var(--ios-secondary); font-size: 12px; line-height: 1.7; }
+.tip { margin: 0; padding-bottom: 16px; max-width: 72ch; color: var(--ios-secondary); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.secret-field { position: relative; flex: 1; min-width: 0; }
+.secret-field .inp { width: 100%; padding-right: 52px; }
+.secret-field button { position: absolute; right: 1px; top: 1px; display: grid; place-items: center; width: 44px; height: calc(100% - 2px); border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.secret-field button:hover { color: var(--ios-text); }
+.secret-field svg { width: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.inp { flex: 1; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease; }
+.inp:focus { border-color: var(--accent, #0063dc); }
+.inp.sm { flex: 0 0 100px; width: 100px; text-align: right; }
+textarea.inp { resize: vertical; line-height: 1.7; }
+select.inp { cursor: pointer; }
+.row.switch input { appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background-color var(--ios-fast) ease; }
+.row.switch input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .2); transition: transform var(--ios-duration) var(--ios-ease); }
+.row.switch input:checked { border-color: transparent; background: var(--ios-accent); }
+.row.switch input:checked::before { transform: translateX(20px); }
+.btn { min-height: 44px; padding: 10px 18px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.btn:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.btn.primary { min-width: 132px; border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn.danger { color: var(--danger, #bd2733); }
+.btn.danger:hover:not(:disabled) { border-color: var(--danger, #bd2733); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.savebar { display: flex; justify-content: flex-end; padding-top: 8px; }
+.subtabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.subtabs::before { width: calc((100% - 20px) / 4); }
+.stab { padding-inline: 8px; font-size: 13px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; }
 .grow { flex: 1; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
-.stat { padding: 14px 16px; border-radius: 10px; background: var(--bg-elevated, #1a1d27); border: 1px solid var(--border-light, #2a2e3a); }
-.stat-l { font-size: 12px; color: var(--text-secondary, #b9c0cc); }
-.stat-n { margin-top: 6px; font-size: 20px; font-weight: 700; color: var(--text-primary, #e8ebf0); word-break: break-all; }
-.stat-n.sm { font-size: 14px; font-weight: 500; }
-.lbs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px; }
-.lb { padding: 12px; border-radius: 10px; background: var(--bg-elevated, #1a1d27); border: 1px solid var(--border-light, #2a2e3a); }
-.lb-h { font-size: 13px; font-weight: 600; color: var(--accent, #6ea8fe); margin-bottom: 8px; }
-.hist-h { font-size: 13px; font-weight: 600; color: var(--accent, #6ea8fe); margin: 8px 0; }
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th, .tbl td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-light, #2a2e3a); }
-.tbl th { color: var(--text-muted, #7a8291); font-weight: 500; font-size: 12px; }
-.tbl td { color: var(--text-primary, #e8ebf0); }
-.rank { width: 32px; color: var(--text-muted, #7a8291); }
-.empty { text-align: center; padding: 40px 0; font-size: 14px; color: var(--text-secondary, #b9c0cc); }
-.muted { font-size: 12px; color: var(--text-muted, #7a8291); }
-
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); }
+.stat { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--ios-line); }
+.stat-l { color: var(--ios-secondary); font-size: 12px; }
+.stat-n { min-width: 0; color: var(--ios-text); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat-n.sm { font-size: 13px; font-weight: 500; }
+.lbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 20px; }
+.lb { min-width: 0; padding: 16px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); }
+.lb-h, .hist-h { margin-bottom: 12px; color: var(--ios-text); font-size: 14px; font-weight: 650; }
+.hist-h { margin-top: 20px; }
+.zq-table-wrap { max-width: 100%; min-width: 0; overflow: auto; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-surface); scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.lb .zq-table-wrap { border: 0; border-radius: 0; background: transparent; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { padding: 12px; border-bottom: 1px solid var(--ios-line); text-align: left; white-space: nowrap; }
+.tbl th { color: var(--ios-secondary); font-size: 12px; font-weight: 500; background: var(--ios-inset); }
+.tbl td { color: var(--ios-text); }
+.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl td:nth-child(2) { max-width: 240px; white-space: normal; overflow-wrap: anywhere; }
+.rank { width: 32px; color: var(--ios-secondary); }
+.empty { padding: 40px 20px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); color: var(--ios-secondary); text-align: center; }
+.muted { color: var(--ios-secondary); font-size: 12px; }
+:global(html[data-theme='transparent'] .zq .card),
+:global(html[data-theme='transparent'] .zq .cards),
+:global(html[data-theme='transparent'] .zq .lb),
+:global(html[data-theme='transparent'] .zq .empty) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
 @container (max-width: 640px) {
-  .layout { flex-direction: column; }
-  .sidebar { flex-basis: auto; width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .zq { gap: 20px; }
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .sidebar { flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 5px; border-radius: 16px; }
   .side-title { display: none; }
-  .lbs { grid-template-columns: 1fr; }
+  .side-item { flex: 1 1 auto; justify-content: center; min-height: 40px; padding: 8px 10px; font-size: 13px; }
+  .card { padding-inline: 16px; }
+  .row:not(.switch) { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .row:not(.switch) > span:first-child { flex: none; }
+  .row .secret-field { flex: none; width: 100%; }
+  .inp { font-size: 16px; }
+  .inp.sm { flex: none; width: 130px; }
+  .grid, .lbs { grid-template-columns: minmax(0, 1fr); }
+  .subtabs .stab { padding-inline: 4px; font-size: 12px; }
+  .savebar .primary { width: 100%; }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+}
+@media (forced-colors: active) {
+  .row.switch input { appearance: auto !important; }
+  .row.switch input::before { display: none; }
+  .tabs::before, .subtabs::before { border: 2px solid Highlight; }
 }
 </style>

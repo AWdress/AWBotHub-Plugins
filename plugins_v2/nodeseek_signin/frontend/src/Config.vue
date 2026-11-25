@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({pluginId: String, host: {type: Object, required: true}})
 const CronInput = computed(() => props.host.ui.CronInput)
@@ -134,28 +135,29 @@ onBeforeUnmount(() => clearInterval(statusTimer))
 </script>
 
 <template>
-  <main class="config-shell">
-    <header class="page-head">
+  <IosSettings>
+  <main class="nsk-shell">
+    <header class="nsk-page-head">
       <div>
         <h2>NodeSeek 签到</h2>
         <p>Cookie 可直接签到；失效时使用对应账号密码通过 CloakBrowser 自动登录。</p>
       </div>
-      <span class="state" :class="{busy: running}">{{ running ? '签到中' : '就绪' }}</span>
+      <span class="nsk-state" :class="{busy: running}">{{ running ? '签到中' : '就绪' }}</span>
     </header>
 
-    <p v-if="loadError" class="alert" role="alert">{{ loadError }}</p>
+    <p v-if="loadError" class="nsk-alert" role="alert">{{ loadError }}</p>
 
     <section aria-labelledby="account-title">
-      <div class="section-head">
+      <div class="nsk-section-head">
         <div>
           <h3 id="account-title">账号与 Cookie</h3>
           <p>账号逐个添加；多个 Cookie 仍用“ &amp; ”分隔，并与账号顺序对应。</p>
         </div>
-        <button class="secondary" type="button" :disabled="loading" @click="addAccount">添加账号</button>
+        <button class="nsk-secondary" type="button" :disabled="loading" @click="addAccount">添加账号</button>
       </div>
-      <label class="field wide">
+      <label class="nsk-field nsk-wide">
         <span>NodeSeek Cookie（可选）</span>
-        <div class="secret">
+        <div class="nsk-secret">
           <input v-model="form.cookies" :type="cookiesVisible ? 'text' : 'password'" autocomplete="off" placeholder="多个 Cookie 使用 & 分隔">
           <button type="button" :disabled="!form.cookies" :aria-label="cookiesVisible ? '隐藏 Cookie' : '显示 Cookie'" @click="cookiesVisible = !cookiesVisible">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -163,61 +165,146 @@ onBeforeUnmount(() => clearInterval(statusTimer))
         </div>
         <small>留空也可以，插件会使用下方账密登录并获取 Cookie。</small>
       </label>
-      <div v-if="loading" class="empty">正在安全读取账号配置…</div>
-      <div v-else-if="!form.accounts.length" class="empty">尚未添加登录账号。已有有效 Cookie 时可以不添加。</div>
-      <div v-else class="account-list">
-        <article v-for="(account, index) in form.accounts" :key="index" class="account-row">
-          <div class="row-number">{{ index + 1 }}</div>
-          <label class="field"><span>用户名或邮箱</span><input v-model.trim="account.user" type="text" autocomplete="username"></label>
-          <label class="field">
+      <div v-if="loading" class="nsk-empty">正在安全读取账号配置…</div>
+      <div v-else-if="!form.accounts.length" class="nsk-empty">尚未添加登录账号。已有有效 Cookie 时可以不添加。</div>
+      <div v-else class="nsk-account-list">
+        <article v-for="(account, index) in form.accounts" :key="index" class="nsk-account-row">
+          <div class="nsk-row-number">{{ index + 1 }}</div>
+          <label class="nsk-field"><span>用户名或邮箱</span><input v-model.trim="account.user" type="text" autocomplete="username"></label>
+          <label class="nsk-field">
             <span>密码</span>
-            <div class="secret">
+            <div class="nsk-secret">
               <input v-model="account.password" :type="visiblePasswords[index] ? 'text' : 'password'" autocomplete="current-password">
               <button type="button" :disabled="!account.password" :aria-label="visiblePasswords[index] ? '隐藏密码' : '显示密码'" @click="visiblePasswords[index] = !visiblePasswords[index]">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
             </div>
           </label>
-          <button class="remove" type="button" @click="removeAccount(index)">删除</button>
+          <button class="nsk-remove" type="button" @click="removeAccount(index)">删除</button>
         </article>
       </div>
     </section>
 
     <section aria-labelledby="switch-title">
       <h3 id="switch-title">功能开关</h3>
-      <div class="switch-grid">
-        <label><span>启用自动签到</span><input v-model="form.enabled" type="checkbox"></label>
-        <label><span>发送签到通知</span><input v-model="form.notify" type="checkbox"></label>
-        <label><span>自动回写新 Cookie</span><input v-model="form.auto_save_cookie" type="checkbox"></label>
-        <label><span>随机鸡腿奖励</span><input v-model="form.random_reward" type="checkbox"></label>
+      <div class="nsk-switch-grid">
+        <label><span>启用自动签到</span><input v-model="form.enabled" type="checkbox" role="switch"></label>
+        <label><span>发送签到通知</span><input v-model="form.notify" type="checkbox" role="switch"></label>
+        <label><span>自动回写新 Cookie</span><input v-model="form.auto_save_cookie" type="checkbox" role="switch"></label>
+        <label><span>随机鸡腿奖励</span><input v-model="form.random_reward" type="checkbox" role="switch"></label>
       </div>
     </section>
 
     <section aria-labelledby="schedule-title">
       <h3 id="schedule-title">签到设置</h3>
-      <div class="form-grid">
-        <label class="field wide"><span>签到 Cron</span><component :is="CronInput" v-model="form.cron" /><small>标准五段 Cron，默认每天 08:00。</small></label>
-        <label class="field"><span>请求超时（秒）</span><input v-model.number="form.timeout" type="number" min="5" max="120"></label>
-        <label class="field"><span>浏览器验证超时（秒）</span><input v-model.number="form.captcha_timeout" type="number" min="30" max="300"></label>
+      <div class="nsk-form-grid">
+        <label class="nsk-field nsk-wide"><span>签到 Cron</span><component :is="CronInput" v-model="form.cron" /><small>标准五段 Cron，默认每天 08:00。</small></label>
+        <label class="nsk-field"><span>请求超时（秒）</span><input v-model.number="form.timeout" type="number" min="5" max="120"></label>
+        <label class="nsk-field"><span>浏览器验证超时（秒）</span><input v-model.number="form.captcha_timeout" type="number" min="30" max="300"></label>
       </div>
     </section>
 
     <section aria-labelledby="status-title">
       <h3 id="status-title">运行状态</h3>
-      <div class="status-grid">
+      <div class="nsk-status-grid">
         <div><span>最近结果</span><p>{{ form.last_result || '尚未运行' }}</p></div>
         <div><span>最近记录</span><pre>{{ form.history || '暂无记录' }}</pre></div>
       </div>
     </section>
 
-    <p v-if="resultText" class="result" aria-live="polite">{{ resultText }}</p>
-    <footer class="actions">
-      <button class="secondary" type="button" :disabled="running || saving || loading" @click="runNow">{{ running ? '签到中…' : '立即签到' }}</button>
-      <button class="primary" type="button" :disabled="saving || running || loading || !!loadError" @click="save">{{ saving ? '正在保存…' : '保存配置' }}</button>
+    <p v-if="resultText" class="nsk-result" aria-live="polite">{{ resultText }}</p>
+    <footer class="nsk-actions">
+      <button class="nsk-secondary" type="button" :disabled="running || saving || loading" @click="runNow">{{ running ? '签到中…' : '立即签到' }}</button>
+      <button class="nsk-primary" type="button" :disabled="saving || running || loading || !!loadError" @click="save">{{ saving ? '正在保存…' : '保存配置' }}</button>
     </footer>
   </main>
+  </IosSettings>
 </template>
 
 <style scoped>
-*{box-sizing:border-box}.config-shell{color:var(--text-primary,#e8edf5);padding:4px 2px max(18px,env(safe-area-inset-bottom));display:grid;gap:28px;min-width:0}.page-head,.section-head,.actions{display:flex;align-items:center;justify-content:space-between;gap:18px}.page-head{padding-bottom:20px;border-bottom:1px solid var(--border,#263244)}h2,h3,p{margin:0}h2{font-size:22px;letter-spacing:-.02em}h3{font-size:14px;color:var(--accent,#4f9cff);margin-bottom:14px}.page-head p,.section-head p{margin-top:7px;color:var(--text-muted,#9aa6b8);font-size:13px;line-height:1.55}.state{flex:0 0 auto;font-size:12px;color:#9ee2b9;background:#153224;padding:7px 12px;border-radius:999px}.state.busy{color:#b6d3ff;background:#172d4d}.alert,.result{padding:13px 14px;border:1px solid #743b43;border-radius:12px;background:#2b171b;color:#ffc2c9;overflow-wrap:anywhere}.result{border-color:#315c4c;background:#10231f;color:#aee4c7}.wide{margin:16px 0}.field{display:block;min-width:0}.field>span,.status-grid span{display:block;margin-bottom:7px;color:var(--text-muted,#a2adbc);font-size:12px}.field small{display:block;margin-top:6px;color:var(--text-muted,#9aa6b8);font-size:11px;line-height:1.45}.account-list{display:grid;gap:12px}.account-row{display:grid;grid-template-columns:32px minmax(180px,1fr) minmax(180px,1fr) auto;align-items:end;gap:12px;padding:14px;border:1px solid var(--border,#263244);border-radius:14px;background:var(--bg-elevated,#111a27)}.row-number{align-self:center;width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:#1b2b42;color:#9bc3ff;font-variant-numeric:tabular-nums}.switch-grid,.form-grid,.status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.switch-grid label,.status-grid>div{display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:13px 14px;border:1px solid var(--border,#263244);border-radius:12px;background:var(--bg-elevated,#121b28)}.status-grid>div{display:block}.status-grid p,.status-grid pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:inherit;font:inherit;line-height:1.5}.form-grid .wide{grid-column:span 2;margin:0}input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent,#338cff)}button,input{font:inherit}input:not([type=checkbox]){width:100%;height:44px;border:1px solid var(--border,#314057);border-radius:10px;background:var(--bg-input,#0c1420);color:inherit;padding:0 12px;outline:none}.secret{position:relative}.secret input{padding-right:48px}.secret button{position:absolute;inset-inline-end:0;top:0;width:44px;height:44px;border:0;background:transparent;color:#9aa7b9;cursor:pointer}.secret svg{width:19px;fill:none;stroke:currentColor;stroke-width:1.8}.secondary,.primary,.remove{min-height:44px;border:1px solid var(--border,#314057);border-radius:10px;padding:9px 14px;color:inherit;background:var(--bg-elevated,#152031);cursor:pointer}.primary{background:var(--accent,#287ff0);border-color:var(--accent,#287ff0);color:#fff}.remove{color:#ffadb6;background:transparent}.empty{padding:20px;border:1px dashed var(--border,#314057);border-radius:12px;color:var(--text-muted,#a2adbc);text-align:center}input:focus-visible,button:focus-visible{border-color:var(--accent,#338cff);outline:3px solid color-mix(in srgb,var(--accent,#338cff) 24%,transparent);outline-offset:1px}.actions{padding-top:2px;justify-content:flex-end}button:disabled{opacity:.5;cursor:not-allowed}@media(hover:hover){button:not(:disabled):hover{border-color:var(--accent,#338cff)}}@media(max-width:760px){.account-row{grid-template-columns:32px 1fr}.account-row .field,.account-row .remove{grid-column:2}.row-number{grid-row:1/span 3}.switch-grid,.form-grid,.status-grid{grid-template-columns:1fr}.form-grid .wide{grid-column:auto}.section-head{align-items:flex-start}}@media(max-width:520px){.page-head{align-items:flex-start}.page-head p{max-width:28ch}.actions{display:grid;grid-template-columns:1fr 1fr}.actions button{width:100%}}@media(pointer:coarse){button,input:not([type=checkbox]){min-height:48px}}@media(forced-colors:active){button,input,.account-row{border:1px solid CanvasText}}
+/* iOS account and Cookie groups. Login, scheduling and status polling remain unchanged. */
+.nsk-shell { display: grid; gap: 28px; min-width: 0; color: var(--ios-text); }
+.nsk-shell h2, .nsk-shell h3, .nsk-shell p { margin: 0; }
+.nsk-page-head, .nsk-section-head, .nsk-actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.nsk-page-head { padding: 4px 0 0; align-items: flex-start; }
+.nsk-page-head h2 { font-size: 22px; font-weight: 650; line-height: 1.4; letter-spacing: -.025em; }
+.nsk-page-head p, .nsk-section-head p { max-width: 70ch; margin-top: 5px; color: var(--ios-secondary); font-size: 13px; line-height: 1.65; }
+.nsk-shell h3 { font-size: 15px; font-weight: 650; line-height: 1.5; }
+.nsk-shell section > h3 { margin: 0 4px 12px; }
+.nsk-section-head { align-items: flex-start; margin: 0 4px 14px; }
+.nsk-state { flex: 0 0 auto; padding: 5px 9px; border-radius: 8px; color: var(--ios-secondary); background: var(--ios-inset); font-size: 12px; }
+.nsk-state.busy { color: var(--accent, #0063dc); background: var(--accent-dim, #e8f1ff); }
+.nsk-alert, .nsk-result { padding: 14px 18px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); color: var(--danger, #bd2733); font-size: 13px; overflow-wrap: anywhere; }
+.nsk-result { color: var(--ios-text); }
+.nsk-field { display: block; min-width: 0; }
+.nsk-field > span { display: block; margin-bottom: 7px; color: var(--ios-secondary); font-size: 12px; line-height: 1.6; }
+.nsk-field small { display: block; margin-top: 7px; max-width: 72ch; color: var(--ios-secondary); font-size: 12px; line-height: 1.65; }
+.nsk-shell section > .nsk-field.nsk-wide { padding: 18px 20px; margin-bottom: 16px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.nsk-shell input:not([type='checkbox']) { display: block; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease; }
+.nsk-shell input:not([type='checkbox']):focus { border-color: var(--accent, #0063dc); }
+.nsk-secret { position: relative; }
+.nsk-shell .nsk-secret input { padding-right: 50px; }
+.nsk-secret button { position: absolute; inset-inline-end: 0; top: 0; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.nsk-secret button:hover:not(:disabled) { color: var(--ios-text); }
+.nsk-secret svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.nsk-secondary, .nsk-primary, .nsk-remove { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.nsk-secondary:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.nsk-primary { min-width: 132px; border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.nsk-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.nsk-remove { padding-inline: 12px; border-color: transparent; background: transparent; color: var(--danger, #bd2733); }
+.nsk-remove:hover { background: color-mix(in srgb, var(--danger, #bd2733) 8%, transparent); }
+.nsk-shell button:disabled { opacity: .5; cursor: not-allowed; }
+.nsk-empty { padding: 36px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); color: var(--ios-secondary); font-size: 13px; text-align: center; }
+.nsk-account-list { overflow: hidden; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.nsk-account-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 16px; padding: 20px; }
+.nsk-account-row + .nsk-account-row { border-top: 1px solid var(--ios-line); }
+.nsk-row-number { display: grid; place-items: center; align-self: center; width: 28px; height: 28px; border-radius: 8px; background: var(--ios-inset); color: var(--ios-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.nsk-switch-grid { padding: 0 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.nsk-switch-grid label { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 66px; padding: 13px 0; cursor: pointer; }
+.nsk-switch-grid label + label { border-top: 1px solid var(--ios-line); }
+.nsk-switch-grid label > span { flex: 1; margin: 0; color: var(--ios-text); font-size: 14px; }
+.nsk-shell input[type='checkbox'] { appearance: none; -webkit-appearance: none; position: relative; display: block; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background-color var(--ios-fast) ease, border-color var(--ios-fast) ease; }
+.nsk-shell input[type='checkbox']::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .18); transition: transform var(--ios-duration) var(--ios-ease); }
+.nsk-shell input[type='checkbox']:checked { border-color: transparent; background: var(--ios-accent); }
+.nsk-shell input[type='checkbox']:checked::before { transform: translateX(20px); }
+.nsk-shell input[type='checkbox']:active::before { transform: scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.nsk-shell input[type='checkbox']:checked:active::before { transform: translateX(20px) scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.nsk-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; min-width: 0; padding: 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.nsk-form-grid .nsk-wide { grid-column: 1 / -1; }
+.nsk-status-grid { overflow: hidden; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.nsk-status-grid > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: baseline; gap: 16px; padding: 16px 20px; min-width: 0; }
+.nsk-status-grid > div + div { border-top: 1px solid var(--ios-line); }
+.nsk-status-grid > div > span { color: var(--ios-secondary); font-size: 12px; }
+.nsk-status-grid p, .nsk-status-grid pre { min-width: 0; margin: 0; max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ios-text); font: inherit; font-size: 13px; line-height: 1.7; }
+.nsk-actions { justify-content: flex-end; gap: 12px; }
+:global(html[data-theme='transparent'] .nsk-switch-grid),
+:global(html[data-theme='transparent'] .nsk-account-list),
+:global(html[data-theme='transparent'] .nsk-shell section > .nsk-field.nsk-wide),
+:global(html[data-theme='transparent'] .nsk-form-grid),
+:global(html[data-theme='transparent'] .nsk-status-grid),
+:global(html[data-theme='transparent'] .nsk-empty),
+:global(html[data-theme='transparent'] .nsk-alert),
+:global(html[data-theme='transparent'] .nsk-result) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 620px) {
+  .nsk-page-head h2 { font-size: 20px; }
+  .nsk-section-head { flex-wrap: wrap; gap: 12px; }
+  .nsk-account-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 16px; gap: 14px; }
+  .nsk-row-number { grid-column: 1; grid-row: 1; }
+  .nsk-account-row .nsk-field { grid-column: 1 / -1; }
+  .nsk-account-row .nsk-remove { grid-column: 2; grid-row: 1; justify-self: end; }
+  .nsk-shell section > .nsk-field.nsk-wide { padding: 16px; }
+  .nsk-form-grid { padding: 16px; }
+  .nsk-switch-grid { padding-inline: 16px; }
+  .nsk-shell input:not([type='checkbox']) { font-size: 16px; }
+  .nsk-status-grid > div { grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 16px; }
+}
+@container (max-width: 380px) {
+  .nsk-page-head { flex-wrap: wrap; gap: 10px; }
+  .nsk-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .nsk-actions { flex-direction: column-reverse; align-items: stretch; }
+}
+@media (forced-colors: active) {
+  .nsk-shell input[type='checkbox'] { appearance: auto; -webkit-appearance: auto; }
+  .nsk-shell input[type='checkbox']::before { display: none; }
+}
 </style>

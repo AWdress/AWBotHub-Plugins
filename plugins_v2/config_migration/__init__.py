@@ -10,10 +10,10 @@ from urllib.parse import urlparse
 
 __plugin__ = {'name': '平台迁移助手',
  'id': 'config_migration',
- 'version': '1.1.5',
+ 'version': '1.1.6',
  'author': 'AWdress',
  'description': '导入旧版配置包，将系统设置和插件配置安全迁移到 AWBotHub。',
- 'changelog': 'v1.1.5 适配最新平台插件规范\n- 补齐 plugin_api_version 与依赖声明\n- 配置落盘改走平台公开持久化入口，不再导入平台内部模块\n\nv1.1.4 补齐敏感字段显示按钮\n'
+ 'changelog': 'v1.1.6 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv1.1.5 适配最新平台插件规范\n- 补齐 plugin_api_version 与依赖声明\n- 配置落盘改走平台公开持久化入口，不再导入平台内部模块\n\nv1.1.4 补齐敏感字段显示按钮\n'
               '- 旧平台 Webhook 密钥与一次性迁移码默认隐藏并提供眼睛按钮\n'
               '- 点击显示时使用平台受控接口读取真实值\n\n'
               'v1.1.3 迁移合并后的消息转发配置\n'

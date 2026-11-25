@@ -1,0 +1,76 @@
+/* Presentation-only enhancement for the retained, published Vue component. */
+.al.al {
+  --ios-surface: var(--bg-card, #fff); --ios-inset: var(--surface-inset, #f0f2f6); --ios-control: var(--bg-elevated, #fff);
+  --ios-text: var(--text-primary, #1c1c1e); --ios-secondary: var(--text-secondary, #53555b); --ios-line: var(--border-card, #d5d7dd); --ios-accent: var(--accent-solid, #0063dc);
+  --ios-fast: calc(160ms * var(--glass-custom-motion, 1)); --ios-duration: calc(260ms * var(--glass-custom-motion, 1));
+  color: var(--ios-text); font: 14px/1.65 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei UI', sans-serif; gap: 24px; min-width: 0; background: transparent; container-type: inline-size;
+}
+.al *, .al *::before, .al *::after { box-sizing: border-box; }
+.al .tabs { display: flex; gap: 4px; width: min(100%, 360px); padding: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.al .tab { flex: 1; min-height: 42px; padding: 8px 14px; border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); }
+.al .tab.on { background: var(--ios-control); color: var(--ios-text); font-weight: 650; box-shadow: 0 2px 5px rgb(0 0 0 / .08); }
+.al .layout { gap: 24px; min-width: 0; }
+.al .sidebar { flex-basis: 150px; padding: 6px; gap: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.al .side-title { color: var(--ios-secondary); font-size: 12px; }
+.al .side-item { min-height: 44px; padding: 10px 12px; border-radius: 11px; color: var(--ios-secondary); background: transparent; }
+.al .side-item.on, .al .side-item:hover { color: var(--ios-text); background: var(--ios-control); }
+.al .detail, .al .pane { gap: 18px; min-width: 0; }
+.al .det-title { font-size: 16px; font-weight: 650; color: var(--ios-text); }
+.al .card { gap: 16px; padding: 20px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); }
+.al .grid { grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 18px 24px; }
+.al .row { min-height: 50px; gap: 16px; }
+.al .row > span:first-child, .al .lbl { color: var(--ios-text); font-size: 14px; }
+.al .row.switch { flex-direction: row-reverse; justify-content: space-between; cursor: pointer; }
+.al .row.switch span { flex: 1; }
+.al .row.switch input { appearance: none; position: relative; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background var(--ios-fast); }
+.al .row.switch input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .18); transition: transform var(--ios-duration) cubic-bezier(.22,1,.36,1); }
+.al .row.switch input:checked { background: var(--ios-accent); border-color: transparent; }
+.al .row.switch input:checked::before { transform: translateX(20px); }
+.al .inp, .al .pinp { min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); font: inherit; }
+.al textarea.inp { line-height: 1.75; }
+.al .btn, .al .mbtn { min-height: 44px; padding: 9px 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font: inherit; cursor: pointer; transition: transform var(--ios-fast), background var(--ios-fast); }
+.al .btn.primary { background: var(--ios-accent); color: #fff; border-color: transparent; font-weight: 600; }
+.al .btn:hover:not(:disabled), .al .mbtn:hover { border-color: var(--accent, #0063dc); }
+.al button:active:not(:disabled) { transform: scale(.975); }
+.al .btn.danger { color: var(--danger, #bd2733); }
+.al .savebar { position: static; padding-top: 8px; }
+.al .toolbar { flex-wrap: wrap; }
+.al .tip, .al .hint, .al .muted, .al .cnt, .al .pid, .al .pempty, .al .extra-l { color: var(--ios-secondary); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.al .chat-names { margin-left: 0; color: var(--ios-secondary); overflow-wrap: anywhere; }
+.al .picker { min-width: 0; }
+.al .picker-list { padding: 6px; border-color: var(--ios-line); border-radius: 12px; background: var(--ios-inset); scrollbar-width: thin; }
+.al .pchip { min-height: 40px; border-radius: 8px; }
+.al .pchip:hover, .al .etag { background: var(--ios-control); }
+.al .ptitle, .al .etag { color: var(--ios-text); }
+.al input[type=checkbox] { accent-color: var(--ios-accent); }
+.al .dot { background: var(--success, #087758); }
+.al .ex { color: var(--danger, #bd2733); }
+.al .tbl { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-variant-numeric: tabular-nums; scrollbar-width: thin; }
+.al .tbl th, .al .tbl td { padding: 13px 14px; border-color: var(--ios-line); color: var(--ios-text); overflow-wrap: anywhere; }
+.al .tbl th, .al .hist-h { color: var(--ios-secondary); }
+.al .empty { padding: 40px 20px; color: var(--ios-secondary); }
+.al :is(button,input,select,textarea):focus-visible { outline: 3px solid var(--accent, #0063dc); outline-offset: 3px; }
+.al ::selection { background: var(--accent-dim, #cbdfff); color: var(--ios-text); }
+.al :is(input,textarea) { caret-color: var(--accent, #0063dc); }
+.al :is(input,textarea)::placeholder { color: var(--text-placeholder, #62656d); opacity: 1; }
+.al select option { color: var(--ios-text); background: var(--select-option-bg, var(--bg-elevated, #fff)); }
+.al :is(textarea,.picker-list,.tbl) { scrollbar-color: var(--ios-line) transparent; }
+html[data-theme=transparent] .al { --ios-surface: var(--glass-surface, var(--bg-card)); --ios-inset: var(--glass-inset, var(--surface-inset)); --ios-control: var(--glass-control, var(--bg-elevated)); }
+html[data-theme=transparent] .al .card { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 640px) {
+  .al .layout { flex-direction: column; gap: 20px; }
+  .al .sidebar { flex-basis: auto; width: 100%; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; }
+  .al .side-title { display: none; }
+  .al .side-item { flex: 0 0 auto; white-space: nowrap; justify-content: center; padding-inline: 10px; }
+  .al .detail { width: 100%; }
+  .al .card { padding: 16px; }
+  .al .row:not(.switch) { flex-wrap: wrap; gap: 8px; }
+  .al .row:not(.switch) > span:first-child { flex-basis: 100%; }
+  .al .inp:not(.sm) { width: 100%; flex-basis: 100%; }
+  .al .savebar .primary { width: 100%; }
+  .al input:not([type=checkbox]), .al select, .al textarea { font-size: 16px; }
+}
+html[data-glass-motion=off] .al *, html[data-glass-motion=off] .al *::before { transition: none !important; animation: none !important; }
+html[data-glass-motion=off] .al button:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .al *, .al *::before { transition: none !important; animation: none !important; } .al button:active { transform: none; } }
+@media (forced-colors: active) { .al .row.switch input { appearance: auto; } .al .row.switch input::before { display: none; } }

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 import { apiError, configValues, sources, validate } from './config.js'
 
 const props = defineProps({ host: { type: Object, required: true } })
@@ -144,8 +145,10 @@ onBeforeUnmount(() => { mounted = false; clearTimeout(pollTimer) })
 </script>
 
 <template>
+  <IosSettings>
   <div class="vw-config">
-    <nav class="vw-tabs" role="tablist" aria-label="VPS-Widget 设置分组">
+    <header class="vw-page-head"><h2>VPS-Widget</h2></header>
+    <nav class="vw-tabs" :style="{ '--vw-tab-index': tabs.findIndex(item => item.id === tab) }" role="tablist" aria-label="VPS-Widget 设置分组">
       <button v-for="(item, index) in tabs" :id="`vw-tab-${item.id}`" :key="item.id" :ref="el => tabButtons[index] = el" type="button" role="tab" :aria-selected="tab === item.id" :aria-controls="`vw-panel-${item.id}`" :tabindex="tab === item.id ? 0 : -1" :class="{ active: tab === item.id }" @click="tab = item.id" @keydown="tabKey($event, index)">{{ item.label }}</button>
     </nav>
     <p v-if="loading" class="vw-note" role="status">正在读取配置…</p>
@@ -153,7 +156,7 @@ onBeforeUnmount(() => { mounted = false; clearTimeout(pollTimer) })
     <p v-if="notice" class="vw-message" :class="{ bad: !noticeOk }" :role="noticeOk ? 'status' : 'alert'">{{ notice }}</p>
 
     <section v-show="tab === 'status'" id="vw-panel-status" role="tabpanel" aria-labelledby="vw-tab-status">
-      <header class="vw-heading"><div><h3>影视榜单</h3><p>先填写 TMDB 密钥并保存，再更新。源站失败时保留上次有效榜单。</p></div><button class="primary" type="button" :disabled="!loaded || busy || status?.running" @click="update()">{{ status?.running ? '正在更新…' : '更新全部榜单' }}</button></header>
+      <header class="vw-heading"><div><h3>影视榜单</h3><p>先填写 TMDB 密钥并保存，再更新。源站失败时保留上次有效榜单。</p></div><button class="vw-primary" type="button" :disabled="!loaded || busy || status?.running" @click="update()">{{ status?.running ? '正在更新…' : '更新全部榜单' }}</button></header>
       <div class="vw-toolbar"><span>{{ status?.auto_update ? `每天 ${status.update_time} 自动更新（北京时间）` : '自动更新已关闭，仅手动更新' }}</span><button type="button" :disabled="!loaded || busy" @click="refresh">刷新状态</button><button v-if="status?.running" type="button" :disabled="busy" @click="stop">停止更新</button></div>
       <p v-if="statusError" class="vw-message bad" role="alert">{{ statusError }}</p>
       <p v-if="status?.running" class="vw-progress" role="status">正在更新 {{ currentName }} · 已完成 {{ status.progress.done }}/{{ status.progress.total }} 个来源 · 已匹配 {{ status.progress.matched }}/{{ status.progress.checked }} 条</p>
@@ -172,11 +175,11 @@ onBeforeUnmount(() => { mounted = false; clearTimeout(pollTimer) })
       <fieldset :disabled="!loaded || busy" class="vw-fields">
         <div class="vw-field"><label for="vw-tmdb">TMDB 密钥</label><div class="vw-secret"><input id="vw-tmdb" v-model="values.tmdb_key" :type="visible.tmdb_key ? 'text' : 'password'" autocomplete="off" spellcheck="false" :aria-invalid="!!errors.tmdb_key"><button type="button" @click="reveal('tmdb_key')">{{ visible.tmdb_key ? '隐藏' : '查看' }}</button></div><p>生成可用榜单必填。支持 v3 API Key 或 v4 API Read Access Token，不会写入 Widget。</p><p v-if="errors.tmdb_key" class="vw-error">{{ errors.tmdb_key }}</p></div>
         <div class="vw-field"><label for="vw-trakt">Trakt Client ID（仅 Trakt 使用）</label><div class="vw-secret"><input id="vw-trakt" v-model="values.trakt_client_id" :type="visible.trakt_client_id ? 'text' : 'password'" autocomplete="off" spellcheck="false"><button type="button" @click="reveal('trakt_client_id')">{{ visible.trakt_client_id ? '隐藏' : '查看' }}</button></div><p>填写 Trakt 应用的 Client ID，不是 OAuth Token。留空只跳过 Trakt，其他来源照常更新。</p><p v-if="errors.trakt_client_id" class="vw-error">{{ errors.trakt_client_id }}</p></div>
-        <div class="vw-field full"><span class="vw-label" id="vw-sources-label">采集哪些榜单</span><div class="vw-choices" role="group" aria-labelledby="vw-sources-label"><label v-for="[id, name] in sources" :key="id"><input v-model="values.sources" type="checkbox" :value="id">{{ name }}</label></div><p>默认选择全部十个来源；取消选择后不再采集或向客户端提供该来源，原有缓存不会删除。</p><p v-if="errors.sources" class="vw-error">{{ errors.sources }}</p></div>
+        <div class="vw-field vw-full"><span class="vw-label" id="vw-sources-label">采集哪些榜单</span><div class="vw-choices" role="group" aria-labelledby="vw-sources-label"><label v-for="[id, name] in sources" :key="id"><input v-model="values.sources" type="checkbox" :value="id">{{ name }}</label></div><p>默认选择全部十个来源；取消选择后不再采集或向客户端提供该来源，原有缓存不会删除。</p><p v-if="errors.sources" class="vw-error">{{ errors.sources }}</p></div>
         <div class="vw-field"><label for="vw-limit">每个分类最多采集多少条</label><input id="vw-limit" v-model.number="values.category_limit" type="number" min="10" max="100" step="1" :aria-invalid="!!errors.category_limit"><p>默认 30 条，可填 10～100。条数越多，TMDB 请求和更新时间越多。</p><p v-if="errors.category_limit" class="vw-error">{{ errors.category_limit }}</p></div>
         <div class="vw-field"><label for="vw-time">每天几点更新（北京时间）</label><input id="vw-time" v-model="values.update_time" type="time" :aria-invalid="!!errors.update_time"><p>默认 17:00。不开启下面的自动更新时，不会定时执行。</p><p v-if="errors.update_time" class="vw-error">{{ errors.update_time }}</p></div>
-        <div class="vw-field full vw-toggles"><label><input v-model="values.auto_update" type="checkbox">每天自动更新</label><p>默认关闭。开启后每天只在指定时间执行，没有频繁空轮询。</p><label><input v-model="values.notify_results" type="checkbox">更新完成后通知</label><p>默认关闭。使用平台关联的通知渠道，不重复填写机器人。</p></div>
-        <div class="vw-field full vw-subsection"><h4>客户端读取</h4><label for="vw-base">平台访问地址</label><input id="vw-base" v-model="values.public_base_url" type="url" placeholder="https://bot.example.com" :aria-invalid="!!errors.public_base_url"><p>填平台地址，不含 /api 路径；有部署子路径需带上。客户端必须能够访问这个地址。</p><p v-if="errors.public_base_url" class="vw-error">{{ errors.public_base_url }}</p><label class="vw-check"><input v-model="values.public_enabled" type="checkbox">允许客户端读取 Widget</label><p>默认关闭。开启后，持有地址的人只能读取影视榜单，不能更新或查看 TMDB 密钥。</p></div>
+        <div class="vw-field vw-full vw-toggles"><label><input v-model="values.auto_update" type="checkbox" role="switch">每天自动更新</label><p>默认关闭。开启后每天只在指定时间执行，没有频繁空轮询。</p><label><input v-model="values.notify_results" type="checkbox" role="switch">更新完成后通知</label><p>默认关闭。使用平台关联的通知渠道，不重复填写机器人。</p></div>
+        <div class="vw-field vw-full vw-subsection"><h4>客户端读取</h4><label for="vw-base">平台访问地址</label><input id="vw-base" v-model="values.public_base_url" type="url" placeholder="https://bot.example.com" :aria-invalid="!!errors.public_base_url"><p>填平台地址，不含 /api 路径；有部署子路径需带上。客户端必须能够访问这个地址。</p><p v-if="errors.public_base_url" class="vw-error">{{ errors.public_base_url }}</p><label class="vw-check"><input v-model="values.public_enabled" type="checkbox" role="switch">允许客户端读取 Widget</label><p>默认关闭。开启后，持有地址的人只能读取影视榜单，不能更新或查看 TMDB 密钥。</p></div>
       </fieldset>
     </section>
 
@@ -185,95 +188,149 @@ onBeforeUnmount(() => { mounted = false; clearTimeout(pollTimer) })
       <ol class="vw-steps"><li>在“配置”填写平台访问地址，开启“允许客户端读取 Widget”，保存。</li><li>在“榜单状态”更新需要的来源，确认有有效条目。</li><li>获取并复制地址，粘贴到 Forward 的 Widget 模块导入处。</li></ol>
       <p class="vw-note">输出使用 Forward 的 Widget 格式；Rex、Capy 等客户端请以其当前版本的导入支持为准。</p>
       <p class="vw-message" :class="{ bad: !status?.public_enabled }">{{ status?.public_enabled ? '客户端读取已开启。地址包含独立只读密钥，请不要公开分享。' : '客户端读取未开启。请先在配置中开启并保存。' }}</p>
-      <div class="vw-address-actions"><button class="primary" type="button" :disabled="!loaded || busy" @click="getAddress">获取 Widget 地址</button><button v-if="address" type="button" @click="copy">复制地址</button></div>
+      <div class="vw-address-actions"><button class="vw-primary" type="button" :disabled="!loaded || busy" @click="getAddress">获取 Widget 地址</button><button v-if="address" type="button" @click="copy">复制地址</button></div>
       <div v-if="address" class="vw-field"><label for="vw-address">只读 Widget 地址</label><textarea id="vw-address" :value="address" readonly rows="3" spellcheck="false"></textarea><p>TMDB 和 Trakt 密钥不会出现在这个地址或生成的模块中。</p></div>
-      <details class="vw-maintenance"><summary>地址泄露或需要更换？</summary><p>更换只读密钥会让所有旧地址立即失效；已导入的客户端也要重新导入新地址。</p><button v-if="!rotateConfirm" type="button" :disabled="!loaded || busy" @click="rotateConfirm = true">更换只读密钥…</button><div v-else class="vw-confirm"><p>确认让所有旧 Widget 地址失效？</p><button class="danger" type="button" :disabled="busy" @click="rotate">确认更换</button><button type="button" :disabled="busy" @click="rotateConfirm = false">取消</button></div></details>
+      <details class="vw-maintenance"><summary>地址泄露或需要更换？</summary><p>更换只读密钥会让所有旧地址立即失效；已导入的客户端也要重新导入新地址。</p><button v-if="!rotateConfirm" type="button" :disabled="!loaded || busy" @click="rotateConfirm = true">更换只读密钥…</button><div v-else class="vw-confirm"><p>确认让所有旧 Widget 地址失效？</p><button class="vw-danger" type="button" :disabled="busy" @click="rotate">确认更换</button><button type="button" :disabled="busy" @click="rotateConfirm = false">取消</button></div></details>
     </section>
-    <footer class="vw-footer"><div class="vw-save-state"><span>{{ dirty ? '有未保存的修改' : loaded ? '配置已读取' : '等待读取配置' }}</span><p v-if="saveNotice" :class="{ 'vw-error': saveFailed }" :role="saveFailed ? 'alert' : 'status'">{{ saveNotice }}<span v-if="saveFailed"> 可点击“保存配置”重试。</span></p></div><div class="vw-save-actions"><button type="button" :disabled="busy || dirty" @click="load">重新读取</button><button class="primary" type="button" :disabled="!loaded || busy" @click="save">{{ saving ? '正在保存…' : '保存配置' }}</button></div></footer>
+    <footer class="vw-footer"><div class="vw-save-state"><span>{{ dirty ? '有未保存的修改' : loaded ? '配置已读取' : '等待读取配置' }}</span><p v-if="saveNotice" :class="{ 'vw-error': saveFailed }" :role="saveFailed ? 'alert' : 'status'">{{ saveNotice }}<span v-if="saveFailed"> 可点击“保存配置”重试。</span></p></div><div class="vw-save-actions"><button type="button" :disabled="busy || dirty" @click="load">重新读取</button><button class="vw-primary" type="button" :disabled="!loaded || busy" @click="save">{{ saving ? '正在保存…' : '保存配置' }}</button></div></footer>
   </div>
+  </IosSettings>
 </template>
 
 <style scoped>
-.vw-config { --vw-fg: var(--text-primary, #172b37); --vw-muted: var(--text-secondary, #52636e); --vw-line: var(--border-light, #d5dee3); --vw-surface: var(--bg-elevated, #fff); --vw-hover: var(--bg-hover, #edf3f5); --vw-accent: var(--accent, #14765e); color: var(--vw-fg); font: inherit; font-size: 14px; line-height: 1.6; }
-* { box-sizing: border-box; }
-::selection { background: var(--accent-dim, #cce9df); color: var(--vw-fg); }
-button, input, textarea { font: inherit; }
-button { border: 1px solid var(--vw-line); border-radius: var(--radius-sm, 6px); padding: 7px 13px; color: var(--vw-fg); background: var(--vw-surface); cursor: pointer; min-height: 36px; }
-button:hover:not(:disabled) { background: var(--vw-hover); }
-button:disabled { opacity: .5; cursor: not-allowed; }
-button.primary { background: var(--vw-accent); color: var(--text-on-accent, #fff); border-color: var(--vw-accent); }
-button.primary:hover:not(:disabled) { background: var(--vw-accent); filter: brightness(.93); }
-button.danger, .vw-error { color: var(--danger, #b33232); }
-:is(button, input, textarea, summary):focus-visible { outline: 2px solid var(--vw-accent); outline-offset: 3px; }
-.vw-tabs { display: flex; gap: 5px; border-bottom: 1px solid var(--vw-line); margin-bottom: 24px; }
-.vw-tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; padding: 10px 16px; }
-.vw-tabs button.active { border-color: var(--vw-accent); color: var(--vw-accent); font-weight: 650; }
-.vw-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-h3, h4, p { margin: 0; }
-h3 { font-size: 18px; font-weight: 650; line-height: 1.4; }
-h4 { font-size: 15px; font-weight: 650; }
-.vw-heading p, .vw-note, .vw-field p, .vw-detail, .vw-toolbar, .vw-preview li span, .vw-footer { color: var(--vw-muted); }
-.vw-heading p { margin-top: 7px; max-width: 68ch; }
-.vw-message { padding: 12px 14px; border: 1px solid var(--vw-line); border-radius: var(--radius-sm, 6px); margin: 0 0 16px; overflow-wrap: anywhere; }
-.vw-message.bad { color: var(--danger, #b33232); }
+/* iOS source ledger, grouped configuration and Widget delivery. Data and actions are unchanged. */
+.vw-config { min-width: 0; color: var(--ios-text); }
+.vw-config h2, .vw-config h3, .vw-config h4, .vw-config p { margin: 0; }
+.vw-page-head { padding: 4px 0 22px; }
+.vw-page-head h2 { font-size: 22px; font-weight: 650; line-height: 1.4; letter-spacing: -.025em; }
+.vw-config button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.vw-config button:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.vw-config button:disabled { opacity: .5; cursor: not-allowed; }
+.vw-config button.vw-primary { border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.vw-config button.vw-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.vw-config button.vw-danger, .vw-error { color: var(--danger, #bd2733); }
+.vw-tabs { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%; max-width: 540px; margin-bottom: 24px; padding: 4px; border-radius: 16px; background: var(--ios-inset); }
+.vw-tabs::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 16px) / 3); border-radius: 12px; background: var(--ios-control); box-shadow: 0 2px 5px rgb(0 0 0 / .08); transform: translateX(calc(var(--vw-tab-index) * (100% + 4px))); transition: transform var(--ios-duration) var(--ios-ease); pointer-events: none; z-index: -1; }
+.vw-config .vw-tabs button { min-height: 42px; padding: 8px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--ios-secondary); }
+.vw-config .vw-tabs button.active { color: var(--ios-text); font-weight: 650; }
+.vw-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 4px 16px; }
+.vw-heading h3 { font-size: 16px; font-weight: 650; line-height: 1.5; letter-spacing: -.015em; }
+.vw-heading h4 { font-size: 15px; font-weight: 650; }
+.vw-heading p { max-width: 70ch; margin-top: 5px; color: var(--ios-secondary); font-size: 13px; line-height: 1.65; }
+.vw-heading > button { flex: 0 0 auto; }
+.vw-note, .vw-field p, .vw-detail, .vw-toolbar, .vw-preview li span, .vw-footer { color: var(--ios-secondary); font-size: 12px; line-height: 1.7; }
+.vw-message { display: block; padding: 14px 18px; margin-bottom: 16px !important; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); color: var(--ios-text); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.vw-message.bad { color: var(--danger, #bd2733); }
+.vw-message button { margin-left: 8px; }
 .vw-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 16px; }
-.vw-toolbar span { margin-right: auto; }
-.vw-progress { margin-bottom: 12px; color: var(--vw-accent); font-variant-numeric: tabular-nums; }
-.vw-ledger { border-top: 1px solid var(--vw-line); }
-.vw-row { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(0, 1.7fr) auto; align-items: center; gap: 14px; border-bottom: 1px solid var(--vw-line); padding: 14px 0; }
-.vw-source { display: flex; flex-direction: column; align-items: start; gap: 3px; }
-.vw-state { font-size: 12px; color: var(--vw-muted); }
-.vw-state.success, .vw-state.running { color: var(--vw-accent); }
-.vw-state.failed { color: var(--danger, #b33232); }
-.vw-detail { font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.vw-detail p { margin-top: 3px; }
-.vw-row-actions { display: flex; gap: 7px; }
-.vw-preview { margin-top: 24px; }
-.vw-preview ul { padding: 0; list-style: none; max-height: 360px; overflow: auto; scrollbar-color: var(--vw-line) var(--vw-surface); }
-.vw-preview li { display: flex; flex-direction: column; border-bottom: 1px solid var(--vw-line); padding: 9px 0; }
-.vw-preview li span { font-size: 12px; }
-.vw-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.vw-toolbar > span { flex: 1; min-width: 180px; }
+.vw-progress { margin-bottom: 14px !important; padding: 12px 16px; border-radius: 12px; background: var(--ios-inset); color: var(--accent, #0063dc); font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vw-ledger { overflow: hidden; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.vw-row { display: grid; grid-template-columns: minmax(105px, .7fr) minmax(0, 1.7fr) auto; align-items: center; gap: 16px; padding: 17px 20px; }
+.vw-row + .vw-row { border-top: 1px solid var(--ios-line); }
+.vw-source { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; min-width: 0; }
+.vw-source strong { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.vw-state { color: var(--ios-secondary); font-size: 12px; }
+.vw-state.success { color: var(--success, #087758); }
+.vw-state.running { color: var(--accent, #0063dc); }
+.vw-state.failed { color: var(--danger, #bd2733); }
+.vw-detail { min-width: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vw-detail p { max-height: 132px; margin-top: 4px; overflow: auto; }
+.vw-row-actions { display: flex; gap: 8px; }
+.vw-preview { margin-top: 26px; padding: 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.vw-preview .vw-heading { margin-inline: 0; }
+.vw-preview ul { max-height: 360px; margin: 0 0 12px; padding: 0; list-style: none; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--ios-line) transparent; }
+.vw-preview li { display: flex; flex-direction: column; gap: 4px; padding: 13px 0; border-bottom: 1px solid var(--ios-line); }
+.vw-preview li:last-child { border-bottom: 0; }
+.vw-preview li strong { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; }
+.vw-preview li span { overflow-wrap: anywhere; }
+.vw-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 24px; min-width: 0; margin: 0; padding: 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
 .vw-field { min-width: 0; }
-.vw-field.full { grid-column: 1 / -1; }
-.vw-field label, .vw-label { display: block; font-weight: 600; margin-bottom: 7px; }
-.vw-field input:not([type=checkbox]), textarea { display: block; width: 100%; min-width: 0; border: 1px solid var(--vw-line); border-radius: var(--radius-sm, 6px); padding: 9px 10px; background: var(--vw-surface); color: var(--vw-fg); caret-color: var(--vw-accent); }
-textarea { resize: vertical; }
-input::placeholder { color: var(--vw-muted); opacity: 1; }
-input[aria-invalid=true] { border-color: var(--danger, #b33232); }
-input[type=checkbox] { accent-color: var(--vw-accent); width: 16px; height: 16px; flex: 0 0 16px; }
-.vw-field p { margin-top: 7px; font-size: 13px; max-width: 70ch; }
-.vw-field p.vw-error { color: var(--danger, #b33232); }
-.vw-secret { display: flex; gap: 7px; }
-.vw-secret button { flex-shrink: 0; }
-.vw-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; }
-.vw-choices label, .vw-toggles label, .vw-check { display: flex !important; align-items: center; gap: 9px; margin: 0; min-height: 32px; cursor: pointer; }
-.vw-toggles label:not(:first-child) { margin-top: 18px; }
-.vw-subsection { border-top: 1px solid var(--vw-line); padding-top: 24px; }
-.vw-subsection h4 { margin-bottom: 15px; }
-.vw-subsection .vw-check { margin-top: 20px; }
-.vw-steps { padding-left: 22px; margin: 12px 0 16px; }
-.vw-steps li { margin-bottom: 10px; }
+.vw-field.vw-full { grid-column: 1 / -1; }
+.vw-field > label, .vw-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; }
+.vw-field input:not([type='checkbox']), .vw-field textarea { display: block; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease; }
+.vw-field input:focus, .vw-field textarea:focus { border-color: var(--accent, #0063dc); }
+.vw-field input[aria-invalid='true'] { border-color: var(--danger, #bd2733); }
+.vw-field textarea { line-height: 1.7; resize: vertical; }
+.vw-field input[type='checkbox'] { flex: 0 0 18px; width: 18px; height: 18px; margin: 0; accent-color: var(--ios-accent); }
+.vw-field p { margin-top: 7px; max-width: 72ch; overflow-wrap: anywhere; }
+.vw-field p.vw-error { color: var(--danger, #bd2733); }
+.vw-secret { display: flex; gap: 8px; }
+.vw-secret button { flex: 0 0 auto; }
+.vw-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 20px; }
+.vw-choices label { display: flex; align-items: center; gap: 9px; min-width: 0; min-height: 42px; margin: 0; padding: 7px 10px; border: 1px solid var(--ios-line); border-radius: 11px; color: var(--ios-secondary); font-size: 13px; cursor: pointer; }
+.vw-choices label:has(input:checked) { border-color: var(--accent, #0063dc); color: var(--ios-text); background: var(--accent-dim, #e8f1ff); }
+.vw-toggles { padding-top: 16px; border-top: 1px solid var(--ios-line); }
+.vw-toggles label, .vw-field label.vw-check { display: flex; align-items: center; flex-direction: row-reverse; justify-content: space-between; gap: 20px; min-height: 44px; margin: 0; color: var(--ios-text); cursor: pointer; }
+.vw-toggles label:not(:first-child) { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--ios-line); }
+.vw-toggles p { margin-top: 4px; padding-right: 66px; }
+.vw-config .vw-toggles input, .vw-config .vw-check input { appearance: none; -webkit-appearance: none; position: relative; display: block; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background-color var(--ios-fast) ease, border-color var(--ios-fast) ease; }
+.vw-config .vw-toggles input::before, .vw-config .vw-check input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .18); transition: transform var(--ios-duration) var(--ios-ease); }
+.vw-config .vw-toggles input:checked, .vw-config .vw-check input:checked { border-color: transparent; background: var(--ios-accent); }
+.vw-config .vw-toggles input:checked::before, .vw-config .vw-check input:checked::before { transform: translateX(20px); }
+.vw-config .vw-toggles input:active::before, .vw-config .vw-check input:active::before { transform: scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.vw-config .vw-toggles input:checked:active::before, .vw-config .vw-check input:checked:active::before { transform: translateX(20px) scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.vw-fields:disabled { opacity: .65; }
+.vw-fields:disabled label, .vw-fields:disabled input { cursor: not-allowed; }
+.vw-subsection { padding-top: 22px; border-top: 1px solid var(--ios-line); }
+.vw-subsection h4 { margin-bottom: 18px; font-size: 14px; font-weight: 650; }
+.vw-field.vw-subsection .vw-check { margin-top: 20px; }
+.vw-steps { margin: 0 0 16px; padding: 18px 20px 8px 42px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.vw-steps li { padding-left: 4px; margin-bottom: 12px; line-height: 1.75; font-size: 13px; }
 #vw-panel-widget > .vw-note { margin-bottom: 18px; }
-.vw-address-actions { display: flex; gap: 8px; margin-bottom: 18px; }
-.vw-maintenance { margin-top: 28px; border-top: 1px solid var(--vw-line); padding-top: 15px; }
-summary { cursor: pointer; font-weight: 600; }
-.vw-maintenance p { margin: 12px 0; color: var(--vw-muted); }
-.vw-confirm { padding-top: 8px; }
-.vw-confirm button { margin-right: 8px; }
-.vw-footer { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--vw-line); }
-.vw-save-state { min-width: 0; max-width: 65ch; }
-.vw-save-state p { margin-top: 5px; font-size: 13px; overflow-wrap: anywhere; }
-.vw-save-actions { display: flex; gap: 8px; flex-shrink: 0; }
-@media (max-width: 560px) {
-  .vw-tabs button { padding: 10px 11px; }
-  .vw-heading { flex-direction: column; }
-  .vw-fields { grid-template-columns: 1fr; }
-  .vw-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .vw-row { grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; }
+.vw-address-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+#vw-panel-widget > .vw-field { padding: 18px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.vw-maintenance { margin-top: 26px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); overflow: hidden; }
+.vw-maintenance summary { position: relative; min-height: 52px; padding: 14px 46px 14px 20px; list-style: none; font-weight: 500; cursor: pointer; }
+.vw-maintenance summary::-webkit-details-marker { display: none; }
+.vw-maintenance summary::after { content: ''; position: absolute; right: 22px; top: 21px; width: 8px; height: 8px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); transition: transform var(--ios-duration) var(--ios-ease); }
+.vw-maintenance[open] summary::after { transform: rotate(135deg); }
+.vw-maintenance p { margin: 0 20px 14px; max-width: 72ch; color: var(--ios-secondary); font-size: 12px; line-height: 1.75; }
+.vw-maintenance > button { margin: 0 20px 18px; }
+.vw-confirm { padding-bottom: 18px; }
+.vw-confirm button { margin-left: 20px; }
+.vw-confirm button + button { margin-left: 8px; }
+.vw-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; padding-top: 18px; }
+.vw-save-state { flex: 1; min-width: 0; max-width: 65ch; }
+.vw-save-state p { margin-top: 5px; font-size: 12px; overflow-wrap: anywhere; }
+.vw-save-actions { display: flex; flex: 0 0 auto; gap: 10px; }
+:global(html[data-theme='transparent'] .vw-ledger),
+:global(html[data-theme='transparent'] .vw-fields),
+:global(html[data-theme='transparent'] .vw-preview),
+:global(html[data-theme='transparent'] .vw-message),
+:global(html[data-theme='transparent'] .vw-maintenance),
+:global(html[data-theme='transparent'] .vw-steps),
+:global(html[data-theme='transparent'] #vw-panel-widget > .vw-field) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 620px) {
+  .vw-page-head h2 { font-size: 20px; }
+  .vw-tabs { max-width: none; margin-bottom: 20px; }
+  .vw-config .vw-tabs button { padding-inline: 8px; font-size: 13px; }
+  .vw-heading { flex-wrap: wrap; gap: 12px; }
+  .vw-heading > div { flex: 1 1 100%; }
+  .vw-fields { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 22px; }
+  .vw-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+  .vw-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 16px; }
   .vw-source { grid-column: 1; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center; }
   .vw-detail { grid-column: 1; }
-  .vw-row-actions { grid-column: 2; grid-row: 1 / 3; }
+  .vw-row-actions { grid-column: 2; grid-row: 1 / 3; flex-direction: column; }
+  .vw-config .vw-row-actions button { min-height: 40px; padding: 7px 12px; }
+  .vw-preview { padding: 16px; }
+  .vw-field input:not([type='checkbox']), .vw-field textarea { font-size: 16px; }
   .vw-footer { align-items: flex-start; flex-direction: column; }
-  .vw-save-actions { width: 100%; justify-content: flex-end; }
+  .vw-save-actions { width: 100%; }
+  .vw-save-actions button { flex: 1; }
+  .vw-toolbar > span { flex: 1 1 100%; }
+  .vw-toggles p { padding-right: 0; }
+}
+@container (max-width: 360px) {
+  .vw-tabs { gap: 2px; }
+  .vw-tabs::before { width: calc((100% - 12px) / 3); transform: translateX(calc(var(--vw-tab-index) * (100% + 2px))); }
+  .vw-config .vw-tabs button { font-size: 12px; padding-inline: 5px; }
+  .vw-address-actions { flex-direction: column; }
+}
+@media (forced-colors: active) {
+  .vw-config .vw-toggles input, .vw-config .vw-check input { appearance: auto; -webkit-appearance: auto; }
+  .vw-config .vw-toggles input::before, .vw-config .vw-check input::before { display: none; }
+  .vw-tabs::before { border: 2px solid Highlight; }
 }
 </style>

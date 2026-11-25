@@ -5,12 +5,12 @@ from .core import setup as _native_setup, teardown as _native_teardown
 
 __plugin__ = {'name': '115频道监控',
  'id': 'movie_monitor_115',
- 'version': '2.0.2',
+ 'version': '2.0.3',
  'plugin_api_version': 2,
  'author': 'AWdress',
  'description': '通用监控频道里的 115 分享，读取/识别 TMDB 后查 Emby 媒体库，缺失的转发给 CMS 入库机器人。可选电影/电视剧，默认全部。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_cloud_media.png',
- 'changelog': 'v2.0.2 补齐敏感字段显示按钮\n'
+ 'changelog': 'v2.0.3 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.2 补齐敏感字段显示按钮\n'
               '- TMDB、Emby API Key 与 115 Cookie 默认隐藏并提供独立眼睛按钮\n'
               '- 点击显示时使用平台受控接口读取真实值\n\n'
               'v2.0.1 修复 Telethon 实体解析与消息兼容\n'

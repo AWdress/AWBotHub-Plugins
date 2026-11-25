@@ -5,12 +5,12 @@ from .core import setup as _native_setup, teardown as _native_teardown
 
 __plugin__ = {'name': '插件开发调试',
  'id': 'custom_plugin',
- 'version': '2.0.0',
+ 'version': '2.0.1',
  'author': 'AWdress',
  'scope': 'both',
  'description': '在管理员配置页编辑、检查并运行 Python 插件源码，显示运行状态与错误堆栈，适合开发和调试单文件插件。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/custom_plugin.svg',
- 'changelog': 'v2.0.0 完成平台原生迁移\n'
+ 'changelog': 'v2.0.1 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.0 完成平台原生迁移\n'
               '- 使用原生事件、内部 API、调度与生命周期接口\n'
               '- 修复 API 路径、Webhook 注册和重载残留问题\n'
               '- 默认示例改为 Telethon 单参数事件写法\n\n'

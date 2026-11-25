@@ -5,12 +5,12 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': 'AWEmbyPush',
  'id': 'awembypush',
- 'version': '2.0.2',
+ 'version': '2.0.3',
  'scope': 'standalone',
  'author': 'AWdress',
  'description': '监听 Emby/Jellyfin 入库 Webhook，经 TMDB 增强/剧集合并/去重后，通过 Telegram/企业微信/Bark 推送精美媒体通知。（自 MoviePilot 插件移植）自带 '
                 'Vue 配置界面 + 最近推送/测试推送。',
- 'changelog': 'v2.0.2 修复企业微信反代与 Webhook 地址\n'
+ 'changelog': 'v2.0.3 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.2 修复企业微信反代与 Webhook 地址\n'
               '- API 地址未填写协议时自动补全 https://，避免 gettoken 请求因 URL 无协议而失败\n'
               '- 配置页直接显示可复制的 Emby/Jellyfin Webhook 完整地址\n\n'
               'v2.0.1 补齐敏感字段显示按钮\n'

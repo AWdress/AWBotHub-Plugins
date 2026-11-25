@@ -5,11 +5,11 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': '趣味答题',
  'id': 'quiz_game',
- 'version': '2.0.2',
+ 'version': '2.0.3',
  'author': 'AWdress',
  'description': '群内答题游戏：发「开启答题」出题，群友抢答，答对自动发魔力奖励，支持连胜加成。AI或天行出题。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/quiz_game.png',
- 'changelog': 'v2.0.2 统一使用平台 AI 接口\n'
+ 'changelog': 'v2.0.3 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.2 统一使用平台 AI 接口\n'
               '- 移除未使用的 OpenAI 依赖和遗留 AI 密钥配置\n'
               '- AI 出题继续由 AWBotHub 平台统一能力提供\n\n'
               'v2.0.1 补齐密钥显示按钮\n'

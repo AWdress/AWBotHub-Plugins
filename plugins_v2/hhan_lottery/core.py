@@ -19,11 +19,11 @@ from ._auth import cookie_header
 __plugin__ = {
     "name": "憨憨小助手",
     "id": "hhan_lottery",
-    "version": "2.0.4",
+    "version": "2.0.5",
     "author": "AWdress",
     "description": "HHanClub 综合助手：赠豆、官方红包与抽奖自动参与、幸运转盘及消息管理。",
     "icon": "https://hhanclub.net/favicon.ico",
-    "changelog": "v2.0.4 新增官方抽奖自动参与并完善红包识别\n- 自动提取进行中抽奖的参与口令并发送\n- 普通红包兼容“每份金额”文案，不再要求正文包含总额\n- 同时支持官方机器人直接消息和 Telegram 原生转发消息\n- 抢红包与抽奖独立为配置分类，两个开关默认关闭",
+    "changelog": "v2.0.5 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.4 新增官方抽奖自动参与并完善红包识别\n- 自动提取进行中抽奖的参与口令并发送\n- 普通红包兼容“每份金额”文案，不再要求正文包含总额\n- 同时支持官方机器人直接消息和 Telegram 原生转发消息\n- 抢红包与抽奖独立为配置分类，两个开关默认关闭",
     "scope": "user",
     "min_platform_version": "1.1.4.0",
     "plugin_api_version": 1,

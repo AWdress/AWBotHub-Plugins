@@ -2,7 +2,7 @@ const currentImports = {};
       const exportSet = new Set(['Module', '__esModule', 'default', '_export_sfc']);
       let moduleMap = {
 "./Config":()=>{
-      dynamicLoadingCss(["__federation_expose_Config-CyjFUrud.css"], false, './Config');
+      dynamicLoadingCss(["__federation_expose_Config-CyjFUrud.css", "ios-settings-2.0.2.css"], false, './Config');
       return __federation_import('/api/plugins/keyword_auto_reply/fe/assets/__federation_expose_Config-BKR1w1wR.js').then(module =>Object.keys(module).every(item => exportSet.has(item)) ? () => module.default : () => module)},};
       const seen = {};
       const dynamicLoadingCss = (cssFilePaths, dontAppendStylesToHead, exposeItemName) => {

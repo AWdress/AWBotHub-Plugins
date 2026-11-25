@@ -1,0 +1,232 @@
+
+.aw-ios-settings[data-v-3b88f062] {
+  --ios-surface: var(--bg-card, #fff);
+  --ios-inset: var(--surface-inset, #f0f2f6);
+  --ios-control: var(--bg-elevated, #fff);
+  --ios-text: var(--text-primary, #1c1c1e);
+  --ios-secondary: var(--text-secondary, #53555b);
+  --ios-line: var(--border-card, #d5d7dd);
+  --ios-accent: var(--accent-solid, #0063dc);
+  --ios-accent-text: var(--accent, #0063dc);
+  --ios-fast: calc(160ms * var(--glass-custom-motion, 1));
+  --ios-duration: calc(260ms * var(--glass-custom-motion, 1));
+  --ios-ease: var(--glass-decelerate, cubic-bezier(.22, 1, .36, 1));
+  color: var(--ios-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-width: 0;
+  container-type: inline-size;
+  background: transparent;
+}
+.aw-ios-settings[data-v-3b88f062] *, .aw-ios-settings[data-v-3b88f062] *::before, .aw-ios-settings[data-v-3b88f062] *::after { box-sizing: border-box;
+}
+.aw-ios-settings[data-v-3b88f062] ::selection { color: var(--ios-text); background: var(--accent-dim, #cbdfff);
+}
+[data-v-3b88f062] :where(button, input, textarea, select) { font: inherit;
+}
+.aw-ios-settings[data-v-3b88f062] button, .aw-ios-settings[data-v-3b88f062] summary, .aw-ios-settings[data-v-3b88f062] a { -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.aw-ios-settings[data-v-3b88f062] button { transition: background-color var(--ios-fast) ease, color var(--ios-fast) ease, box-shadow var(--ios-fast) ease, transform var(--ios-fast) var(--ios-ease);
+}
+.aw-ios-settings[data-v-3b88f062] button:active:not(:disabled) { transform: scale(calc(1 - .025 * var(--glass-custom-motion, 1)));
+}
+.aw-ios-settings[data-v-3b88f062] :is(button, input, textarea, select, summary, a):focus-visible { outline: 3px solid var(--accent, #0063dc); outline-offset: 3px;
+}
+.aw-ios-settings[data-v-3b88f062] :is(input, textarea, select) { caret-color: var(--accent, #0063dc);
+}
+.aw-ios-settings[data-v-3b88f062] :is(input, textarea)::placeholder { color: var(--text-placeholder, #62656d); opacity: 1;
+}
+.aw-ios-settings[data-v-3b88f062] :is(textarea, pre, .table-wrap) { scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent;
+}
+.aw-ios-settings[data-v-3b88f062] :is(table, time, input[type=number]) { font-variant-numeric: tabular-nums;
+}
+.aw-ios-settings[data-v-3b88f062] select option { background: var(--select-option-bg, var(--ios-control)); color: var(--ios-text);
+}
+.aw-ios-settings[data-v-3b88f062] button:disabled { cursor: not-allowed;
+}
+.aw-ios-settings[data-v-3b88f062] a { text-underline-offset: 3px;
+}
+html[data-theme="transparent"] .aw-ios-settings {
+  --ios-surface: var(--glass-surface, var(--bg-card, #171d28));
+  --ios-control: var(--glass-control, var(--bg-elevated, #222b3a));
+  --ios-inset: var(--glass-inset, var(--surface-inset, #111824));
+}
+html[data-glass-motion="off"] .aw-ios-settings { --glass-custom-motion: 0;
+}
+html[data-glass-motion="off"] .aw-ios-settings *,html[data-glass-motion="off"] .aw-ios-settings *::before,html[data-glass-motion="off"] .aw-ios-settings *::after { transition: none !important; animation: none !important;
+}
+html[data-glass-motion="off"] .aw-ios-settings button:active:not(:disabled) { transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+.aw-ios-settings[data-v-3b88f062] { --glass-custom-motion: 0;
+}
+.aw-ios-settings[data-v-3b88f062] *, .aw-ios-settings[data-v-3b88f062] *::before, .aw-ios-settings[data-v-3b88f062] *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important;
+}
+.aw-ios-settings[data-v-3b88f062] button:active:not(:disabled) { transform: none;
+}
+}
+@media (forced-colors: active) {
+.aw-ios-settings[data-v-3b88f062] input[type=checkbox] { appearance: auto !important;
+}
+}
+
+/* User-pinned iOS grouped settings; platform tokens own dark and glass materials.
+   THESIS: choose the monitored media and its service connections, then inspect results.
+   OWN-WORLD: sliding segments, grouped service rows, rounded native controls.
+   STORY: configure sources and destinations, save, then test or read processing history.
+   FIRST VIEWPORT: three segments above the monitor scope; other services follow in groups.
+   FORM: the user's established iOS Settings direction; no new visual-world selection.
+   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance */
+.movie-monitor-config[data-v-42a62880] { display: flex; flex-direction: column; gap: 24px; min-width: 0; color: var(--ios-text);
+}
+.tabs[data-v-42a62880] { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset);
+}
+.tabs[data-v-42a62880]::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 16px) / 3); border-radius: 11px; background: var(--ios-control); box-shadow: 0 2px 5px rgb(0 0 0 / .08); transform: translateX(calc(var(--movie-tab-index) * (100% + 4px))); transition: transform var(--ios-duration) var(--ios-ease); z-index: -1;
+}
+.tabs button[data-v-42a62880] { min-width: 0; min-height: 44px; padding: 9px 12px; border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer;
+}
+.tabs button.active[data-v-42a62880] { color: var(--ios-text); font-weight: 650;
+}
+.tab-content[data-v-42a62880] { min-width: 0;
+}
+.settings[data-v-42a62880] { display: flex; flex-direction: column; gap: 20px;
+}
+.section[data-v-42a62880], .card[data-v-42a62880] { min-width: 0; padding: 4px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface);
+}
+.section h3[data-v-42a62880], .card h3[data-v-42a62880] { margin: 0; padding: 14px 0 16px; color: var(--ios-text); font-size: 16px; font-weight: 650; letter-spacing: -.015em;
+}
+.row[data-v-42a62880] { display: flex; align-items: center; gap: 16px; min-height: 74px; margin: 0; padding: 16px 0; border-top: 1px solid var(--ios-line);
+}
+.row > span[data-v-42a62880]:first-child { flex: 0 0 150px; min-width: 0; color: var(--ios-text);
+}
+.chat-names[data-v-42a62880] { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 16px 166px; color: var(--ios-secondary); font-size: 12px; overflow-wrap: anywhere;
+}
+.chat-name[data-v-42a62880] { min-width: 0;
+}
+.row.switch[data-v-42a62880] { flex-direction: row-reverse; justify-content: space-between; gap: 20px; cursor: pointer;
+}
+.row.switch span[data-v-42a62880] { flex: 1; min-width: 0; line-height: 1.7;
+}
+.secret-field[data-v-42a62880] { position: relative; flex: 1; min-width: 0;
+}
+.secret-field .inp[data-v-42a62880] { width: 100%; padding-right: 52px;
+}
+.secret-field button[data-v-42a62880] { position: absolute; right: 1px; top: 1px; display: grid; place-items: center; width: 44px; height: calc(100% - 2px); border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer;
+}
+.secret-field button[data-v-42a62880]:hover { color: var(--ios-text);
+}
+.secret-field svg[data-v-42a62880] { width: 20px; fill: none; stroke: currentColor; stroke-width: 1.8;
+}
+.inp[data-v-42a62880] { flex: 1; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease;
+}
+.inp[data-v-42a62880]:focus { border-color: var(--accent, #0063dc);
+}
+.fld[data-v-42a62880] { display: flex; align-items: center; gap: 16px; min-height: 74px; padding: 16px 0; border-top: 1px solid var(--ios-line);
+}
+.lbl[data-v-42a62880] { flex: 0 0 150px; color: var(--ios-text);
+}
+.chips[data-v-42a62880] { display: flex; flex-wrap: wrap; gap: 8px;
+}
+.chip[data-v-42a62880] { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 14px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-secondary); cursor: pointer;
+}
+.chip[data-v-42a62880]:has(input:checked) { border-color: var(--accent, #0063dc); color: var(--ios-text); background: var(--accent-dim, #e8f1ff);
+}
+.chip input[data-v-42a62880] { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--ios-accent); cursor: pointer;
+}
+.row.switch input[data-v-42a62880] { appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background-color var(--ios-fast) ease;
+}
+.row.switch input[data-v-42a62880]::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .2); transition: transform var(--ios-duration) var(--ios-ease);
+}
+.row.switch input[data-v-42a62880]:checked { border-color: transparent; background: var(--ios-accent);
+}
+.row.switch input[data-v-42a62880]:checked::before { transform: translateX(20px);
+}
+.btn[data-v-42a62880], .btn-primary[data-v-42a62880], .btn-sm[data-v-42a62880] { min-height: 44px; padding: 10px 18px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer;
+}
+.btn[data-v-42a62880]:hover:not(:disabled), .btn-sm[data-v-42a62880]:hover:not(:disabled) { border-color: var(--accent, #0063dc);
+}
+.btn-primary[data-v-42a62880] { align-self: flex-end; min-width: 132px; margin-top: 4px; border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600;
+}
+.btn-primary[data-v-42a62880]:hover:not(:disabled) { filter: brightness(1.08);
+}
+.btn[data-v-42a62880]:disabled, .btn-primary[data-v-42a62880]:disabled, .btn-sm[data-v-42a62880]:disabled { opacity: .5; cursor: not-allowed;
+}
+.status[data-v-42a62880] { display: flex; flex-direction: column; align-items: flex-start; gap: 20px;
+}
+.status .card[data-v-42a62880] { align-self: stretch;
+}
+.kv[data-v-42a62880] { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 60px; padding: 14px 0; border-top: 1px solid var(--ios-line);
+}
+.kv span[data-v-42a62880] { color: var(--ios-secondary);
+}
+.kv b[data-v-42a62880] { min-width: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+}
+.ok[data-v-42a62880], .kv b.ok[data-v-42a62880] { color: var(--success, #087758);
+}
+.err[data-v-42a62880], .kv b.err[data-v-42a62880] { color: var(--danger, #bd2733);
+}
+.test-result[data-v-42a62880] { align-self: stretch; margin: 0; padding: 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-surface); font-size: 13px; line-height: 1.75; overflow-wrap: anywhere;
+}
+.toolbar[data-v-42a62880] { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px;
+}
+.muted[data-v-42a62880] { color: var(--ios-secondary); font-size: 12px;
+}
+.movie-table-wrap[data-v-42a62880] { max-width: 100%; min-width: 0; overflow: auto; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent;
+}
+.tbl[data-v-42a62880] { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.tbl th[data-v-42a62880], .tbl td[data-v-42a62880] { padding: 13px 14px; border-bottom: 1px solid var(--ios-line); text-align: left; white-space: nowrap;
+}
+.tbl th[data-v-42a62880] { color: var(--ios-secondary); background: var(--ios-inset); font-size: 12px; font-weight: 500;
+}
+.tbl td[data-v-42a62880] { color: var(--ios-text);
+}
+.tbl td[data-v-42a62880]:nth-child(2), .tbl td[data-v-42a62880]:nth-child(3) { min-width: 120px; max-width: 260px; white-space: normal; overflow-wrap: anywhere;
+}
+.tbl tbody tr:last-child td[data-v-42a62880] { border-bottom: 0;
+}
+.tbl td.muted[data-v-42a62880] { color: var(--ios-secondary); font-size: 12px;
+}
+.tbl td.empty[data-v-42a62880] { padding: 40px 20px; color: var(--ios-secondary); text-align: center;
+}
+.tmdb-id[data-v-42a62880] { color: var(--accent, #0063dc); font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px;
+}
+.action-转发[data-v-42a62880] { color: var(--success, #087758);
+}
+.action-跳过[data-v-42a62880] { color: var(--warning, #926100);
+}
+.action-失败[data-v-42a62880] { color: var(--danger, #bd2733);
+}
+html[data-theme='transparent'] .movie-monitor-config .section,html[data-theme='transparent'] .movie-monitor-config .card,html[data-theme='transparent'] .movie-monitor-config .movie-table-wrap { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%));
+}
+@container (max-width: 600px) {
+.movie-monitor-config[data-v-42a62880] { gap: 20px;
+}
+.tabs button[data-v-42a62880] { padding-inline: 5px; font-size: 13px;
+}
+.section[data-v-42a62880], .card[data-v-42a62880] { padding-inline: 16px;
+}
+.row[data-v-42a62880]:not(.switch), .fld[data-v-42a62880] { flex-direction: column; align-items: stretch; gap: 8px;
+}
+.row:not(.switch) > span[data-v-42a62880]:first-child, .lbl[data-v-42a62880] { flex: none;
+}
+.secret-field[data-v-42a62880] { flex: none; width: 100%;
+}
+.chat-names[data-v-42a62880] { margin-left: 0;
+}
+.inp[data-v-42a62880] { font-size: 16px;
+}
+.settings .btn-primary[data-v-42a62880] { width: 100%; margin-top: 4px;
+}
+.tbl th[data-v-42a62880], .tbl td[data-v-42a62880] { padding: 12px;
+}
+}
+@media (forced-colors: active) {
+.row.switch input[data-v-42a62880] { appearance: auto !important;
+}
+.row.switch input[data-v-42a62880]::before { display: none;
+}
+.tabs[data-v-42a62880]::before { border: 2px solid Highlight;
+}
+}

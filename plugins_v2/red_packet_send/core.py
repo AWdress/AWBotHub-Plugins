@@ -29,14 +29,14 @@ from ._activity import (
 __plugin__ = {
     "name": "发红包",
     "id": "red_packet_send",
-    "version": "2.0.3",
+    "version": "2.0.4",
     "author": "AWdress",
     "scope": "user",
     "default_enabled": False,
     "render_mode": "vue",
     "description": "用你的账号在群里发拼手气红包，支持验证码图片或可复制的文字口令，可选每领取一份后更换口令、旧码立即失效。按拼手气随机分配魔力，自带 Vue 配置页和红包监控。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_redpacket.png",
-    "changelog": "v1.0.13 重复参与反馈\n- 用户再次发送当前有效参与口令时，回复重复参与无效提示\n- 提示 8 秒后自动删除，普通聊天不会被误判为重复参与\n\nv1.0.12 显示群组名称\n- 红包监控和历史记录显示群组名称并保留 UID\n- 创建、超时和结算日志显示群组名称\n\nv1.0.11 修复红包金额\n- 统一用整数魔力分配，避免按分切再取整导致小份额打成 0 或扣发不符\n- 总额不足以每个红包至少 1 魔力时拒绝创建",
+    "changelog": "v2.0.4 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv1.0.13 重复参与反馈\n- 用户再次发送当前有效参与口令时，回复重复参与无效提示\n- 提示 8 秒后自动删除，普通聊天不会被误判为重复参与\n\nv1.0.12 显示群组名称\n- 红包监控和历史记录显示群组名称并保留 UID\n- 创建、超时和结算日志显示群组名称\n\nv1.0.11 修复红包金额\n- 统一用整数魔力分配，避免按分切再取整导致小份额打成 0 或扣发不符\n- 总额不足以每个红包至少 1 魔力时拒绝创建",
 }
 
 # vue 模式无 config_schema：配置默认值集中此处备查（后端各处 ctx.config.get(k, 默认) 已带默认，

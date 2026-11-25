@@ -11,7 +11,7 @@ from .helpers import (extract_amount, group_allowed, is_continuous_command,
 from .state import GameStateManager
 
 __plugin__ = {
-    "id": "bomb_game", "name": "数字炸弹", "version": "2.0.0",
+    "id": "bomb_game", "name": "数字炸弹", "version": "2.0.1",
     "author": "AWdress", "scope": "user", "plugin_api_version": 2,
     "description": "群内数字炸弹竞猜：开启后群友回复+金额参与组奖池，轮流猜数字，猜中/范围耗尽即爆炸，中奖者按比例分奖池。",
     "requirements": [],
@@ -19,7 +19,7 @@ __plugin__ = {
     "tags": ["数字炸弹", "群组游戏", "奖池互动"], "render_mode": "vue",
     "config_schema": {},
     "resources": {"timeout_seconds": 120, "max_concurrency": 16, "max_background_tasks": 64},
-    "changelog": "v2.0.0 原生 AWBotHub 迁移\n- 移除旧版兼容运行层与 Pyrogram 模拟层\n- 使用 Telethon 原生事件和交互快速通道\n- 活跃游戏迁移到平台会话运行时，关键状态使用异步存储检查点\n- 后台等待与自动删除任务纳入平台生命周期管理",
+    "changelog": "v2.0.1 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.0 原生 AWBotHub 迁移\n- 移除旧版兼容运行层与 Pyrogram 模拟层\n- 使用 Telethon 原生事件和交互快速通道\n- 活跃游戏迁移到平台会话运行时，关键状态使用异步存储检查点\n- 后台等待与自动删除任务纳入平台生命周期管理",
 }
 
 DEFAULTS = {

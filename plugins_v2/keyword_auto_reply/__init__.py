@@ -5,11 +5,11 @@ from .core import setup as _core_setup, teardown as _core_teardown
 
 __plugin__ = {'name': '聊天互动助手',
  'id': 'keyword_auto_reply',
- 'version': '2.0.1',
+ 'version': '2.0.2',
  'author': 'AWdress',
  'description': '按可配置概率自动回复群消息，关键词可选，并支持追加回复、冷却、限群、自动删除及排行榜。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/family_reply.png',
- 'changelog': 'v2.0.1 修复原生富文本排行榜用户显示\n- 表格单元格仅保留名称，不再放入会被平台过滤的用户链接\n- 避免无效 tg 协议文本出现在排行榜通知中\n\n'
+ 'changelog': 'v2.0.2 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.1 修复原生富文本排行榜用户显示\n- 表格单元格仅保留名称，不再放入会被平台过滤的用户链接\n- 避免无效 tg 协议文本出现在排行榜通知中\n\n'
               'v2.0.0 原生 AWBotHub 迁移\n'
               '- 使用 Telethon 原生事件、调度、存储与生命周期接口\n'
               '- 保留原有功能、配置项和运行数据\n'

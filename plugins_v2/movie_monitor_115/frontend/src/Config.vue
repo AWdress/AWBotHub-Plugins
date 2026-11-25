@@ -1,9 +1,10 @@
 <template>
+  <IosSettings>
   <div class="movie-monitor-config">
-    <div class="tabs">
-      <button :class="{ active: tab === 'settings' }" @click="tab = 'settings'">⚙️ 设置</button>
-      <button :class="{ active: tab === 'status' }" @click="tab = 'status'">📊 运行状态</button>
-      <button :class="{ active: tab === 'logs' }" @click="tab = 'logs'">📝 处理记录</button>
+    <div class="tabs" :style="{ '--movie-tab-index': ['settings','status','logs'].indexOf(tab) }" aria-label="影视监控页面">
+      <button :class="{ active: tab === 'settings' }" :aria-pressed="tab === 'settings'" @click="tab = 'settings'">功能设置</button>
+      <button :class="{ active: tab === 'status' }" :aria-pressed="tab === 'status'" @click="tab = 'status'">运行状态</button>
+      <button :class="{ active: tab === 'logs' }" :aria-pressed="tab === 'logs'" @click="tab = 'logs'">处理记录</button>
     </div>
 
     <div class="tab-content">
@@ -19,7 +20,7 @@
               <label class="chip"><input type="checkbox" :checked="mediaTypes.includes('tv')" @change="toggleMedia('tv')" />电视剧</label>
             </div>
           </div>
-          <label class="row switch"><input v-model="cfg.only_complete_series" type="checkbox" /><span>剧集仅转存完结</span></label>
+          <label class="row switch"><input v-model="cfg.only_complete_series" type="checkbox" role="switch" /><span>剧集仅转存完结</span></label>
         </div>
 
         <div class="section">
@@ -32,14 +33,14 @@
           <h3>Emby 配置</h3>
           <label class="row"><span>地址</span><input v-model="cfg.emby_url" class="inp" placeholder="http://emby.local:8096" /></label>
           <label class="row"><span>API Key</span><div class="secret-field"><input v-model="cfg.emby_api_key" :type="secretVisible.emby_api_key ? 'text' : 'password'" class="inp" /><button type="button" aria-label="显示或隐藏 Emby API Key" @click="secretVisible.emby_api_key = !secretVisible.emby_api_key"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></label>
-          <label class="row switch"><input v-model="cfg.skip_emby_check" type="checkbox" /><span>跳过 Emby 查重（直接转发所有链接）</span></label>
+          <label class="row switch"><input v-model="cfg.skip_emby_check" type="checkbox" role="switch" /><span>跳过 Emby 查重（直接转发所有链接）</span></label>
         </div>
 
         <div class="section">
           <h3>转发设置</h3>
           <label class="row"><span>CMS Bot 用户名</span><input v-model="cfg.cms_bot_username" class="inp" placeholder="如 @cmsbot" /></label>
           <label class="row"><span>转发标签</span><input v-model="cfg.forward_label" class="inp" placeholder="115 网盘" /></label>
-          <label class="row switch"><input v-model="cfg.forward_to_saved" type="checkbox" /><span>转发到 Saved Messages（自己的收藏）</span></label>
+          <label class="row switch"><input v-model="cfg.forward_to_saved" type="checkbox" role="switch" /><span>转发到 Saved Messages（自己的收藏）</span></label>
         </div>
 
         <div class="section">
@@ -66,7 +67,7 @@
           <button @click="loadLogs" class="btn-sm">刷新</button>
           <span class="muted">最近 {{ logs.length }} 条</span>
         </div>
-        <table class="tbl">
+        <div class="movie-table-wrap" tabindex="0" role="region" aria-label="处理记录列表"><table class="tbl">
           <thead><tr><th>时间</th><th>频道/群组</th><th>标题</th><th>TMDB ID</th><th>操作</th></tr></thead>
           <tbody>
             <tr v-for="(log, i) in logs" :key="i">
@@ -78,14 +79,16 @@
             </tr>
             <tr v-if="!logs.length"><td colspan="5" class="empty">暂无处理记录</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   </div>
+</IosSettings>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({ pluginId: { type: String, required: true }, host: { type: Object, required: true } })
 const cfg = ref({
@@ -172,51 +175,91 @@ async function loadLogs() {
 </script>
 
 <style scoped>
-.movie-monitor-config { display: flex; flex-direction: column; gap: 16px; }
-.tabs { display: flex; gap: 8px; border-bottom: 1px solid var(--border-light, #2a2e3a); }
-.tabs button { background: none; border: none; color: var(--text-secondary, #b9c0cc); padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
-.tabs button.active { color: var(--text-primary, #e8edf5); border-bottom-color: var(--primary, #4a9eff); }
-.tab-content { padding: 16px 0; }
-.section { margin-bottom: 24px; }
-.section h3 { font-size: 14px; color: var(--text-primary, #e8edf5); margin-bottom: 12px; }
-.row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.row > span:first-child { min-width: 120px; font-size: 13px; color: var(--text-secondary, #b9c0cc); }
-.chat-names { margin: -4px 0 12px 132px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
-.chat-label { color: var(--text-muted, #7a8291); }
-.chat-name { color: var(--text-primary, #e8edf5); }
-.row.switch { gap: 8px; }
-.row.switch span { min-width: auto; }
-.secret-field { position: relative; flex: 1; min-width: 0; }.secret-field .inp { width: 100%; box-sizing: border-box; padding-right: 44px; }.secret-field button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted, #7a8291); cursor: pointer; }.secret-field button:hover { color: var(--accent, #6ea8fe); background: var(--accent-dim, #1e3a5f); }.secret-field svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.inp { flex: 1; padding: 8px 12px; background: var(--bg-input, #1a1d26); border: 1px solid var(--border-light, #2a2e3a); border-radius: 6px; color: var(--text-primary, #e8edf5); font-size: 13px; }
-.fld { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.lbl { font-size: 13px; color: var(--text-secondary, #b9c0cc); }
+/* User-pinned iOS grouped settings; platform tokens own dark and glass materials.
+   THESIS: choose the monitored media and its service connections, then inspect results.
+   OWN-WORLD: sliding segments, grouped service rows, rounded native controls.
+   STORY: configure sources and destinations, save, then test or read processing history.
+   FIRST VIEWPORT: three segments above the monitor scope; other services follow in groups.
+   FORM: the user's established iOS Settings direction; no new visual-world selection.
+   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance */
+.movie-monitor-config { display: flex; flex-direction: column; gap: 24px; min-width: 0; color: var(--ios-text); }
+.tabs { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.tabs::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 16px) / 3); border-radius: 11px; background: var(--ios-control); box-shadow: 0 2px 5px rgb(0 0 0 / .08); transform: translateX(calc(var(--movie-tab-index) * (100% + 4px))); transition: transform var(--ios-duration) var(--ios-ease); z-index: -1; }
+.tabs button { min-width: 0; min-height: 44px; padding: 9px 12px; border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.tabs button.active { color: var(--ios-text); font-weight: 650; }
+.tab-content { min-width: 0; }
+.settings { display: flex; flex-direction: column; gap: 20px; }
+.section, .card { min-width: 0; padding: 4px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.section h3, .card h3 { margin: 0; padding: 14px 0 16px; color: var(--ios-text); font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
+.row { display: flex; align-items: center; gap: 16px; min-height: 74px; margin: 0; padding: 16px 0; border-top: 1px solid var(--ios-line); }
+.row > span:first-child { flex: 0 0 150px; min-width: 0; color: var(--ios-text); }
+.chat-names { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 16px 166px; color: var(--ios-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.chat-name { min-width: 0; }
+.row.switch { flex-direction: row-reverse; justify-content: space-between; gap: 20px; cursor: pointer; }
+.row.switch span { flex: 1; min-width: 0; line-height: 1.7; }
+.secret-field { position: relative; flex: 1; min-width: 0; }
+.secret-field .inp { width: 100%; padding-right: 52px; }
+.secret-field button { position: absolute; right: 1px; top: 1px; display: grid; place-items: center; width: 44px; height: calc(100% - 2px); border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.secret-field button:hover { color: var(--ios-text); }
+.secret-field svg { width: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.inp { flex: 1; min-width: 0; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease; }
+.inp:focus { border-color: var(--accent, #0063dc); }
+.fld { display: flex; align-items: center; gap: 16px; min-height: 74px; padding: 16px 0; border-top: 1px solid var(--ios-line); }
+.lbl { flex: 0 0 150px; color: var(--ios-text); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary, #b9c0cc); cursor: pointer; padding: 4px 8px; border-radius: 6px; background: var(--bg-card, #12141c); border: 1px solid var(--border-light, #2a2e3a); }
-.btn, .btn-primary, .btn-sm { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-.btn-primary { background: var(--primary, #4a9eff); color: #fff; }
-.btn { background: var(--bg-card, #12141c); color: var(--text-primary, #e8edf5); border: 1px solid var(--border-light, #2a2e3a); margin-right: 8px; }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.btn:disabled, .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.card { background: var(--bg-card, #12141c); padding: 16px; border-radius: 8px; margin-bottom: 16px; }
-.card h3 { font-size: 14px; margin-bottom: 12px; }
-.kv { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-light, #2a2e3a); }
-.kv:last-child { border-bottom: none; }
-.kv span { color: var(--text-secondary, #b9c0cc); font-size: 13px; }
-.kv b { color: var(--text-primary, #e8edf5); font-size: 14px; }
-.kv b.ok { color: #4ade80; }
-.kv b.err { color: #ff4a4a; }
-.test-result { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; }
-.test-result.ok { background: rgba(74, 158, 255, 0.1); color: var(--primary, #4a9eff); }
-.test-result.err { background: rgba(255, 74, 74, 0.1); color: #ff4a4a; }
-.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.muted { color: var(--text-muted, #7a8291); font-size: 12px; }
-.tbl { width: 100%; border-collapse: collapse; }
-.tbl th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border-light, #2a2e3a); color: var(--text-secondary, #b9c0cc); font-size: 12px; font-weight: normal; }
-.tbl td { padding: 10px 12px; border-bottom: 1px solid var(--border-light, #2a2e3a); font-size: 13px; color: var(--text-primary, #e8edf5); }
-.tbl td.muted { color: var(--text-muted, #7a8291); font-size: 12px; }
-.tbl td.empty { text-align: center; color: var(--text-muted, #7a8291); padding: 40px; }
-.tmdb-id { color: var(--primary, #4a9eff); font-family: monospace; }
-.action-转发 { color: #4ade80; }
-.action-跳过 { color: #ffa500; }
-.action-失败 { color: #ff4a4a; }
+.chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 14px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-secondary); cursor: pointer; }
+.chip:has(input:checked) { border-color: var(--accent, #0063dc); color: var(--ios-text); background: var(--accent-dim, #e8f1ff); }
+.chip input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--ios-accent); cursor: pointer; }
+.row.switch input { appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background-color var(--ios-fast) ease; }
+.row.switch input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .2); transition: transform var(--ios-duration) var(--ios-ease); }
+.row.switch input:checked { border-color: transparent; background: var(--ios-accent); }
+.row.switch input:checked::before { transform: translateX(20px); }
+.btn, .btn-primary, .btn-sm { min-height: 44px; padding: 10px 18px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.btn:hover:not(:disabled), .btn-sm:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.btn-primary { align-self: flex-end; min-width: 132px; margin-top: 4px; border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn:disabled, .btn-primary:disabled, .btn-sm:disabled { opacity: .5; cursor: not-allowed; }
+.status { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+.status .card { align-self: stretch; }
+.kv { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 60px; padding: 14px 0; border-top: 1px solid var(--ios-line); }
+.kv span { color: var(--ios-secondary); }
+.kv b { min-width: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.ok, .kv b.ok { color: var(--success, #087758); }
+.err, .kv b.err { color: var(--danger, #bd2733); }
+.test-result { align-self: stretch; margin: 0; padding: 16px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-surface); font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
+.toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.muted { color: var(--ios-secondary); font-size: 12px; }
+.movie-table-wrap { max-width: 100%; min-width: 0; overflow: auto; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { padding: 13px 14px; border-bottom: 1px solid var(--ios-line); text-align: left; white-space: nowrap; }
+.tbl th { color: var(--ios-secondary); background: var(--ios-inset); font-size: 12px; font-weight: 500; }
+.tbl td { color: var(--ios-text); }
+.tbl td:nth-child(2), .tbl td:nth-child(3) { min-width: 120px; max-width: 260px; white-space: normal; overflow-wrap: anywhere; }
+.tbl tbody tr:last-child td { border-bottom: 0; }
+.tbl td.muted { color: var(--ios-secondary); font-size: 12px; }
+.tbl td.empty { padding: 40px 20px; color: var(--ios-secondary); text-align: center; }
+.tmdb-id { color: var(--accent, #0063dc); font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; }
+.action-转发 { color: var(--success, #087758); }
+.action-跳过 { color: var(--warning, #926100); }
+.action-失败 { color: var(--danger, #bd2733); }
+:global(html[data-theme='transparent'] .movie-monitor-config .section),
+:global(html[data-theme='transparent'] .movie-monitor-config .card),
+:global(html[data-theme='transparent'] .movie-monitor-config .movie-table-wrap) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 600px) {
+  .movie-monitor-config { gap: 20px; }
+  .tabs button { padding-inline: 5px; font-size: 13px; }
+  .section, .card { padding-inline: 16px; }
+  .row:not(.switch), .fld { flex-direction: column; align-items: stretch; gap: 8px; }
+  .row:not(.switch) > span:first-child, .lbl { flex: none; }
+  .secret-field { flex: none; width: 100%; }
+  .chat-names { margin-left: 0; }
+  .inp { font-size: 16px; }
+  .settings .btn-primary { width: 100%; margin-top: 4px; }
+  .tbl th, .tbl td { padding: 12px; }
+}
+@media (forced-colors: active) {
+  .row.switch input { appearance: auto !important; }
+  .row.switch input::before { display: none; }
+  .tabs::before { border: 2px solid Highlight; }
+}
 </style>

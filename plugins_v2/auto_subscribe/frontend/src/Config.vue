@@ -3,6 +3,7 @@
 // 平台注入 props { pluginId, host }；host: getConfig/saveConfig/callApi/toast/token。
 // 三个页签：配置（左侧分组 + 右侧明细，宽屏 master-detail）/ 历史 / 订阅。
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({
   pluginId: { type: String, required: true },
@@ -378,185 +379,186 @@ function switchTab(t) {
 </script>
 
 <template>
-  <div class="asub">
-    <div v-if="loading" class="muted">加载配置…</div>
+  <IosSettings>
+  <div class="as-ios">
+    <div v-if="loading" class="as-ios-muted">加载配置…</div>
     <template v-else>
-      <div v-if="!configReady" class="muted err" role="alert">配置读取失败，已禁止保存以保护已有配置。请重新打开配置页重试。</div>
-      <div class="tabs">
-        <button :class="['tab', { on: tab === 'settings' }]" @click="switchTab('settings')">⚙ 订阅配置</button>
-        <button :class="['tab', { on: tab === 'history' }]" @click="switchTab('history')">↻ 订阅历史</button>
-        <button :class="['tab', { on: tab === 'subs' }]" @click="switchTab('subs')">🔔 订阅管理</button>
+      <div v-if="!configReady" class="as-ios-muted as-ios-err" role="alert">配置读取失败，已禁止保存以保护已有配置。请重新打开配置页重试。</div>
+      <div class="as-ios-tabs" :style="{ '--as-ios-tab-index': tab === 'settings' ? 0 : tab === 'history' ? 1 : 2 }" aria-label="NextFind 助手页面">
+        <button type="button" :class="['as-ios-tab', { on: tab === 'settings' }]" @click="switchTab('settings')">订阅配置</button>
+        <button type="button" :class="['as-ios-tab', { on: tab === 'history' }]" @click="switchTab('history')">订阅历史</button>
+        <button type="button" :class="['as-ios-tab', { on: tab === 'subs' }]" @click="switchTab('subs')">订阅管理</button>
       </div>
 
       <!-- ============ 配置：左分组 + 右明细 ============ -->
-      <div v-show="tab === 'settings'" class="layout">
-        <aside class="sidebar">
-          <div class="side-title">设置分组</div>
-          <button v-for="g in GROUPS" :key="g.key"
-                  :class="['side-item', { on: group === g.key }]" @click="group = g.key">
+      <div v-show="tab === 'settings'" class="as-ios-layout">
+        <aside class="as-ios-sidebar">
+          <div class="as-ios-side-title">设置分组</div>
+          <button type="button" v-for="g in GROUPS" :key="g.key"
+                  :class="['as-ios-side-item', { on: group === g.key }]" @click="group = g.key">
             <span>{{ g.label }}</span>
-            <span v-if="(g.key === 'ranks' && enabledCount > 0) || (g.en && cfg[g.en])" class="dot"></span>
+            <span v-if="(g.key === 'ranks' && enabledCount > 0) || (g.en && cfg[g.en])" class="as-ios-dot"></span>
           </button>
-          <div class="side-foot">启用来源 {{ enabledCount }} / {{ rankSources.length }}</div>
+          <div class="as-ios-side-foot">启用来源 {{ enabledCount }} / {{ rankSources.length }}</div>
         </aside>
 
-        <div class="detail">
+        <div class="as-ios-detail">
           <!-- 全局 -->
           <template v-if="group === 'global'">
-            <h3 class="det-title">全局设置</h3>
-            <section class="card">
-              <div class="card-h">NextFind 连接</div>
-              <div class="grid">
-                <label class="row"><span>地址</span>
-                  <input v-model="cfg.api_url" class="inp" placeholder="https://你的域名/api/openapi" /></label>
-                <label class="row"><span>密钥</span><div class="secret-field">
-                  <input v-model="cfg.api_key" class="inp" :type="secretVisible.api_key ? 'text' : 'password'" placeholder="X-API-Key" />
+            <h3 class="as-ios-det-title">全局设置</h3>
+            <section class="as-ios-card">
+              <div class="as-ios-card-h">NextFind 连接</div>
+              <div class="as-ios-grid">
+                <label class="as-ios-row"><span>地址</span>
+                  <input v-model="cfg.api_url" class="as-ios-inp" placeholder="https://你的域名/api/openapi" /></label>
+                <label class="as-ios-row"><span>密钥</span><div class="as-ios-secret-field">
+                  <input v-model="cfg.api_key" class="as-ios-inp" :type="secretVisible.api_key ? 'text' : 'password'" placeholder="X-API-Key" />
                   <button type="button" :disabled="secretLoading.api_key" :aria-label="secretVisible.api_key ? '隐藏密钥' : '显示密钥'" @click="toggleSecret('api_key')">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button></div></label>
               </div>
-              <div class="row"><button class="btn" :disabled="testing" @click="testConn">{{ testing ? '测试中…' : '测试连接' }}</button></div>
+              <div class="as-ios-row"><button type="button" class="as-ios-btn" :disabled="testing" @click="testConn">{{ testing ? '测试中…' : '测试连接' }}</button></div>
             </section>
-            <section class="card">
-              <div class="card-h">运行</div>
-              <div class="grid">
-                <label class="row"><span>定时（Cron）</span><component :is="CronInput" v-model="cfg.schedule" /></label>
-                <label class="row switch"><input v-model="cfg.notify" type="checkbox" /><span>推送运行结果</span></label>
-                <label class="row switch"><input v-model="cfg.ai_assist_recognition" type="checkbox" /><span>平台 AI 辅助识别</span></label>
-                <label class="row switch"><input v-model="cfg.auto_fill_missing" type="checkbox" /><span>自动补缺集</span></label>
-                <label v-if="cfg.auto_fill_missing" class="row"><span>每轮补缺上限</span><input v-model.number="cfg.auto_fill_missing_limit" class="inp" type="number" min="1" max="100" /></label>
+            <section class="as-ios-card">
+              <div class="as-ios-card-h">运行</div>
+              <div class="as-ios-grid">
+                <label class="as-ios-row"><span>定时（Cron）</span><component :is="CronInput" v-model="cfg.schedule" /></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.notify" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>推送运行结果</span></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.ai_assist_recognition" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>平台 AI 辅助识别</span></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.auto_fill_missing" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>自动补缺集</span></label>
+                <label v-if="cfg.auto_fill_missing" class="as-ios-row"><span>每轮补缺上限</span><input v-model.number="cfg.auto_fill_missing_limit" class="as-ios-inp" type="number" min="1" max="100" /></label>
               </div>
-              <div v-if="cfg.ai_assist_recognition" class="hint">仅在常规搜索无结果时调用平台 AI 清洗片名、判断电影/剧集及季号；识别结果仍须经 NextFind 核验，平台 AI 不可用时自动降级。</div>
-              <div v-if="cfg.auto_fill_missing" class="hint flow-hint">检查已有剧集订阅的入库进度，将明确缺集的项目加入补缺队列，每轮按补缺上限处理。不新增订阅，也无需启用榜单源。</div>
-              <div class="hint flow-hint">本地缺集自动订阅请在左侧「本地缺集」设置。先保存配置，再测试连接或立即运行。</div>
-              <div class="row">
-                <button class="btn primary" :disabled="running" @click="runNow">{{ running ? '运行中…' : '立即运行一次' }}</button>
+              <div v-if="cfg.ai_assist_recognition" class="as-ios-hint">仅在常规搜索无结果时调用平台 AI 清洗片名、判断电影/剧集及季号；识别结果仍须经 NextFind 核验，平台 AI 不可用时自动降级。</div>
+              <div v-if="cfg.auto_fill_missing" class="as-ios-hint as-ios-flow-hint">检查已有剧集订阅的入库进度，将明确缺集的项目加入补缺队列，每轮按补缺上限处理。不新增订阅，也无需启用榜单源。</div>
+              <div class="as-ios-hint as-ios-flow-hint">本地缺集自动订阅请在左侧「本地缺集」设置。先保存配置，再测试连接或立即运行。</div>
+              <div class="as-ios-row">
+                <button type="button" class="as-ios-btn as-ios-primary" :disabled="running" @click="runNow">{{ running ? '运行中…' : '立即运行一次' }}</button>
               </div>
-              <pre v-if="runOutput" class="output">{{ runOutput }}</pre>
+              <pre v-if="runOutput" class="as-ios-output">{{ runOutput }}</pre>
             </section>
-            <section class="card">
-              <div class="card-h">全局过滤（各来源默认；可在来源内单独覆盖）</div>
-              <div class="grid">
-                <label class="row"><span>年份≥</span><input v-model.number="cfg.min_year" class="inp" type="number" /><span class="hint">0=不限</span></label>
-                <label class="row"><span>评分≥</span><input v-model.number="cfg.min_vote" class="inp" type="number" min="0" max="10" step="0.5" /><span class="hint">0=不限</span></label>
-                <label class="row"><span>热度≥</span><input v-model.number="cfg.min_popularity" class="inp" type="number" /><span class="hint">0=不限</span></label>
-                <label class="row"><span>媒体类型</span>
-                  <select v-model="cfg.media_type" class="inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
+            <section class="as-ios-card">
+              <div class="as-ios-card-h">全局过滤（各来源默认；可在来源内单独覆盖）</div>
+              <div class="as-ios-grid">
+                <label class="as-ios-row"><span>年份≥</span><input v-model.number="cfg.min_year" class="as-ios-inp" type="number" /><span class="as-ios-hint">0=不限</span></label>
+                <label class="as-ios-row"><span>评分≥</span><input v-model.number="cfg.min_vote" class="as-ios-inp" type="number" min="0" max="10" step="0.5" /><span class="as-ios-hint">0=不限</span></label>
+                <label class="as-ios-row"><span>热度≥</span><input v-model.number="cfg.min_popularity" class="as-ios-inp" type="number" /><span class="as-ios-hint">0=不限</span></label>
+                <label class="as-ios-row"><span>媒体类型</span>
+                  <select v-model="cfg.media_type" class="as-ios-inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
               </div>
             </section>
           </template>
 
           <template v-else-if="group === 'missing'">
-            <h3 class="det-title">本地缺集</h3>
-            <section class="card">
-              <label class="row switch"><input v-model="cfg.auto_subscribe_missing" type="checkbox" /><span>本地缺集自动订阅</span></label>
-              <div class="hint flow-hint">从 Emby 读取本地剧集，按季号和集号对比 TMDB 已播集。一次订阅全部未订阅的缺集剧集；不再使用 NextFind 本地缺集接口，也不调用 AI。</div>
-              <div class="hint flow-hint">已有订阅不会重复新增。需要让 NextFind 搜索补缺时，请在「全局设置」开启「自动补缺集」。</div>
+            <h3 class="as-ios-det-title">本地缺集</h3>
+            <section class="as-ios-card">
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.auto_subscribe_missing" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>本地缺集自动订阅</span></label>
+              <div class="as-ios-hint as-ios-flow-hint">从 Emby 读取本地剧集，按季号和集号对比 TMDB 已播集。一次订阅全部未订阅的缺集剧集；不再使用 NextFind 本地缺集接口，也不调用 AI。</div>
+              <div class="as-ios-hint as-ios-flow-hint">已有订阅不会重复新增。需要让 NextFind 搜索补缺时，请在「全局设置」开启「自动补缺集」。</div>
             </section>
-            <section class="card">
-              <div class="card-h">Emby 与 TMDB 连接</div>
-              <label class="fld"><span class="lbl">Emby 服务地址</span>
-                <input v-model="cfg.emby_server" class="inp" placeholder="https://你的Emby域名" />
+            <section class="as-ios-card">
+              <div class="as-ios-card-h">Emby 与 TMDB 连接</div>
+              <label class="as-ios-fld"><span class="as-ios-lbl">Emby 服务地址</span>
+                <input v-model="cfg.emby_server" class="as-ios-inp" placeholder="https://你的Emby域名" />
               </label>
-              <div class="hint flow-hint">填写平台所在服务器能访问的 Emby 地址，支持反代域名和带 /emby 的地址。API Key 需能读取完整剧集库。</div>
-              <label class="fld"><span class="lbl">Emby API Key</span><div class="secret-field">
-                <input v-model="cfg.emby_api_key" class="inp" :type="secretVisible.emby_api_key ? 'text' : 'password'" autocomplete="off" placeholder="在 Emby 控制台 → 高级 → API 密钥中创建" />
+              <div class="as-ios-hint as-ios-flow-hint">填写平台所在服务器能访问的 Emby 地址，支持反代域名和带 /emby 的地址。API Key 需能读取完整剧集库。</div>
+              <label class="as-ios-fld"><span class="as-ios-lbl">Emby API Key</span><div class="as-ios-secret-field">
+                <input v-model="cfg.emby_api_key" class="as-ios-inp" :type="secretVisible.emby_api_key ? 'text' : 'password'" autocomplete="off" placeholder="在 Emby 控制台 → 高级 → API 密钥中创建" />
                 <button type="button" :disabled="secretLoading.emby_api_key" :aria-label="secretVisible.emby_api_key ? '隐藏 Emby API Key' : '显示 Emby API Key'" @click="toggleSecret('emby_api_key')">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button></div>
               </label>
-              <label class="fld"><span class="lbl">TMDB 密钥</span><div class="secret-field">
-                <input v-model="cfg.tmdb_key" class="inp" :type="secretVisible.tmdb_key ? 'text' : 'password'" autocomplete="off" placeholder="TMDB API Key 或 API Read Access Token" />
+              <label class="as-ios-fld"><span class="as-ios-lbl">TMDB 密钥</span><div class="as-ios-secret-field">
+                <input v-model="cfg.tmdb_key" class="as-ios-inp" :type="secretVisible.tmdb_key ? 'text' : 'password'" autocomplete="off" placeholder="TMDB API Key 或 API Read Access Token" />
                 <button type="button" :disabled="secretLoading.tmdb_key" :aria-label="secretVisible.tmdb_key ? '隐藏 TMDB 密钥' : '显示 TMDB 密钥'" @click="toggleSecret('tmdb_key')">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button></div>
               </label>
-              <div class="hint flow-hint">这些配置仅用于 NextFind 助手，不读取其他插件。仅检查 Emby 已有且带 TMDB ID 的剧集；电影、特别篇和季集号不明的条目不参与。</div>
-              <label class="row"><span>播出缓冲天数</span><input v-model.number="cfg.missing_air_delay_days" class="inp sm" type="number" min="0" max="30" /></label>
-              <div class="hint flow-hint">默认 1 天：按北京时间只核对截至昨天已播出的集，避免当天未放送就判缺集。填 0 包含今天；未来集或没有明确播出日期的集不计入。</div>
-              <div class="hint flow-hint">先保存，再测试连接。测试只读取 Emby 和 TMDB，不新增订阅、不补缺，也不修改 Emby。</div>
-              <div class="row"><button class="btn" :disabled="libraryTesting" @click="testLibrary">{{ libraryTesting ? '检查中…' : '测试 Emby / TMDB 连接' }}</button></div>
-              <pre v-if="libraryTestOutput" class="output" role="status" aria-live="polite">{{ libraryTestOutput }}</pre>
+              <div class="as-ios-hint as-ios-flow-hint">这些配置仅用于 NextFind 助手，不读取其他插件。仅检查 Emby 已有且带 TMDB ID 的剧集；电影、特别篇和季集号不明的条目不参与。</div>
+              <label class="as-ios-row"><span>播出缓冲天数</span><input v-model.number="cfg.missing_air_delay_days" class="as-ios-inp as-ios-sm" type="number" min="0" max="30" /></label>
+              <div class="as-ios-hint as-ios-flow-hint">默认 1 天：按北京时间只核对截至昨天已播出的集，避免当天未放送就判缺集。填 0 包含今天；未来集或没有明确播出日期的集不计入。</div>
+              <div class="as-ios-hint as-ios-flow-hint">先保存，再测试连接。测试只读取 Emby 和 TMDB，不新增订阅、不补缺，也不修改 Emby。</div>
+              <div class="as-ios-row"><button type="button" class="as-ios-btn" :disabled="libraryTesting" @click="testLibrary">{{ libraryTesting ? '检查中…' : '测试 Emby / TMDB 连接' }}</button></div>
+              <pre v-if="libraryTestOutput" class="as-ios-output" role="status" aria-live="polite">{{ libraryTestOutput }}</pre>
             </section>
           </template>
 
           <template v-else-if="group === 'moviepilot'">
-            <h3 class="det-title">MoviePilot 订阅接口</h3>
-            <section class="card">
-              <label class="row switch"><input v-model="cfg.mp_api_enabled" type="checkbox" /><span>接收第三方订阅，转交 NextFind（默认关闭）</span></label>
-              <div class="hint flow-hint">提供 MoviePilot v2 风格的登录、查询、新增和取消订阅接口。使用上方「全局设置」中已保存的 NextFind 连接；不需要安装 MoviePilot。取消订阅不会删除已入库文件。</div>
-              <div class="hint flow-hint">NextFind 按整部作品订阅，不按季限制。默认拒绝指定季的请求；如果接受追整部剧，请开启下方选项。画质、站点、下载目录等 MoviePilot 专属筛选不支持，不能把它当作完整 MoviePilot 服务。</div>
-              <label class="row switch"><input v-model="cfg.mp_whole_series" type="checkbox" /><span>允许指定季的请求按整部剧订阅或取消（默认关闭）</span></label>
-              <div class="hint flow-hint">开启后，Forward 订阅或移除某一季，会对应订阅或取消 NextFind 的整部剧追更。关闭时拒绝单季操作，不会悄悄扩大范围；媒体文件不会删除。</div>
-              <label class="fld"><span class="lbl">接口专用密码 / API Key</span><div class="secret-field">
-                <input v-model="cfg.mp_api_key" class="inp" :type="secretVisible.mp_api_key ? 'text' : 'password'" autocomplete="new-password" placeholder="点击下方按钮生成；不是平台登录密码或 NextFind 密钥" />
+            <h3 class="as-ios-det-title">MoviePilot 订阅接口</h3>
+            <section class="as-ios-card">
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.mp_api_enabled" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>接收第三方订阅，转交 NextFind（默认关闭）</span></label>
+              <div class="as-ios-hint as-ios-flow-hint">提供 MoviePilot v2 风格的登录、查询、新增和取消订阅接口。使用上方「全局设置」中已保存的 NextFind 连接；不需要安装 MoviePilot。取消订阅不会删除已入库文件。</div>
+              <div class="as-ios-hint as-ios-flow-hint">NextFind 按整部作品订阅，不按季限制。默认拒绝指定季的请求；如果接受追整部剧，请开启下方选项。画质、站点、下载目录等 MoviePilot 专属筛选不支持，不能把它当作完整 MoviePilot 服务。</div>
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.mp_whole_series" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>允许指定季的请求按整部剧订阅或取消（默认关闭）</span></label>
+              <div class="as-ios-hint as-ios-flow-hint">开启后，Forward 订阅或移除某一季，会对应订阅或取消 NextFind 的整部剧追更。关闭时拒绝单季操作，不会悄悄扩大范围；媒体文件不会删除。</div>
+              <label class="as-ios-fld"><span class="as-ios-lbl">接口专用密码 / API Key</span><div class="as-ios-secret-field">
+                <input v-model="cfg.mp_api_key" class="as-ios-inp" :type="secretVisible.mp_api_key ? 'text' : 'password'" autocomplete="new-password" placeholder="点击下方按钮生成；不是平台登录密码或 NextFind 密钥" />
                 <button type="button" :disabled="secretLoading.mp_api_key" :aria-label="secretVisible.mp_api_key ? '隐藏接口专用密码' : '显示接口专用密码'" @click="toggleSecret('mp_api_key')">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button></div>
               </label>
-              <div class="row"><button type="button" class="btn" :disabled="mpGenerating || !configReady" @click="generateMpKey">{{ mpGenerating ? '生成中…' : (cfg.mp_api_key ? '生成新的专用密码' : '生成专用密码') }}</button></div>
-              <div class="hint flow-hint">先生成密码，再启用并保存。密码默认隐藏，点眼睛查看和复制。更换后旧登录凭据立即失效，Forward 需要更新密码并重新登录。</div>
+              <div class="as-ios-row"><button type="button" class="as-ios-btn" :disabled="mpGenerating || !configReady" @click="generateMpKey">{{ mpGenerating ? '生成中…' : (cfg.mp_api_key ? '生成新的专用密码' : '生成专用密码') }}</button></div>
+              <div class="as-ios-hint as-ios-flow-hint">先生成密码，再启用并保存。密码默认隐藏，点眼睛查看和复制。更换后旧登录凭据立即失效，Forward 需要更新密码并重新登录。</div>
             </section>
-            <section class="card">
-              <div class="card-h">Forward 怎么填写</div>
-              <label class="fld"><span class="lbl">MoviePilot 服务器地址</span><input class="inp" :value="mpAddress" readonly aria-label="Forward MoviePilot 服务器地址" /></label>
-              <div class="hint flow-hint">在 Forward「设置 → 服务 → 服务器订阅」填写这个完整地址，不再追加 /api/v1。请从你服务器的域名打开平台，再复制地址；手机须能访问该地址，外网请使用 HTTPS。</div>
-              <label class="row"><span>用户名</span><input class="inp" :value="mpUsername" readonly aria-label="Forward 用户名" /></label>
-              <div class="hint flow-hint">开启「是否需要登录」，用户名填上面的值，密码填本页的接口专用密码。需要同步取消追更时，可开启 Forward 的「同步移除订阅」；只取消 NextFind 订阅，不删除媒体文件。</div>
-              <div class="hint flow-hint">Forward 带季号的订阅和移除请求，需要上方允许按整部剧处理。取消后会核对 NextFind 列表，确认已移除才返回成功。同一 TMDB 编号同时对应电影和剧集时会拒绝操作，避免误取消。</div>
+            <section class="as-ios-card">
+              <div class="as-ios-card-h">Forward 怎么填写</div>
+              <label class="as-ios-fld"><span class="as-ios-lbl">MoviePilot 服务器地址</span><input class="as-ios-inp" :value="mpAddress" readonly aria-label="Forward MoviePilot 服务器地址" /></label>
+              <div class="as-ios-hint as-ios-flow-hint">在 Forward「设置 → 服务 → 服务器订阅」填写这个完整地址，不再追加 /api/v1。请从你服务器的域名打开平台，再复制地址；手机须能访问该地址，外网请使用 HTTPS。</div>
+              <label class="as-ios-row"><span>用户名</span><input class="as-ios-inp" :value="mpUsername" readonly aria-label="Forward 用户名" /></label>
+              <div class="as-ios-hint as-ios-flow-hint">开启「是否需要登录」，用户名填上面的值，密码填本页的接口专用密码。需要同步取消追更时，可开启 Forward 的「同步移除订阅」；只取消 NextFind 订阅，不删除媒体文件。</div>
+              <div class="as-ios-hint as-ios-flow-hint">Forward 带季号的订阅和移除请求，需要上方允许按整部剧处理。取消后会核对 NextFind 列表，确认已移除才返回成功。同一 TMDB 编号同时对应电影和剧集时会拒绝操作，避免误取消。</div>
             </section>
           </template>
 
           <!-- 所有榜单使用一个入口；豆瓣直采与 RSS 补充归为同一来源。 -->
           <template v-else-if="group === 'ranks'">
-            <h3 class="det-title">影视榜单</h3>
-            <div class="hint flow-hint">在这里选择来源和分类。同一作品按 TMDB 编号与媒体类型跨榜合并，电影和剧集不会混在一起；原有选择、过滤和开关保持不变。</div>
-            <div v-if="Object.keys(chartsErrors).length" ref="chartsErrorSummary" class="charts-error" role="alert" tabindex="-1">未保存：请检查下方榜单选择与通用设置。</div>
-            <label class="row rank-picker"><span>榜单来源</span>
-              <select v-model="rankSource" class="inp" aria-describedby="rank-source-hint">
+            <h3 class="as-ios-det-title">影视榜单</h3>
+            <div class="as-ios-hint as-ios-flow-hint">在这里选择来源和分类。同一作品按 TMDB 编号与媒体类型跨榜合并，电影和剧集不会混在一起；原有选择、过滤和开关保持不变。</div>
+            <div v-if="Object.keys(chartsErrors).length" ref="chartsErrorSummary" class="as-ios-charts-error" role="alert" tabindex="-1">未保存：请检查下方榜单选择与通用设置。</div>
+            <label class="as-ios-row as-ios-rank-picker"><span>榜单来源</span>
+              <select v-model="rankSource" class="as-ios-inp" aria-describedby="rank-source-hint">
                 <option v-for="source in rankSources" :key="source.id" :value="source.id">{{ source.name }}{{ sourceEnabled(source.id) ? ' · 已启用' : '' }}</option>
               </select>
             </label>
-            <div id="rank-source-hint" class="hint flow-hint">每个来源只显示一个入口。豆瓣直采与 RSS 放在一起；选其他来源可查看各自的榜单。</div>
-            <label class="row switch"><input v-model="cfg.charts_enabled" type="checkbox" /><span>启用直采榜单（原「内置影视榜单」）</span></label>
-            <div class="hint flow-hint">默认关闭。开启后只处理勾选的直采分类；RSS、蜜柑、奈飞和猫眼仍使用各自开关。</div>
-            <div v-if="chartsLoading" class="hint flow-hint" role="status">正在读取可选榜单…</div>
-            <div v-else-if="chartsLoadError" class="charts-load-error" role="alert">
-              <div class="charts-error">{{ chartsLoadError }}</div>
-              <div class="hint flow-hint">已有选择已保留。请重试读取；其他来源的设置仍可查看。</div>
-              <button type="button" class="btn" @click="loadMeta">重新读取榜单</button>
+            <div id="rank-source-hint" class="as-ios-hint as-ios-flow-hint">每个来源只显示一个入口。豆瓣直采与 RSS 放在一起；选其他来源可查看各自的榜单。</div>
+            <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.charts_enabled" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>启用直采榜单（原「内置影视榜单」）</span></label>
+            <div class="as-ios-hint as-ios-flow-hint">默认关闭。开启后只处理勾选的直采分类；RSS、蜜柑、奈飞和猫眼仍使用各自开关。</div>
+            <div v-if="chartsLoading" class="as-ios-hint as-ios-flow-hint" role="status">正在读取可选榜单…</div>
+            <div v-else-if="chartsLoadError" class="as-ios-charts-load-error" role="alert">
+              <div class="as-ios-charts-error">{{ chartsLoadError }}</div>
+              <div class="as-ios-hint as-ios-flow-hint">已有选择已保留。请重试读取；其他来源的设置仍可查看。</div>
+              <button type="button" class="as-ios-btn" @click="loadMeta">重新读取榜单</button>
             </div>
-            <section v-else-if="currentChartSource" class="card charts-card">
-              <div class="charts-heading"><h4 class="card-h">{{ currentChartSource.name === '豆瓣热榜' ? '豆瓣直采' : currentChartSource.name }}</h4><span class="muted">已选 {{ selectedInSource(currentChartSource) }} / {{ currentChartSource.boards.length }}</span></div>
-              <div class="chips">
-                <label v-for="board in currentChartSource.boards" :key="board.id" class="chip"><input type="checkbox" :checked="selectedCharts.includes(board.id)" @change="toggleChart(board.id)" />{{ board.name }}</label>
+            <section v-else-if="currentChartSource" class="as-ios-card as-ios-charts-card">
+              <div class="as-ios-charts-heading"><h4 class="as-ios-card-h">{{ currentChartSource.name === '豆瓣热榜' ? '豆瓣直采' : currentChartSource.name }}</h4><span class="as-ios-muted">已选 {{ selectedInSource(currentChartSource) }} / {{ currentChartSource.boards.length }}</span></div>
+              <div class="as-ios-chips">
+                <label v-for="board in currentChartSource.boards" :key="board.id" class="as-ios-chip"><input type="checkbox" :checked="selectedCharts.includes(board.id)" @change="toggleChart(board.id)" />{{ board.name }}</label>
               </div>
-              <div v-if="!cfg.charts_enabled && selectedInSource(currentChartSource)" class="hint flow-hint">已选分类尚未启用，不会运行。</div>
+              <div v-if="!cfg.charts_enabled && selectedInSource(currentChartSource)" class="as-ios-hint as-ios-flow-hint">已选分类尚未启用，不会运行。</div>
             </section>
-            <div v-if="!chartsLoading && !chartsLoadError && unknownCharts.length" class="fld">
-              <span class="charts-error">这些旧选择已失效，请移除后重新选择：</span>
-              <div class="chips"><button v-for="id in unknownCharts" :key="id" type="button" class="btn" @click="toggleChart(id)">移除 {{ id }}</button></div>
+            <div v-if="!chartsLoading && !chartsLoadError && unknownCharts.length" class="as-ios-fld">
+              <span class="as-ios-charts-error">这些旧选择已失效，请移除后重新选择：</span>
+              <div class="as-ios-chips"><button v-for="id in unknownCharts" :key="id" type="button" class="as-ios-btn" @click="toggleChart(id)">移除 {{ id }}</button></div>
             </div>
-            <div v-if="chartsErrors.catalog || chartsErrors.boards" class="charts-error" role="alert">{{ chartsErrors.catalog || chartsErrors.boards }}</div>
+            <div v-if="chartsErrors.catalog || chartsErrors.boards" class="as-ios-charts-error" role="alert">{{ chartsErrors.catalog || chartsErrors.boards }}</div>
 
           <!-- 豆瓣 -->
           <template v-if="rankSource === 'douban'">
-            <h4 class="det-title">豆瓣 RSS 补充</h4>
-            <section class="card">
-              <label class="row switch"><input v-model="cfg.douban_enabled" type="checkbox" /><span>启用豆瓣 RSS 补充</span></label>
+            <h4 class="as-ios-det-title">豆瓣 RSS 补充</h4>
+            <section class="as-ios-card">
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.douban_enabled" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>启用豆瓣 RSS 补充</span></label>
               <template v-if="cfg.douban_enabled">
-                <div class="fld"><span class="lbl">订阅榜单</span>
-                  <div class="chips">
-                    <label v-for="o in DOUBAN_RANKS" :key="o.v" class="chip"><input type="checkbox" :checked="cfg.douban_ranks.includes(o.v)" @change="toggle(cfg.douban_ranks, o.v)" />{{ o.l }}</label>
+                <div class="as-ios-fld"><span class="as-ios-lbl">订阅榜单</span>
+                  <div class="as-ios-chips">
+                    <label v-for="o in DOUBAN_RANKS" :key="o.v" class="as-ios-chip"><input type="checkbox" :checked="cfg.douban_ranks.includes(o.v)" @change="toggle(cfg.douban_ranks, o.v)" />{{ o.l }}</label>
                   </div>
                 </div>
-                <label class="row"><span>RSSHub</span><input v-model="cfg.douban_rsshub" class="inp" /></label>
-                <label class="row top"><span>自定义RSS</span><textarea v-model="cfg.douban_rss_custom" class="inp" rows="2" placeholder="每行一个完整 RSS 地址"></textarea></label>
-                <label class="row switch"><input v-model="cfg.douban_filter_custom" type="checkbox" /><span>独立过滤(否则用全局)</span></label>
-                <div v-if="cfg.douban_filter_custom" class="grid subfilter">
-                  <label class="row"><span>年份≥</span><input v-model.number="cfg.douban_min_year" class="inp" type="number" /></label>
-                  <label class="row"><span>评分≥</span><input v-model.number="cfg.douban_min_vote" class="inp" type="number" min="0" max="10" step="0.5" /></label>
-                  <label class="row"><span>类型</span><select v-model="cfg.douban_media_type" class="inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
+                <label class="as-ios-row"><span>RSSHub</span><input v-model="cfg.douban_rsshub" class="as-ios-inp" /></label>
+                <label class="as-ios-row as-ios-top"><span>自定义RSS</span><textarea v-model="cfg.douban_rss_custom" class="as-ios-inp" rows="2" placeholder="每行一个完整 RSS 地址"></textarea></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.douban_filter_custom" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>独立过滤(否则用全局)</span></label>
+                <div v-if="cfg.douban_filter_custom" class="as-ios-grid as-ios-subfilter">
+                  <label class="as-ios-row"><span>年份≥</span><input v-model.number="cfg.douban_min_year" class="as-ios-inp" type="number" /></label>
+                  <label class="as-ios-row"><span>评分≥</span><input v-model.number="cfg.douban_min_vote" class="as-ios-inp" type="number" min="0" max="10" step="0.5" /></label>
+                  <label class="as-ios-row"><span>类型</span><select v-model="cfg.douban_media_type" class="as-ios-inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
                 </div>
               </template>
             </section>
@@ -564,18 +566,18 @@ function switchTab(t) {
 
           <!-- Mikan -->
           <template v-else-if="rankSource === 'mikan'">
-            <section class="card">
-              <label class="row switch"><input v-model="cfg.mikan_enabled" type="checkbox" /><span>启用 Mikan 新番</span></label>
+            <section class="as-ios-card">
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.mikan_enabled" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>启用 Mikan 新番</span></label>
               <template v-if="cfg.mikan_enabled">
-                <div class="grid">
-                  <label class="row"><span>季度</span><select v-model="cfg.mikan_season" class="inp"><option v-for="o in MIKAN_SEASONS" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
-                  <label class="row"><span>年份</span><input v-model.number="cfg.mikan_year" class="inp" type="number" /><span class="hint">0=当前年</span></label>
+                <div class="as-ios-grid">
+                  <label class="as-ios-row"><span>季度</span><select v-model="cfg.mikan_season" class="as-ios-inp"><option v-for="o in MIKAN_SEASONS" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
+                  <label class="as-ios-row"><span>年份</span><input v-model.number="cfg.mikan_year" class="as-ios-inp" type="number" /><span class="as-ios-hint">0=当前年</span></label>
                 </div>
-                <label class="row switch"><input v-model="cfg.mikan_resolve_detail" type="checkbox" /><span>抓详情补放送年(更准更慢)</span></label>
-                <label class="row switch"><input v-model="cfg.mikan_filter_custom" type="checkbox" /><span>独立过滤(否则用全局)</span></label>
-                <div v-if="cfg.mikan_filter_custom" class="grid subfilter">
-                  <label class="row"><span>年份≥</span><input v-model.number="cfg.mikan_min_year" class="inp" type="number" /></label>
-                  <label class="row"><span>评分≥</span><input v-model.number="cfg.mikan_min_vote" class="inp" type="number" min="0" max="10" step="0.5" /></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.mikan_resolve_detail" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>抓详情补放送年(更准更慢)</span></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.mikan_filter_custom" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>独立过滤(否则用全局)</span></label>
+                <div v-if="cfg.mikan_filter_custom" class="as-ios-grid as-ios-subfilter">
+                  <label class="as-ios-row"><span>年份≥</span><input v-model.number="cfg.mikan_min_year" class="as-ios-inp" type="number" /></label>
+                  <label class="as-ios-row"><span>评分≥</span><input v-model.number="cfg.mikan_min_vote" class="as-ios-inp" type="number" min="0" max="10" step="0.5" /></label>
                 </div>
               </template>
             </section>
@@ -583,35 +585,35 @@ function switchTab(t) {
 
           <!-- 奈飞 -->
           <template v-else-if="rankSource === 'netflix'">
-            <section class="card">
-              <label class="row switch"><input v-model="cfg.netflix_enabled" type="checkbox" /><span>启用奈飞榜单</span></label>
+            <section class="as-ios-card">
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.netflix_enabled" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>启用奈飞榜单</span></label>
               <template v-if="cfg.netflix_enabled">
-                <div class="grid">
-                  <label class="row switch"><input v-model="cfg.netflix_global" type="checkbox" /><span>全球榜</span></label>
-                  <label class="row"><span>数据源</span><select v-model="cfg.netflix_dataset" class="inp"><option v-for="o in NF_DATASETS" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
-                  <label class="row"><span>每榜前N</span><input v-model.number="cfg.netflix_limit" class="inp" type="number" /></label>
+                <div class="as-ios-grid">
+                  <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.netflix_global" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>全球榜</span></label>
+                  <label class="as-ios-row"><span>数据源</span><select v-model="cfg.netflix_dataset" class="as-ios-inp"><option v-for="o in NF_DATASETS" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
+                  <label class="as-ios-row"><span>每榜前N</span><input v-model.number="cfg.netflix_limit" class="as-ios-inp" type="number" /></label>
                 </div>
-                <div class="fld"><span class="lbl">全球类型</span>
-                  <div class="chips">
-                    <label v-for="o in NF_CATS" :key="o.v" class="chip"><input type="checkbox" :checked="cfg.netflix_media_types.includes(o.v)" @change="toggle(cfg.netflix_media_types, o.v)" />{{ o.l }}</label>
+                <div class="as-ios-fld"><span class="as-ios-lbl">全球类型</span>
+                  <div class="as-ios-chips">
+                    <label v-for="o in NF_CATS" :key="o.v" class="as-ios-chip"><input type="checkbox" :checked="cfg.netflix_media_types.includes(o.v)" @change="toggle(cfg.netflix_media_types, o.v)" />{{ o.l }}</label>
                   </div>
                 </div>
-                <div class="fld"><span class="lbl">国家/地区榜</span>
-                  <div class="chips scroll">
-                    <label v-for="o in countries" :key="o.value" class="chip"><input type="checkbox" :checked="cfg.netflix_countries.includes(o.value)" @change="toggle(cfg.netflix_countries, o.value)" />{{ o.label }}</label>
+                <div class="as-ios-fld"><span class="as-ios-lbl">国家/地区榜</span>
+                  <div class="as-ios-chips as-ios-scroll">
+                    <label v-for="o in countries" :key="o.value" class="as-ios-chip"><input type="checkbox" :checked="cfg.netflix_countries.includes(o.value)" @change="toggle(cfg.netflix_countries, o.value)" />{{ o.label }}</label>
                   </div>
                 </div>
-                <div class="fld" v-if="cfg.netflix_countries.length"><span class="lbl">国家榜类型</span>
-                  <div class="chips">
-                    <label v-for="o in NF_COUNTRY_TYPES" :key="o.v" class="chip"><input type="checkbox" :checked="cfg.netflix_country_types.includes(o.v)" @change="toggle(cfg.netflix_country_types, o.v)" />{{ o.l }}</label>
+                <div class="as-ios-fld" v-if="cfg.netflix_countries.length"><span class="as-ios-lbl">国家榜类型</span>
+                  <div class="as-ios-chips">
+                    <label v-for="o in NF_COUNTRY_TYPES" :key="o.v" class="as-ios-chip"><input type="checkbox" :checked="cfg.netflix_country_types.includes(o.v)" @change="toggle(cfg.netflix_country_types, o.v)" />{{ o.l }}</label>
                   </div>
                 </div>
-                <label class="row switch"><input v-model="cfg.netflix_rich" type="checkbox" /><span>富元数据(带年份，识别更准 · 推荐)</span></label>
-                <label class="row switch"><input v-model="cfg.netflix_filter_custom" type="checkbox" /><span>独立过滤(否则用全局)</span></label>
-                <div v-if="cfg.netflix_filter_custom" class="grid subfilter">
-                  <label class="row"><span>年份≥</span><input v-model.number="cfg.netflix_min_year" class="inp" type="number" /></label>
-                  <label class="row"><span>评分≥</span><input v-model.number="cfg.netflix_min_vote" class="inp" type="number" min="0" max="10" step="0.5" /></label>
-                  <label class="row"><span>类型</span><select v-model="cfg.netflix_media_type" class="inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.netflix_rich" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>富元数据(带年份，识别更准 · 推荐)</span></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.netflix_filter_custom" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>独立过滤(否则用全局)</span></label>
+                <div v-if="cfg.netflix_filter_custom" class="as-ios-grid as-ios-subfilter">
+                  <label class="as-ios-row"><span>年份≥</span><input v-model.number="cfg.netflix_min_year" class="as-ios-inp" type="number" /></label>
+                  <label class="as-ios-row"><span>评分≥</span><input v-model.number="cfg.netflix_min_vote" class="as-ios-inp" type="number" min="0" max="10" step="0.5" /></label>
+                  <label class="as-ios-row"><span>类型</span><select v-model="cfg.netflix_media_type" class="as-ios-inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
                 </div>
               </template>
             </section>
@@ -619,77 +621,77 @@ function switchTab(t) {
 
           <!-- 猫眼 -->
           <template v-else-if="rankSource === 'maoyan'">
-            <section class="card">
-              <label class="row switch"><input v-model="cfg.maoyan_enabled" type="checkbox" /><span>启用猫眼榜单</span></label>
+            <section class="as-ios-card">
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.maoyan_enabled" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>启用猫眼榜单</span></label>
               <template v-if="cfg.maoyan_enabled">
-                <label class="row switch"><input v-model="cfg.maoyan_movie_box" type="checkbox" /><span>电影票房榜</span></label>
-                <div class="fld"><span class="lbl">网播平台</span>
-                  <div class="chips">
-                    <label v-for="o in MY_PLATFORMS" :key="o.v" class="chip"><input type="checkbox" :checked="cfg.maoyan_web_platforms.includes(o.v)" @change="toggle(cfg.maoyan_web_platforms, o.v)" />{{ o.l }}</label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.maoyan_movie_box" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>电影票房榜</span></label>
+                <div class="as-ios-fld"><span class="as-ios-lbl">网播平台</span>
+                  <div class="as-ios-chips">
+                    <label v-for="o in MY_PLATFORMS" :key="o.v" class="as-ios-chip"><input type="checkbox" :checked="cfg.maoyan_web_platforms.includes(o.v)" @change="toggle(cfg.maoyan_web_platforms, o.v)" />{{ o.l }}</label>
                   </div>
                 </div>
-                <div class="fld"><span class="lbl">网播类型</span>
-                  <div class="chips">
-                    <label v-for="o in MY_TYPES" :key="o.v" class="chip"><input type="checkbox" :checked="cfg.maoyan_web_types.includes(o.v)" @change="toggle(cfg.maoyan_web_types, o.v)" />{{ o.l }}</label>
+                <div class="as-ios-fld"><span class="as-ios-lbl">网播类型</span>
+                  <div class="as-ios-chips">
+                    <label v-for="o in MY_TYPES" :key="o.v" class="as-ios-chip"><input type="checkbox" :checked="cfg.maoyan_web_types.includes(o.v)" @change="toggle(cfg.maoyan_web_types, o.v)" />{{ o.l }}</label>
                   </div>
                 </div>
-                <label class="row"><span>每榜条数</span><input v-model.number="cfg.maoyan_num" class="inp" type="number" /></label>
-                <label class="row switch"><input v-model="cfg.maoyan_filter_custom" type="checkbox" /><span>独立过滤(否则用全局)</span></label>
-                <div v-if="cfg.maoyan_filter_custom" class="grid subfilter">
-                  <label class="row"><span>年份≥</span><input v-model.number="cfg.maoyan_min_year" class="inp" type="number" /></label>
-                  <label class="row"><span>评分≥</span><input v-model.number="cfg.maoyan_min_vote" class="inp" type="number" min="0" max="10" step="0.5" /></label>
-                  <label class="row"><span>类型</span><select v-model="cfg.maoyan_media_type" class="inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
+                <label class="as-ios-row"><span>每榜条数</span><input v-model.number="cfg.maoyan_num" class="as-ios-inp" type="number" /></label>
+                <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.maoyan_filter_custom" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>独立过滤(否则用全局)</span></label>
+                <div v-if="cfg.maoyan_filter_custom" class="as-ios-grid as-ios-subfilter">
+                  <label class="as-ios-row"><span>年份≥</span><input v-model.number="cfg.maoyan_min_year" class="as-ios-inp" type="number" /></label>
+                  <label class="as-ios-row"><span>评分≥</span><input v-model.number="cfg.maoyan_min_vote" class="as-ios-inp" type="number" min="0" max="10" step="0.5" /></label>
+                  <label class="as-ios-row"><span>类型</span><select v-model="cfg.maoyan_media_type" class="as-ios-inp"><option v-for="o in MEDIA_TYPES" :key="o.v" :value="o.v">{{ o.l }}</option></select></label>
                 </div>
               </template>
             </section>
           </template>
 
 
-            <details class="rank-settings" :open="Object.keys(chartsErrors).length > 0">
-              <summary>直采榜单通用设置<span class="muted">数量、缓存、密钥与过滤</span></summary>
-              <div class="rank-settings-body">
-            <section class="card charts-card">
-              <div class="hint flow-hint">这些设置用于直采榜单；RSS、蜜柑、奈飞和猫眼的专用设置保留在对应来源内。</div>
-              <div class="grid charts-grid">
-                <div class="fld">
-                  <label class="row" for="charts-limit"><span>每榜前几名</span><input id="charts-limit" v-model.number="cfg.charts_limit" class="inp" type="number" min="1" max="100" :aria-invalid="!!chartsErrors.limit" aria-describedby="charts-limit-hint" /></label>
-                  <div id="charts-limit-hint" class="hint flow-hint">每个选中分类取前 1～100 名，默认 20 名。</div>
-                  <div v-if="chartsErrors.limit" class="charts-error" role="alert">{{ chartsErrors.limit }}</div>
+            <details class="as-ios-rank-settings" :open="Object.keys(chartsErrors).length > 0">
+              <summary>直采榜单通用设置<span class="as-ios-muted">数量、缓存、密钥与过滤</span></summary>
+              <div class="as-ios-rank-settings-body">
+            <section class="as-ios-card as-ios-charts-card">
+              <div class="as-ios-hint as-ios-flow-hint">这些设置用于直采榜单；RSS、蜜柑、奈飞和猫眼的专用设置保留在对应来源内。</div>
+              <div class="as-ios-grid as-ios-charts-grid">
+                <div class="as-ios-fld">
+                  <label class="as-ios-row" for="charts-limit"><span>每榜前几名</span><input id="charts-limit" v-model.number="cfg.charts_limit" class="as-ios-inp" type="number" min="1" max="100" :aria-invalid="!!chartsErrors.limit" aria-describedby="charts-limit-hint" /></label>
+                  <div id="charts-limit-hint" class="as-ios-hint as-ios-flow-hint">每个选中分类取前 1～100 名，默认 20 名。</div>
+                  <div v-if="chartsErrors.limit" class="as-ios-charts-error" role="alert">{{ chartsErrors.limit }}</div>
                 </div>
-                <div class="fld">
-                  <label class="row" for="charts-cache"><span>缓存小时</span><input id="charts-cache" v-model.number="cfg.charts_cache_hours" class="inp" type="number" min="1" max="24" :aria-invalid="!!chartsErrors.cache" aria-describedby="charts-cache-hint" /></label>
-                  <div id="charts-cache-hint" class="hint flow-hint">1～24 小时，默认 6 小时；期间运行复用缓存。</div>
-                  <div v-if="chartsErrors.cache" class="charts-error" role="alert">{{ chartsErrors.cache }}</div>
+                <div class="as-ios-fld">
+                  <label class="as-ios-row" for="charts-cache"><span>缓存小时</span><input id="charts-cache" v-model.number="cfg.charts_cache_hours" class="as-ios-inp" type="number" min="1" max="24" :aria-invalid="!!chartsErrors.cache" aria-describedby="charts-cache-hint" /></label>
+                  <div id="charts-cache-hint" class="as-ios-hint as-ios-flow-hint">1～24 小时，默认 6 小时；期间运行复用缓存。</div>
+                  <div v-if="chartsErrors.cache" class="as-ios-charts-error" role="alert">{{ chartsErrors.cache }}</div>
                 </div>
               </div>
             </section>
-            <section class="card charts-card">
-              <div class="card-h">来源密钥</div>
-              <label class="fld"><span class="lbl">TMDB 密钥{{ needsChartsTmdb ? '（所选榜单需要）' : '（当前所选榜单可不填）' }}</span><div class="secret-field">
-                <input v-model="cfg.tmdb_key" class="inp" :type="secretVisible.tmdb_key ? 'text' : 'password'" autocomplete="off" placeholder="与「本地缺集」共用同一个 TMDB 密钥" :aria-invalid="!!chartsErrors.tmdb" />
+            <section class="as-ios-card as-ios-charts-card">
+              <div class="as-ios-card-h">来源密钥</div>
+              <label class="as-ios-fld"><span class="as-ios-lbl">TMDB 密钥{{ needsChartsTmdb ? '（所选榜单需要）' : '（当前所选榜单可不填）' }}</span><div class="as-ios-secret-field">
+                <input v-model="cfg.tmdb_key" class="as-ios-inp" :type="secretVisible.tmdb_key ? 'text' : 'password'" autocomplete="off" placeholder="与「本地缺集」共用同一个 TMDB 密钥" :aria-invalid="!!chartsErrors.tmdb" />
                 <button type="button" :disabled="secretLoading.tmdb_key" :aria-label="secretVisible.tmdb_key ? '隐藏 TMDB 密钥' : '显示 TMDB 密钥'" @click="toggleSecret('tmdb_key')">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button></div>
               </label>
-              <div v-if="chartsErrors.tmdb" class="charts-error" role="alert">{{ chartsErrors.tmdb }}</div>
-              <div class="hint flow-hint">TMDB 榜单及动画类榜单需要此密钥；动画类用它核对作品类型，避免误订阅。其他榜单可不填。修改这里也会同步到「本地缺集」。</div>
+              <div v-if="chartsErrors.tmdb" class="as-ios-charts-error" role="alert">{{ chartsErrors.tmdb }}</div>
+              <div class="as-ios-hint as-ios-flow-hint">TMDB 榜单及动画类榜单需要此密钥；动画类用它核对作品类型，避免误订阅。其他榜单可不填。修改这里也会同步到「本地缺集」。</div>
               <template v-if="usesTraktCharts">
-                <label class="fld"><span class="lbl">Trakt Client ID（所选榜单需要）</span><div class="secret-field">
-                  <input v-model="cfg.charts_trakt_client_id" class="inp" :type="secretVisible.charts_trakt_client_id ? 'text' : 'password'" autocomplete="off" placeholder="Trakt 应用的 Client ID，不是 Client Secret" :aria-invalid="!!chartsErrors.trakt" />
+                <label class="as-ios-fld"><span class="as-ios-lbl">Trakt Client ID（所选榜单需要）</span><div class="as-ios-secret-field">
+                  <input v-model="cfg.charts_trakt_client_id" class="as-ios-inp" :type="secretVisible.charts_trakt_client_id ? 'text' : 'password'" autocomplete="off" placeholder="Trakt 应用的 Client ID，不是 Client Secret" :aria-invalid="!!chartsErrors.trakt" />
                   <button type="button" :disabled="secretLoading.charts_trakt_client_id" :aria-label="secretVisible.charts_trakt_client_id ? '隐藏 Trakt Client ID' : '显示 Trakt Client ID'" @click="toggleSecret('charts_trakt_client_id')">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button></div>
                 </label>
-                <div v-if="chartsErrors.trakt" class="charts-error" role="alert">{{ chartsErrors.trakt }}</div>
+                <div v-if="chartsErrors.trakt" class="as-ios-charts-error" role="alert">{{ chartsErrors.trakt }}</div>
               </template>
             </section>
-            <section class="card charts-card">
-              <label class="row switch"><input v-model="cfg.charts_filter_custom" type="checkbox" /><span>使用独立过滤（默认关闭，沿用全局过滤）</span></label>
-              <div v-if="!cfg.charts_filter_custom" class="hint flow-hint">年份、评分和类型沿用「全局设置」。开启后可单独设置下方三项；各来源热度单位不同，不使用全局热度阈值。</div>
-              <div v-else class="grid subfilter charts-grid">
-                <div class="fld"><label class="row"><span>最低年份</span><input v-model.number="cfg.charts_min_year" class="inp" type="number" min="0" max="9999" :aria-invalid="!!chartsErrors.year" /></label><span class="hint flow-hint">0 表示不限年份</span><span v-if="chartsErrors.year" class="charts-error" role="alert">{{ chartsErrors.year }}</span></div>
-                <div class="fld"><label class="row"><span>最低评分</span><input v-model.number="cfg.charts_min_vote" class="inp" type="number" min="0" max="10" step="0.5" :aria-invalid="!!chartsErrors.vote" /></label><span class="hint flow-hint">0 表示不限评分</span><span v-if="chartsErrors.vote" class="charts-error" role="alert">{{ chartsErrors.vote }}</span></div>
-                <div class="fld"><label class="row"><span>媒体类型</span><select v-model="cfg.charts_media_type" class="inp" :aria-invalid="!!chartsErrors.media"><option v-for="option in MEDIA_TYPES" :key="option.v" :value="option.v">{{ option.l }}</option></select></label><span v-if="chartsErrors.media" class="charts-error" role="alert">{{ chartsErrors.media }}</span></div>
+            <section class="as-ios-card as-ios-charts-card">
+              <label class="as-ios-row as-ios-switch"><span class="as-ios-toggle"><input v-model="cfg.charts_filter_custom" type="checkbox" role="switch" /><span class="as-ios-toggle-track" aria-hidden="true"></span></span><span>使用独立过滤（默认关闭，沿用全局过滤）</span></label>
+              <div v-if="!cfg.charts_filter_custom" class="as-ios-hint as-ios-flow-hint">年份、评分和类型沿用「全局设置」。开启后可单独设置下方三项；各来源热度单位不同，不使用全局热度阈值。</div>
+              <div v-else class="as-ios-grid as-ios-subfilter as-ios-charts-grid">
+                <div class="as-ios-fld"><label class="as-ios-row"><span>最低年份</span><input v-model.number="cfg.charts_min_year" class="as-ios-inp" type="number" min="0" max="9999" :aria-invalid="!!chartsErrors.year" /></label><span class="as-ios-hint as-ios-flow-hint">0 表示不限年份</span><span v-if="chartsErrors.year" class="as-ios-charts-error" role="alert">{{ chartsErrors.year }}</span></div>
+                <div class="as-ios-fld"><label class="as-ios-row"><span>最低评分</span><input v-model.number="cfg.charts_min_vote" class="as-ios-inp" type="number" min="0" max="10" step="0.5" :aria-invalid="!!chartsErrors.vote" /></label><span class="as-ios-hint as-ios-flow-hint">0 表示不限评分</span><span v-if="chartsErrors.vote" class="as-ios-charts-error" role="alert">{{ chartsErrors.vote }}</span></div>
+                <div class="as-ios-fld"><label class="as-ios-row"><span>媒体类型</span><select v-model="cfg.charts_media_type" class="as-ios-inp" :aria-invalid="!!chartsErrors.media"><option v-for="option in MEDIA_TYPES" :key="option.v" :value="option.v">{{ option.l }}</option></select></label><span v-if="chartsErrors.media" class="as-ios-charts-error" role="alert">{{ chartsErrors.media }}</span></div>
               </div>
             </section>
 
@@ -697,204 +699,213 @@ function switchTab(t) {
             </details>
           </template>
 
-          <div class="savebar" :class="{ 'charts-savebar': group === 'ranks' }"><button class="btn primary lg" :disabled="saving || !configReady" @click="save">{{ saving ? '保存中…' : '保存配置' }}</button></div>
+          <div class="as-ios-savebar" :class="{ 'as-ios-charts-savebar': group === 'ranks' }"><button type="button" class="as-ios-btn as-ios-primary as-ios-lg" :disabled="saving || !configReady" @click="save">{{ saving ? '保存中…' : '保存配置' }}</button></div>
         </div>
       </div>
 
       <!-- ============ 历史 ============ -->
-      <div v-show="tab === 'history'" class="pane">
-        <div v-if="Object.keys(missingStats).length" class="output" role="status">
+      <div v-show="tab === 'history'" class="as-ios-pane">
+        <div v-if="Object.keys(missingStats).length" class="as-ios-output" role="status">
           <div v-if="missingStats.scan_error">上轮本地缺集：已读取 Emby 剧集 {{ missingStats.scanned ?? '—' }} 部。扫描未完成，未执行缺集订阅。</div>
           <div v-else>上轮本地缺集：Emby 剧集 {{ missingStats.scanned ?? '—' }} 部，缺集剧集 {{ missingStats.checked || 0 }} 部，缺 {{ missingStats.missing_episodes || 0 }} 集；新增 {{ missingStats.added || 0 }} 部，已订阅跳过 {{ missingStats.skipped || 0 }} 部，资料不全跳过 {{ missingStats.unknown || 0 }} 部，失败 {{ missingStats.failed || 0 }} 部。</div>
-          <div v-if="missingStats.error" class="muted err">{{ missingStats.error }}</div>
+          <div v-if="missingStats.error" class="as-ios-muted as-ios-err">{{ missingStats.error }}</div>
         </div>
-        <div class="stats">
-          <div v-for="k in STAT_CARDS" :key="k" class="stat" :style="{ borderColor: STATUS_COLORS[k] + '55' }">
-            <div class="stat-n" :style="{ color: STATUS_COLORS[k] }">{{ histStats[k] || 0 }}</div>
-            <div class="stat-l">{{ STATUS_LABELS[k] }}</div>
+        <div class="as-ios-stats">
+          <div v-for="k in STAT_CARDS" :key="k" class="as-ios-stat" :style="{ borderColor: STATUS_COLORS[k] + '55' }">
+            <div class="as-ios-stat-n" :style="{ color: STATUS_COLORS[k] }">{{ histStats[k] || 0 }}</div>
+            <div class="as-ios-stat-l">{{ STATUS_LABELS[k] }}</div>
           </div>
         </div>
-        <div class="toolbar">
-          <span class="muted">上次运行：{{ lastRun || '—' }}</span>
-          <span class="grow"></span>
-          <select v-model="statusFilter" class="inp sm">
+        <div class="as-ios-toolbar">
+          <span class="as-ios-muted">上次运行：{{ lastRun || '—' }}</span>
+          <span class="as-ios-grow"></span>
+          <select v-model="statusFilter" class="as-ios-inp as-ios-sm">
             <option value="all">全部状态</option>
             <option v-for="(l, k) in STATUS_LABELS" :key="k" :value="k">{{ l }}</option>
           </select>
-          <button class="btn" @click="loadHistory">刷新</button>
-          <button class="btn danger" @click="clearHistory">清空</button>
+          <button type="button" class="as-ios-btn" @click="loadHistory">刷新</button>
+          <button type="button" class="as-ios-btn as-ios-danger" @click="clearHistory">清空</button>
         </div>
-        <div v-if="historyLoading" class="muted">加载中…</div>
-        <div v-else-if="!filteredHistory.length" class="empty">暂无订阅历史记录<br><span class="muted">启用来源并运行后，这里会记录每次订阅结果</span></div>
-        <table v-else class="tbl">
+        <div v-if="historyLoading" class="as-ios-muted">加载中…</div>
+        <div v-else-if="!filteredHistory.length" class="as-ios-empty">暂无订阅历史记录<br><span class="as-ios-muted">启用来源并运行后，这里会记录每次订阅结果</span></div>
+        <div v-else class="as-ios-table-wrap" tabindex="0" role="region" aria-label="订阅数据表"><table class="as-ios-tbl">
           <thead><tr><th>标题</th><th>类型</th><th>状态</th><th>来源</th><th>时间</th><th></th></tr></thead>
           <tbody>
             <tr v-for="h in filteredHistory" :key="h.key">
               <td>{{ h.title }}</td>
               <td>{{ typeOfKey(h.key) }}</td>
               <td><span :style="{ color: STATUS_COLORS[h.status] || '#b9c0cc' }">{{ STATUS_LABELS[h.status] || h.status }}</span></td>
-              <td class="muted">{{ h.source || '—' }}</td>
-              <td class="muted">{{ h.time }}</td>
-              <td><button class="btn xs" @click="delHistory(h.key)">删除</button></td>
+              <td class="as-ios-muted">{{ h.source || '—' }}</td>
+              <td class="as-ios-muted">{{ h.time }}</td>
+              <td><button type="button" class="as-ios-btn as-ios-xs" @click="delHistory(h.key)">删除</button></td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       <!-- ============ 订阅 ============ -->
-      <div v-show="tab === 'subs'" class="pane">
-        <div class="toolbar">
-          <span class="muted">NextFind 活跃订阅</span>
-          <span class="grow"></span>
-          <button class="btn" @click="loadSubs">刷新</button>
+      <div v-show="tab === 'subs'" class="as-ios-pane">
+        <div class="as-ios-toolbar">
+          <span class="as-ios-muted">NextFind 活跃订阅</span>
+          <span class="as-ios-grow"></span>
+          <button type="button" class="as-ios-btn" @click="loadSubs">刷新</button>
         </div>
-        <div v-if="subsLoading" class="muted">加载中…</div>
-        <div v-else-if="subsError" class="muted err">读取失败：{{ subsError }}</div>
-        <div v-else-if="!subs.length" class="empty">暂无本插件创建的订阅<br><span class="muted">启用来源运行后，订阅会出现在这里</span></div>
-        <table v-else class="tbl">
+        <div v-if="subsLoading" class="as-ios-muted">加载中…</div>
+        <div v-else-if="subsError" class="as-ios-muted as-ios-err">读取失败：{{ subsError }}</div>
+        <div v-else-if="!subs.length" class="as-ios-empty">暂无本插件创建的订阅<br><span class="as-ios-muted">启用来源运行后，订阅会出现在这里</span></div>
+        <div v-else class="as-ios-table-wrap" tabindex="0" role="region" aria-label="订阅数据表"><table class="as-ios-tbl">
           <thead><tr><th>标题</th><th>类型</th><th>年份</th><th>评分</th><th>进度</th><th>状态</th><th></th></tr></thead>
           <tbody>
             <tr v-for="s in subs" :key="s.tmdb_id + s.media_type">
               <td>{{ s.title }}</td>
               <td>{{ s.media_type === 'tv' ? '剧集' : '电影' }}</td>
-              <td class="muted">{{ s.year || '—' }}</td>
-              <td class="muted">{{ s.rating || '—' }}</td>
-              <td class="muted">{{ s.media_type === 'tv' ? `${s.local_episodes || 0}/${s.total_episodes || 0}` : (s.is_in_library ? '已入库' : '—') }}</td>
-              <td class="muted">{{ s.sub_status || s.status || '—' }}</td>
-              <td><button class="btn xs danger" @click="removeSub(s)">取消</button></td>
+              <td class="as-ios-muted">{{ s.year || '—' }}</td>
+              <td class="as-ios-muted">{{ s.rating || '—' }}</td>
+              <td class="as-ios-muted">{{ s.media_type === 'tv' ? `${s.local_episodes || 0}/${s.total_episodes || 0}` : (s.is_in_library ? '已入库' : '—') }}</td>
+              <td class="as-ios-muted">{{ s.sub_status || s.status || '—' }}</td>
+              <td><button type="button" class="as-ios-btn as-ios-xs as-ios-danger" @click="removeSub(s)">取消</button></td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
     </template>
   </div>
+  </IosSettings>
 </template>
 
 <style scoped>
-/* container-type：让下面的 @container 按「本组件(=配置弹窗)实际宽度」自适应，
-   而非浏览器视口宽度——平台弹窗被 max-width:90vw 夹窄时也能正确收起侧栏。 */
-.asub { display: flex; flex-direction: column; gap: 14px; container-type: inline-size; }
-.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light, #2a2e3a); }
-.tab {
-  padding: 8px 16px; background: none; border: none; cursor: pointer; font-size: 13px;
-  color: var(--text-secondary, #b9c0cc); border-bottom: 2px solid transparent;
+.as-ios { display: flex; flex-direction: column; gap: 24px; min-width: 0; color: var(--ios-text); }
+.as-ios *, .as-ios *::before, .as-ios *::after { box-sizing: border-box; }
+.as-ios-tabs { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; isolation: isolate; padding: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.as-ios-tabs::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 16px) / 3); border-radius: 11px; background: var(--ios-control); box-shadow: 0 2px 5px rgb(0 0 0 / .08); transform: translateX(calc(var(--as-ios-tab-index) * (100% + 4px))); transition: transform var(--ios-duration) var(--ios-ease); z-index: -1; }
+.as-ios-tab { min-height: 42px; padding: 8px 10px; border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.as-ios-tab.on { color: var(--ios-text); font-weight: 650; }
+.as-ios-layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: start; gap: 24px; min-width: 0; }
+.as-ios-sidebar { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-inset); }
+.as-ios-side-title { padding: 6px 10px; color: var(--ios-secondary); font-size: 12px; }
+.as-ios-side-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 9px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--ios-secondary); text-align: left; cursor: pointer; }
+.as-ios-side-item:hover, .as-ios-side-item.on { color: var(--ios-text); background: var(--ios-control); }
+.as-ios-side-item.on { font-weight: 600; box-shadow: 0 2px 4px rgb(0 0 0 / .06); }
+.as-ios-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success, #087758); flex: none; }
+.as-ios-side-foot { margin-top: 4px; padding: 10px; border-top: 1px solid var(--ios-line); color: var(--ios-secondary); font-size: 12px; }
+.as-ios-detail, .as-ios-pane { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.as-ios-det-title { margin: 0; font-size: 16px; font-weight: 650; line-height: 1.5; letter-spacing: -.015em; color: var(--ios-text); }
+.as-ios-card { display: flex; flex-direction: column; gap: 16px; min-width: 0; padding: 20px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); }
+.as-ios-card-h { margin: 0; color: var(--ios-text); font-size: 14px; font-weight: 600; }
+.as-ios-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); align-items: start; gap: 16px; }
+.as-ios-grid > .as-ios-row { flex-direction: column; align-items: stretch; }
+.as-ios-grid > .as-ios-switch { flex-direction: row; align-items: center; }
+.as-ios-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; min-width: 0; }
+.as-ios-row > span:first-child:not(.as-ios-toggle), .as-ios-lbl { min-width: 64px; color: var(--ios-text); font-size: 14px; }
+.as-ios-row.as-ios-top { flex-direction: column; align-items: stretch; gap: 10px; }
+.as-ios-row > :not(span):not(button) { min-width: 0; flex: 1; }
+.as-ios-switch { cursor: pointer; }
+.as-ios-switch > span:not(.as-ios-toggle) { order: 1; flex: 1; min-width: 0; }
+.as-ios-switch > .as-ios-toggle { order: 2; }
+.as-ios-toggle { position: relative; display: inline-flex; align-items: center; flex: 0 0 50px; width: 50px; min-height: 44px; }
+.as-ios-toggle input { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.as-ios-toggle-track { position: relative; display: block; width: 50px; height: 30px; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); transition: background var(--ios-fast) ease, border-color var(--ios-fast) ease; }
+.as-ios-toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .2); transition: transform var(--ios-duration) var(--ios-ease); }
+.as-ios-toggle input:checked + .as-ios-toggle-track { border-color: transparent; background: var(--ios-accent); }
+.as-ios-toggle input:checked + .as-ios-toggle-track::after { transform: translateX(20px); }
+.as-ios-switch:active .as-ios-toggle-track::after { transform: scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.as-ios-switch:active input:checked + .as-ios-toggle-track::after { transform: translateX(20px) scaleX(calc(1 + .08 * var(--glass-custom-motion, 1))); }
+.as-ios-toggle input:focus-visible + .as-ios-toggle-track { outline: 3px solid var(--accent, #0063dc); outline-offset: 3px; }
+.as-ios-inp { flex: 1; width: 100%; min-width: 0; min-height: 44px; padding: 9px 12px; border: 1px solid var(--ios-line); border-radius: 12px; background: var(--ios-inset); color: var(--ios-text); transition: border-color var(--ios-fast) ease; }
+.as-ios-inp:focus { border-color: var(--accent, #0063dc); }
+.as-ios-inp.as-ios-sm { flex: 0 0 auto; width: 130px; }
+.as-ios textarea { resize: vertical; line-height: 1.75; }
+.as-ios-fld { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.as-ios-hint, .as-ios-muted { min-width: 0; color: var(--ios-secondary); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.as-ios-flow-hint { white-space: normal; max-width: 75ch; }
+.as-ios-secret-field { position: relative; flex: 1; min-width: 0; }
+.as-ios-secret-field .as-ios-inp { width: 100%; padding-right: 48px; }
+.as-ios-secret-field button { position: absolute; inset: 4px 4px 4px auto; width: 36px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--ios-secondary); cursor: pointer; }
+.as-ios-secret-field button:hover:not(:disabled) { color: var(--accent, #0063dc); background: var(--accent-dim, #e8f1ff); }
+.as-ios-secret-field svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.as-ios-chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.as-ios-chips.as-ios-scroll { max-height: 190px; overflow-y: auto; padding: 10px; border: 1px solid var(--ios-line); border-radius: 12px; scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.as-ios-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--ios-line); border-radius: 10px; background: var(--ios-inset); color: var(--ios-secondary); font-size: 12px; line-height: 1.5; cursor: pointer; transition: background var(--ios-fast), border-color var(--ios-fast); }
+.as-ios-chip:has(input:checked) { color: var(--ios-text); border-color: var(--accent, #0063dc); background: var(--accent-dim, #e8f1ff); }
+.as-ios-chip > input { flex: none; width: 17px; height: 17px; margin: 0; accent-color: var(--ios-accent); }
+.as-ios-subfilter { padding: 16px; border: 1px solid var(--ios-line); border-radius: 13px; background: var(--ios-inset); }
+.as-ios-charts-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.as-ios-rank-picker { padding: 16px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); }
+.as-ios-rank-picker > select { flex: 1; }
+.as-ios-rank-settings { border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.as-ios-rank-settings summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; min-height: 56px; padding: 15px 18px; color: var(--ios-text); font-size: 14px; cursor: pointer; list-style: none; }
+.as-ios-rank-settings summary::-webkit-details-marker { display: none; }
+.as-ios-rank-settings summary::after { content: ''; width: 7px; height: 7px; margin-left: auto; border-right: 1px solid var(--ios-secondary); border-bottom: 1px solid var(--ios-secondary); transform: rotate(45deg); transition: transform var(--ios-duration) var(--ios-ease); }
+.as-ios-rank-settings[open] summary::after { transform: rotate(225deg); }
+.as-ios-rank-settings-body { display: flex; flex-direction: column; gap: 16px; padding: 0 12px 12px; }
+.as-ios-rank-settings-body .as-ios-card { padding: 16px; background: transparent; border: 0; border-top: 1px solid var(--ios-line); border-radius: 0; }
+.as-ios-charts-error, .as-ios-muted.as-ios-err { color: var(--danger, #bd2733); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.as-ios-charts-load-error { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); }
+.as-ios-inp[aria-invalid='true'] { border-color: var(--danger, #bd2733); }
+.as-ios-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 18px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.as-ios-button:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.as-ios-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 9px 18px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); font-weight: 500; cursor: pointer; }
+.as-ios-btn:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.as-ios-btn.as-ios-primary { min-width: 132px; border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.as-ios-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.as-ios-btn.as-ios-danger { color: var(--danger, #bd2733); }
+.as-ios-btn.as-ios-danger:hover:not(:disabled) { border-color: var(--danger, #bd2733); }
+.as-ios-btn.as-ios-xs { min-height: 36px; padding: 6px 11px; font-size: 12px; }
+.as-ios button:disabled { opacity: .5; cursor: not-allowed; }
+.as-ios-savebar { display: flex; justify-content: flex-end; padding-top: 6px; }
+.as-ios-output { margin: 0; padding: 16px; border: 1px solid var(--ios-line); border-radius: 13px; background: var(--ios-inset); color: var(--ios-text); font: inherit; font-size: 12px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.as-ios-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); overflow: hidden; }
+.as-ios-stat { padding: 16px 18px; border: 0; border-right: 1px solid var(--ios-line); }
+.as-ios-stat:last-child { border-right: 0; }
+.as-ios-stat-n { font-size: 23px; font-weight: 650; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.as-ios-stat-l { margin-top: 4px; color: var(--ios-secondary); font-size: 12px; }
+.as-ios-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.as-ios-grow { flex: 1; }
+.as-ios-table-wrap { max-width: 100%; min-width: 0; overflow: auto; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.as-ios-tbl { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.as-ios-tbl th, .as-ios-tbl td { padding: 13px 14px; border-bottom: 1px solid var(--ios-line); white-space: nowrap; text-align: left; }
+.as-ios-tbl th { background: var(--ios-inset); color: var(--ios-secondary); font-size: 12px; font-weight: 500; }
+.as-ios-tbl td { color: var(--ios-text); }
+.as-ios-tbl td:first-child { min-width: 140px; max-width: 280px; white-space: normal; overflow-wrap: anywhere; }
+.as-ios-tbl td.as-ios-muted { color: var(--ios-secondary); }
+.as-ios-tbl tr:last-child td { border-bottom: 0; }
+.as-ios-tbl tbody tr:hover { background: var(--ios-inset); }
+.as-ios-empty { padding: 40px 24px; border: 1px solid var(--ios-line); border-radius: 18px; background: var(--ios-surface); text-align: center; color: var(--ios-text); }
+.as-ios-empty .as-ios-muted { display: inline-block; margin-top: 7px; }
+:global(html[data-theme='transparent'] .as-ios-card),
+:global(html[data-theme='transparent'] .as-ios-rank-picker),
+:global(html[data-theme='transparent'] .as-ios-charts-load-error),
+:global(html[data-theme='transparent'] .as-ios-table-wrap),
+:global(html[data-theme='transparent'] .as-ios-stats),
+:global(html[data-theme='transparent'] .as-ios-empty) { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); -webkit-backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 640px) {
+  .as-ios { gap: 20px; }
+  .as-ios-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .as-ios-sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px; border-radius: 16px; }
+  .as-ios-side-title { display: none; }
+  .as-ios-side-item { flex: 1 1 auto; justify-content: center; min-height: 40px; padding: 8px 11px; font-size: 13px; }
+  .as-ios-side-foot { flex: 1 1 100%; margin: 0; padding: 7px 10px; border-top: 0; }
+  .as-ios-card { padding: 16px; gap: 14px; }
+  .as-ios-grid { grid-template-columns: minmax(0, 1fr); }
+  .as-ios-row:not(.as-ios-switch) { flex-wrap: wrap; gap: 10px; }
+  .as-ios-row > .as-ios-inp:not(.as-ios-sm), .as-ios-row > .as-ios-secret-field { flex: 1 1 100%; }
+  .as-ios-inp { font-size: 16px; }
+  .as-ios-savebar .as-ios-primary { width: 100%; }
+  .as-ios-toolbar > .as-ios-muted { flex: 1 1 100%; }
+  .as-ios-toolbar > .as-ios-grow { display: none; }
+  .as-ios-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .as-ios-stat { border-bottom: 1px solid var(--ios-line); padding: 12px; }
+  .as-ios-rank-settings summary { padding-inline: 15px; }
+  .as-ios-tbl th, .as-ios-tbl td { padding: 12px; }
 }
-.tab.on { color: var(--accent, #6ea8fe); border-bottom-color: var(--accent, #6ea8fe); }
-
-/* master-detail 布局 */
-.layout { display: flex; gap: 16px; align-items: flex-start; }
-.sidebar {
-  flex: 0 0 150px; display: flex; flex-direction: column; gap: 4px;
-  padding: 10px; border-radius: 10px;
-  background: var(--bg-elevated, #1a1d27); border: 1px solid var(--border-light, #2a2e3a);
+@container (max-width: 360px) {
+  .as-ios-tab { padding-inline: 6px; font-size: 13px; }
+  .as-ios-chip { max-width: 100%; overflow-wrap: anywhere; }
+  .as-ios-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.side-title { font-size: 11px; color: var(--text-muted, #7a8291); padding: 4px 8px 6px; }
-.side-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 9px 10px; border-radius: 8px; border: none; cursor: pointer; text-align: left;
-  background: none; color: var(--text-secondary, #b9c0cc); font-size: 13px;
-}
-.side-item:hover { background: var(--bg-card, #12141c); }
-.side-item.on { background: var(--accent-dim, #1e3a5f); color: var(--accent, #6ea8fe); }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: #6ee7a8; flex: 0 0 auto; }
-.side-foot { margin-top: 8px; padding: 8px; font-size: 11px; color: var(--text-muted, #7a8291); border-top: 1px solid var(--border-light, #2a2e3a); }
-.detail { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.det-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary, #e8ebf0); }
-
-.pane { display: flex; flex-direction: column; gap: 14px; }
-.card {
-  display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 10px;
-  background: var(--bg-elevated, #1a1d27); border: 1px solid var(--border-light, #2a2e3a);
-}
-.card-h { font-size: 13px; font-weight: 600; color: var(--accent, #6ea8fe); }
-/* 表单自适应：窄模态单列（输入框占满、不截断），够宽才两列。 */
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px 20px; }
-.subfilter { padding: 12px; border-radius: 8px; background: var(--bg-card, #12141c); border: 1px dashed var(--border-light, #2a2e3a); }
-.row { display: flex; align-items: center; gap: 10px; }
-.row.top { align-items: flex-start; }
-.row > span:first-child, .lbl { min-width: 64px; font-size: 13px; color: var(--text-secondary, #b9c0cc); }
-.row.switch { justify-content: flex-start; }
-.row.switch span { min-width: 0; }
-.hint { min-width: 0 !important; font-size: 12px; color: var(--text-muted, #7a8291); white-space: nowrap; }
-.flow-hint { white-space: normal; line-height: 1.6; overflow-wrap: anywhere; color: var(--text-secondary, #b9c0cc); }
-.secret-field { position: relative; flex: 1; min-width: 0; }
-.fld .secret-field { flex: auto; }
-.secret-field .inp { width: 100%; box-sizing: border-box; padding-right: 44px; }
-.secret-field button { position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted, #7a8291); cursor: pointer; }
-.secret-field button:hover { color: var(--accent, #6ea8fe); background: var(--accent-dim, #1e3a5f); }
-.secret-field svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.charts-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.rank-settings { border-top: 1px solid var(--border-light, #2a2e3a); }
-.rank-settings summary { padding: 14px 0; cursor: pointer; color: var(--text-primary, #e8ebf0); font-size: 13px; }
-.rank-settings summary .muted { margin-inline-start: 12px; }
-.rank-settings-body { display: flex; flex-direction: column; gap: 14px; }
-.rank-picker select { width: 100%; }
-.charts-card .chip { min-height: 34px; box-sizing: border-box; }
-.charts-heading .card-h { margin: 0; }
-.charts-error { color: var(--danger, #ff8e8e); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.charts-load-error { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.charts-card [aria-invalid="true"] { border-color: var(--danger, #ff8e8e); }
-.charts-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
-.rank-settings summary:focus-visible, .charts-error:focus-visible { outline: 2px solid var(--accent, #6ea8fe); outline-offset: 3px; }
-.inp {
-  flex: 1; min-width: 0; padding: 8px 10px; border-radius: 6px; font-size: 13px;
-  background: var(--bg-card, #12141c); color: var(--text-primary, #e8ebf0);
-  border: 1px solid var(--border-light, #2a2e3a);
-}
-.inp.sm { flex: 0 0 auto; width: 130px; }
-textarea.inp { resize: vertical; font-family: inherit; }
-.fld { display: flex; flex-direction: column; gap: 6px; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chips.scroll { max-height: 150px; overflow-y: auto; padding: 8px; border: 1px solid var(--border-light, #2a2e3a); border-radius: 6px; }
-.chip {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
-  color: var(--text-secondary, #b9c0cc); cursor: pointer;
-  padding: 4px 8px; border-radius: 6px; background: var(--bg-card, #12141c);
-  border: 1px solid var(--border-light, #2a2e3a);
-}
-.btn {
-  padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
-  background: var(--bg-card, #12141c); color: var(--text-secondary, #b9c0cc);
-  border: 1px solid var(--border-light, #2a2e3a);
-}
-.btn:hover { border-color: var(--accent, #6ea8fe); color: var(--accent, #6ea8fe); }
-.btn.primary { background: var(--accent-dim, #1e3a5f); border-color: var(--accent, #6ea8fe); color: var(--accent, #6ea8fe); }
-.btn.danger:hover { border-color: #ff6b6b; color: #ff6b6b; }
-.btn.lg { padding: 9px 22px; }
-.btn.xs { padding: 3px 9px; font-size: 12px; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.inp:focus-visible, button:focus-visible { outline: 2px solid var(--accent, #6ea8fe); outline-offset: 2px; }
-.savebar { position: sticky; bottom: 0; display: flex; justify-content: flex-end; padding-top: 4px; }
-.savebar.charts-savebar { position: static; padding-top: 12px; }
-.output { margin: 0; padding: 10px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; background: var(--bg-card, #12141c); color: var(--text-primary, #e8ebf0); border: 1px solid var(--border-light, #2a2e3a); }
-
-/* 历史统计卡：横向铺开 */
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
-.stat { padding: 14px 16px; border-radius: 10px; background: var(--bg-elevated, #1a1d27); border: 1px solid var(--border-light, #2a2e3a); }
-.stat-n { font-size: 26px; font-weight: 700; line-height: 1.1; }
-.stat-l { margin-top: 4px; font-size: 12px; color: var(--text-secondary, #b9c0cc); }
-
-.toolbar { display: flex; align-items: center; gap: 8px; }
-.grow { flex: 1; }
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th, .tbl td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border-light, #2a2e3a); }
-.tbl th { color: var(--text-muted, #7a8291); font-weight: 500; font-size: 12px; }
-.tbl td { color: var(--text-primary, #e8ebf0); }
-.empty { text-align: center; padding: 48px 0; font-size: 15px; color: var(--text-secondary, #b9c0cc); }
-.muted { font-size: 12px; color: var(--text-muted, #7a8291); }
-.muted.err { color: #ff6b6b; }
-
-/* 弹窗较窄时：分组栏从左侧竖排改为顶部横排 chips，把整宽让给明细。 */
-@container (max-width: 620px) {
-  .layout { flex-direction: column; }
-  .sidebar { flex-basis: auto; width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
-  .side-title { display: none; }
-  .side-item { flex: 0 1 auto; }
-  .side-foot { width: 100%; margin-top: 4px; border-top: none; }
-  .stats { grid-template-columns: repeat(3, 1fr); }
-}
-/* 更窄（手机）：统计卡两列 */
-@container (max-width: 380px) {
-  .stats { grid-template-columns: repeat(2, 1fr); }
+@media (forced-colors: active) {
+  .as-ios-toggle input { position: static; width: 24px; height: 24px; clip-path: none; }
+  .as-ios-toggle-track { display: none; }
+  .as-ios-tabs::before { border: 2px solid Highlight; }
 }
 </style>

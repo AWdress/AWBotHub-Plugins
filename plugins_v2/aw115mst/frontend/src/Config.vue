@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import SwitchField from './SwitchField.vue'
+import IosSettings from '../../../_frontend/IosSettings.vue'
 
 const props = defineProps({pluginId: {type: String, required: true}, host: {type: Object, required: true}})
 const MASK = '********'
@@ -309,89 +310,90 @@ onBeforeUnmount(() => { alive = false; clearTimeout(pollTimer); cookieReveal.val
 </script>
 
 <template>
+  <IosSettings>
   <main class="mst-shell">
-    <header class="page-head">
+    <header class="mst-page-head">
       <div><h2>AW115MST</h2><p>115 秒传检测与文件整理</p></div>
-      <span class="save-state" :class="{changed: dirty}">{{ saving ? '正在保存' : dirty ? '有未保存修改' : loading ? '正在读取' : loadError ? '读取失败' : '配置已同步' }}</span>
+      <span class="mst-save-state" :class="{changed: dirty}">{{ saving ? '正在保存' : dirty ? '有未保存修改' : loading ? '正在读取' : loadError ? '读取失败' : '配置已同步' }}</span>
     </header>
-    <div v-if="loadError" class="alert error" role="alert"><p>{{ loadError }}</p><button class="secondary" type="button" @click="load">重新读取</button></div>
-    <p v-if="actionError" ref="actionAlert" class="alert error" role="alert" tabindex="-1">{{ actionError }}</p>
-    <p v-else-if="actionMessage" class="alert success" role="status">{{ actionMessage }}</p>
-    <p v-if="loading" class="loading" role="status">正在读取配置…</p>
+    <div v-if="loadError" class="mst-alert mst-error" role="alert"><p>{{ loadError }}</p><button class="mst-secondary" type="button" @click="load">重新读取</button></div>
+    <p v-if="actionError" ref="actionAlert" class="mst-alert mst-error" role="alert" tabindex="-1">{{ actionError }}</p>
+    <p v-else-if="actionMessage" class="mst-alert mst-success" role="status">{{ actionMessage }}</p>
+    <p v-if="loading" class="mst-loading" role="status">正在读取配置…</p>
 
-    <div v-else class="workspace">
-      <nav class="section-nav" role="tablist" aria-label="AW115MST 配置分组">
+    <div v-else class="mst-workspace">
+      <nav :style="{ '--mst-tab-index': TABS.findIndex(item => item.key === activeTab) }" class="mst-section-nav" role="tablist" aria-label="AW115MST 配置分组">
         <button v-for="(item, index) in TABS" :id="`mst-tab-${item.key}`" :key="item.key" type="button" role="tab" :aria-selected="activeTab === item.key" :aria-controls="`mst-panel-${item.key}`" :tabindex="activeTab === item.key ? 0 : -1" :class="{active: activeTab === item.key}" @click="activeTab = item.key" @keydown="tabKeyboard($event, index)">
           <span>{{ item.label }}</span><i :class="{on: tabEnabled(item.key)}" aria-hidden="true"></i>
         </button>
       </nav>
 
-      <section :id="`mst-panel-${activeTab}`" class="panel" role="tabpanel" :aria-labelledby="`mst-tab-${activeTab}`">
-        <fieldset class="fields" :disabled="locked">
+      <section :id="`mst-panel-${activeTab}`" class="mst-panel" role="tabpanel" :aria-labelledby="`mst-tab-${activeTab}`">
+        <fieldset class="mst-fields" :disabled="locked">
           <template v-if="activeTab === 'account'">
-            <div class="panel-head"><h3>115 账号</h3><p>使用 Cookie 或扫码连接账号，服务可独立运行。</p></div>
-            <div class="subsection">
-              <div class="form-grid">
-                <label class="wide"><span>115 Cookie</span><div class="secret-field"><input :value="cookieDisplay" :type="cookieVisible ? 'text' : 'password'" autocomplete="off" spellcheck="false" placeholder="留空使用平台 115 Cookie，或在下方扫码登录" @input="form.cookie = $event.target.value"><button type="button" :aria-label="cookieVisible ? '隐藏 Cookie' : '显示 Cookie'" :aria-pressed="cookieVisible" :disabled="revealing || !hasCookie" @click="revealCookie"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12C4.5 7.5 8 5 12 5s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z"/><circle cx="12" cy="12" r="3"/><path v-if="!cookieVisible" d="m4 3 16 18"/></svg></button></div><small>留空读取平台保存的 115 Cookie；填写后优先使用本插件配置。默认隐藏，点击眼睛可查看。</small></label>
+            <div class="mst-panel-head"><h3>115 账号</h3><p>使用 Cookie 或扫码连接账号，服务可独立运行。</p></div>
+            <div class="mst-subsection">
+              <div class="mst-form-grid">
+                <label class="mst-wide"><span>115 Cookie</span><div class="mst-secret-field"><input :value="cookieDisplay" :type="cookieVisible ? 'text' : 'password'" autocomplete="off" spellcheck="false" placeholder="留空使用平台 115 Cookie，或在下方扫码登录" @input="form.cookie = $event.target.value"><button type="button" :aria-label="cookieVisible ? '隐藏 Cookie' : '显示 Cookie'" :aria-pressed="cookieVisible" :disabled="revealing || !hasCookie" @click="revealCookie"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12C4.5 7.5 8 5 12 5s7.5 2.5 10 7c-2.5 4.5-6 7-10 7S4.5 16.5 2 12Z"/><circle cx="12" cy="12" r="3"/><path v-if="!cookieVisible" d="m4 3 16 18"/></svg></button></div><small>留空读取平台保存的 115 Cookie；填写后优先使用本插件配置。默认隐藏，点击眼睛可查看。</small></label>
                 <label><span>115 目标目录 ID</span><input v-model.trim="form.target_pid" inputmode="numeric"><small>根目录填 0；子目录可从 115 目录链接中查看 ID。</small></label>
                 <label><span>请求超时（秒）</span><input v-model.number="form.request_timeout" type="number" min="5" max="300" step="1"></label>
               </div>
-              <div class="action-row"><button class="secondary" type="button" :disabled="!!busy" @click="testLogin">{{ busy === 'login' ? '正在检测…' : '检测登录' }}</button><p v-if="loginResult" class="login-result" role="status">{{ loginResult }}</p></div>
+              <div class="mst-action-row"><button class="mst-secondary" type="button" :disabled="!!busy" @click="testLogin">{{ busy === 'login' ? '正在检测…' : '检测登录' }}</button><p v-if="loginResult" class="mst-login-result" role="status">{{ loginResult }}</p></div>
             </div>
-            <div class="subsection">
-              <div class="section-head"><div><h4>扫码登录</h4><p>使用 115 客户端扫描，并在手机上确认登录。</p></div></div>
-              <div class="form-grid qr-controls"><label><span>登录客户端</span><select v-model="form.qr_app"><option value="qandroid">115 管理 Android</option><option value="ios">115 生活 iOS</option><option value="web">115 网页端</option></select></label><button class="secondary" type="button" :disabled="!!busy" @click="startQr">{{ busy === 'qr' ? '正在生成…' : qr.session ? '重新生成二维码' : '生成登录二维码' }}</button></div>
-              <div v-if="qr.image" class="qr-area"><img :src="qr.image" alt="115 登录二维码" width="192" height="192"><div><b>{{ qr.state === 'confirmed' ? '登录成功' : qr.state === 'scanned' ? '等待手机确认' : qr.state === 'expired' ? '二维码已过期' : '等待扫码' }}</b><p role="status">{{ qr.message }}</p><small>停留在账号页时每 5 秒检查一次扫码状态。</small></div></div>
+            <div class="mst-subsection">
+              <div class="mst-section-head"><div><h4>扫码登录</h4><p>使用 115 客户端扫描，并在手机上确认登录。</p></div></div>
+              <div class="mst-form-grid mst-qr-controls"><label><span>登录客户端</span><select v-model="form.qr_app"><option value="qandroid">115 管理 Android</option><option value="ios">115 生活 iOS</option><option value="web">115 网页端</option></select></label><button class="mst-secondary" type="button" :disabled="!!busy" @click="startQr">{{ busy === 'qr' ? '正在生成…' : qr.session ? '重新生成二维码' : '生成登录二维码' }}</button></div>
+              <div v-if="qr.image" class="mst-qr-area"><img :src="qr.image" alt="115 登录二维码" width="192" height="192"><div><b>{{ qr.state === 'confirmed' ? '登录成功' : qr.state === 'scanned' ? '等待手机确认' : qr.state === 'expired' ? '二维码已过期' : '等待扫码' }}</b><p role="status">{{ qr.message }}</p><small>停留在账号页时每 5 秒检查一次扫码状态。</small></div></div>
             </div>
           </template>
 
           <template v-else-if="activeTab === 'files'">
-            <div class="panel-head"><h3>文件规则</h3><p>目录指向服务运行环境；三个目录需独立设置。</p></div>
-            <div class="subsection"><div class="form-grid"><label class="wide"><span>待检测目录</span><input v-model.trim="form.input_dir"></label><label><span>可秒传目录</span><input v-model.trim="form.rapid_dir"></label><label><span>待秒传目录</span><input v-model.trim="form.non_rapid_dir"></label></div><p v-if="status?.roots" class="hint root-note">实际目录：{{ typeof status.roots === 'string' ? status.roots : Object.values(status.roots).join(' · ') }}</p></div>
-            <div class="subsection switch-list"><SwitchField v-model="form.use_copy" title="复制整理" hint="启用时保留待检测原件；关闭后按移动方式整理。"/><SwitchField v-model="form.keep_structure" title="保留子目录结构" hint="本地整理和 115 目标目录保留相对目录层级。"/><SwitchField v-model="form.check_only" title="仅检测，不整理本地文件" hint="秒传命中会入 115 网盘；仅检测只不改本地文件。"/></div>
-            <div class="subsection">
-              <div class="section-head"><h4>筛选与文件稳定</h4></div>
-              <div class="form-grid">
-                <label class="wide"><span>仅包含扩展名</span><input v-model.trim="form.include_extensions" placeholder="留空表示不限；多个扩展名用逗号分隔"><small>例如 .mkv,.mp4；匹配不区分大小写。</small></label>
-                <label class="wide"><span>排除扩展名</span><input v-model.trim="form.exclude_extensions"><small>避免处理日志、临时文件和未完成的下载。</small></label>
+            <div class="mst-panel-head"><h3>文件规则</h3><p>目录指向服务运行环境；三个目录需独立设置。</p></div>
+            <div class="mst-subsection"><div class="mst-form-grid"><label class="mst-wide"><span>待检测目录</span><input v-model.trim="form.input_dir"></label><label><span>可秒传目录</span><input v-model.trim="form.rapid_dir"></label><label><span>待秒传目录</span><input v-model.trim="form.non_rapid_dir"></label></div><p v-if="status?.roots" class="mst-hint mst-root-note">实际目录：{{ typeof status.roots === 'string' ? status.roots : Object.values(status.roots).join(' · ') }}</p></div>
+            <div class="mst-subsection mst-switch-list"><SwitchField v-model="form.use_copy" title="复制整理" hint="启用时保留待检测原件；关闭后按移动方式整理。"/><SwitchField v-model="form.keep_structure" title="保留子目录结构" hint="本地整理和 115 目标目录保留相对目录层级。"/><SwitchField v-model="form.check_only" title="仅检测，不整理本地文件" hint="秒传命中会入 115 网盘；仅检测只不改本地文件。"/></div>
+            <div class="mst-subsection">
+              <div class="mst-section-head"><h4>筛选与文件稳定</h4></div>
+              <div class="mst-form-grid">
+                <label class="mst-wide"><span>仅包含扩展名</span><input v-model.trim="form.include_extensions" placeholder="留空表示不限；多个扩展名用逗号分隔"><small>例如 .mkv,.mp4；匹配不区分大小写。</small></label>
+                <label class="mst-wide"><span>排除扩展名</span><input v-model.trim="form.exclude_extensions"><small>避免处理日志、临时文件和未完成的下载。</small></label>
                 <label><span>最小文件大小（MB）</span><input v-model.number="form.min_size_mb" type="number" min="0" max="102400" step="1"></label>
                 <label><span>最大文件大小（GB）</span><input v-model.number="form.max_size_gb" type="number" min="0" max="102400" step="1"><small>0 表示不限大小。</small></label>
                 <label><span>哈希读取分块（MB）</span><input v-model.number="form.hash_chunk_mb" type="number" min="1" max="16" step="1"></label>
                 <label><span>文件稳定等待（秒）</span><input v-model.number="form.stable_seconds" type="number" min="0" max="3600" step="1"></label>
               </div>
             </div>
-            <div class="subsection"><div class="section-head"><h4>成功后的本地处理</h4></div><div class="switch-list"><SwitchField v-model="form.delete_after_rapid" title="秒传确认后删除当前处理文件" hint="直接删除当前处理文件，不生成可秒传目录副本。"/><SwitchField v-model="form.delete_source_after_rapid" title="重检入库确认后删除关联输入源文件" hint="仅处理重检记录关联的输入源文件；内容已变化时保留。"/><SwitchField v-model="form.upload_enabled" title="重检达上限后真实上传" hint="秒传仍未命中时上传完整文件，会产生上传流量。"/><SwitchField v-model="form.delete_after_upload" title="真实上传确认后删除当前处理文件" hint="仅在真实上传已确认成功后执行。"/></div></div>
+            <div class="mst-subsection"><div class="mst-section-head"><h4>成功后的本地处理</h4></div><div class="mst-switch-list"><SwitchField v-model="form.delete_after_rapid" title="秒传确认后删除当前处理文件" hint="直接删除当前处理文件，不生成可秒传目录副本。"/><SwitchField v-model="form.delete_source_after_rapid" title="重检入库确认后删除关联输入源文件" hint="仅处理重检记录关联的输入源文件；内容已变化时保留。"/><SwitchField v-model="form.upload_enabled" title="重检达上限后真实上传" hint="秒传仍未命中时上传完整文件，会产生上传流量。"/><SwitchField v-model="form.delete_after_upload" title="真实上传确认后删除当前处理文件" hint="仅在真实上传已确认成功后执行。"/></div></div>
           </template>
 
           <template v-else-if="activeTab === 'tasks'">
-            <div class="panel-head"><h3>自动任务</h3><p>每项任务独立控制，修改后保存即可应用。</p></div>
-            <div class="subsection"><SwitchField v-model="form.watch_enabled" title="目录监控（定期检查新文件）" hint="按间隔扫描新文件，并等待文件稳定后处理。"/><div class="form-grid following"><label><span>目录检查间隔（秒）</span><input v-model.number="form.watch_interval_seconds" type="number" min="5" max="3600" step="1"></label></div></div>
-            <div class="subsection"><SwitchField v-model="form.schedule_enabled" title="定时处理" hint="按设定间隔检测待检测目录，可同时处理待秒传重检。"/><div class="form-grid following"><label><span>处理间隔（分钟）</span><input v-model.number="form.interval_minutes" type="number" min="1" max="10080" step="1"></label></div></div>
-            <div class="subsection"><SwitchField v-model="form.recheck_enabled" title="重检待秒传文件" hint="自动任务中检查已暂存的文件，确认是否能够秒传。"/><div class="form-grid following"><label><span>最大重检次数</span><input v-model.number="form.max_recheck_times" type="number" min="0" max="10000" step="1"><small>0 表示不限次数，不触发达上限真实上传。</small></label></div></div>
-            <div class="subsection switch-list"><SwitchField v-model="form.notify" title="Telegram 结果通知" hint="通过平台已有账号发送，不需要新增 Bot Token。"/><SwitchField v-model="form.telegram_control" title="Telegram 命令控制" hint="只接受下方明确允许的用户发送控制命令。"/><div class="form-grid following"><label class="wide"><span>允许控制的 Telegram 用户 ID</span><textarea v-model.trim="form.telegram_admin_ids" rows="3" placeholder="多个用户 ID 用逗号或换行分隔"></textarea><small>开启命令控制时必填；只允许配置中的用户执行。</small></label></div></div>
+            <div class="mst-panel-head"><h3>自动任务</h3><p>每项任务独立控制，修改后保存即可应用。</p></div>
+            <div class="mst-subsection"><SwitchField v-model="form.watch_enabled" title="目录监控（定期检查新文件）" hint="按间隔扫描新文件，并等待文件稳定后处理。"/><div class="mst-form-grid mst-following"><label><span>目录检查间隔（秒）</span><input v-model.number="form.watch_interval_seconds" type="number" min="5" max="3600" step="1"></label></div></div>
+            <div class="mst-subsection"><SwitchField v-model="form.schedule_enabled" title="定时处理" hint="按设定间隔检测待检测目录，可同时处理待秒传重检。"/><div class="mst-form-grid mst-following"><label><span>处理间隔（分钟）</span><input v-model.number="form.interval_minutes" type="number" min="1" max="10080" step="1"></label></div></div>
+            <div class="mst-subsection"><SwitchField v-model="form.recheck_enabled" title="重检待秒传文件" hint="自动任务中检查已暂存的文件，确认是否能够秒传。"/><div class="mst-form-grid mst-following"><label><span>最大重检次数</span><input v-model.number="form.max_recheck_times" type="number" min="0" max="10000" step="1"><small>0 表示不限次数，不触发达上限真实上传。</small></label></div></div>
+            <div class="mst-subsection mst-switch-list"><SwitchField v-model="form.notify" title="Telegram 结果通知" hint="通过平台已有账号发送，不需要新增 Bot Token。"/><SwitchField v-model="form.telegram_control" title="Telegram 命令控制" hint="只接受下方明确允许的用户发送控制命令。"/><div class="mst-form-grid mst-following"><label class="mst-wide"><span>允许控制的 Telegram 用户 ID</span><textarea v-model.trim="form.telegram_admin_ids" rows="3" placeholder="多个用户 ID 用逗号或换行分隔"></textarea><small>开启命令控制时必填；只允许配置中的用户执行。</small></label></div></div>
           </template>
 
           <template v-else>
-            <div class="panel-head records-heading"><div><h3>运行记录</h3><p>查看当前进度与文件处理结果。</p></div><button class="secondary" type="button" :disabled="refreshing" @click="refreshStatus">{{ refreshing ? '正在刷新…' : '刷新状态' }}</button></div>
-            <div class="subsection"><p class="hint">秒传命中会入 115 网盘；仅检测只不改本地文件。启动前会保存当前修改，停止任务不会保存。</p><div class="action-row run-actions"><button class="primary" type="button" :disabled="status?.running || !!busy" @click="run('scan')">{{ busy === 'run-scan' ? '正在启动…' : '检测待检测目录' }}</button><button class="secondary" type="button" :disabled="status?.running || !!busy" @click="run('recheck')">重检待秒传文件</button><button class="secondary" type="button" :disabled="status?.running || !!busy" @click="run('all')">检测并重检</button><button v-if="status?.running" class="secondary danger-text" type="button" :disabled="!!busy" @click="postAction('stop', '/stop')">{{ busy === 'stop' ? '正在停止…' : '停止任务' }}</button></div><p class="hint">Cookie 留空时读取平台已保存的 115 Cookie；无法连接时可到账号页检测登录。</p></div>
-            <p v-if="statusError" class="alert error status-error" role="alert">{{ statusError }}</p>
-            <div v-if="status" class="subsection runtime-status">
-              <div class="status-line"><b>{{ status.running ? '任务运行中' : '当前没有任务运行' }}</b><span v-if="status.running">每 5 秒刷新</span></div>
-              <p v-if="status.current" class="current-file">{{ typeof status.current === 'string' ? status.current : status.current.path || status.current.name || '' }}</p>
+            <div class="mst-panel-head mst-records-heading"><div><h3>运行记录</h3><p>查看当前进度与文件处理结果。</p></div><button class="mst-secondary" type="button" :disabled="refreshing" @click="refreshStatus">{{ refreshing ? '正在刷新…' : '刷新状态' }}</button></div>
+            <div class="mst-subsection"><p class="mst-hint">秒传命中会入 115 网盘；仅检测只不改本地文件。启动前会保存当前修改，停止任务不会保存。</p><div class="mst-action-row mst-run-actions"><button class="mst-primary" type="button" :disabled="status?.running || !!busy" @click="run('scan')">{{ busy === 'run-scan' ? '正在启动…' : '检测待检测目录' }}</button><button class="mst-secondary" type="button" :disabled="status?.running || !!busy" @click="run('recheck')">重检待秒传文件</button><button class="mst-secondary" type="button" :disabled="status?.running || !!busy" @click="run('all')">检测并重检</button><button v-if="status?.running" class="mst-secondary mst-danger-text" type="button" :disabled="!!busy" @click="postAction('stop', '/stop')">{{ busy === 'stop' ? '正在停止…' : '停止任务' }}</button></div><p class="mst-hint">Cookie 留空时读取平台已保存的 115 Cookie；无法连接时可到账号页检测登录。</p></div>
+            <p v-if="statusError" class="mst-alert mst-error mst-status-error" role="alert">{{ statusError }}</p>
+            <div v-if="status" class="mst-subsection mst-runtime-status">
+              <div class="mst-status-line"><b>{{ status.running ? '任务运行中' : '当前没有任务运行' }}</b><span v-if="status.running">每 5 秒刷新</span></div>
+              <p v-if="status.current" class="mst-current-file">{{ typeof status.current === 'string' ? status.current : status.current.path || status.current.name || '' }}</p>
               <progress v-if="status.running && runProgress !== null" :value="runProgress" max="100" :aria-label="`当前进度 ${Math.round(runProgress)}%`"></progress>
-              <dl class="counts"><div><dt>文件记录</dt><dd>{{ count('total') }}</dd></div><div><dt>已完成记录</dt><dd>{{ count('rapid') }}</dd></div><div><dt>待重检</dt><dd>{{ count('pending') }}</dd></div><div><dt>失败 / 待核对</dt><dd>{{ count('failed') }}</dd></div></dl>
-              <p v-if="status.last_result?.message" class="hint">{{ status.last_result.message }}</p>
+              <dl class="mst-counts"><div><dt>文件记录</dt><dd>{{ count('total') }}</dd></div><div><dt>已完成记录</dt><dd>{{ count('rapid') }}</dd></div><div><dt>待重检</dt><dd>{{ count('pending') }}</dd></div><div><dt>失败 / 待核对</dt><dd>{{ count('failed') }}</dd></div></dl>
+              <p v-if="status.last_result?.message" class="mst-hint">{{ status.last_result.message }}</p>
             </div>
-            <div class="subsection">
-              <div class="section-head"><div><h4>文件记录</h4><p>最多显示最近 100 条记录；统计包含全部记录。</p></div><button class="text-button danger-text" type="button" :disabled="!items.length || status?.running || !!busy" @click="clearConfirmation = true">清空记录</button></div>
-              <div v-if="clearConfirmation" class="confirmation"><b>清空文件处理记录？</b><p>文件不会删除。清空后会重新检测、可能重复云端入库。</p><div class="action-row"><button class="secondary" type="button" @click="clearConfirmation = false">取消</button><button class="secondary danger-text" type="button" :disabled="!!busy" @click="clearRecords">{{ busy === 'clear' ? '正在清空…' : '确认清空记录' }}</button></div></div>
-              <div v-if="!status && statusError" class="empty"><b>运行记录暂不可用</b><p>请点击刷新状态重新读取。</p></div>
-              <div v-else-if="!items.length" class="empty"><b>尚无文件处理记录</b><p>连接账号并执行检测后，结果将显示在这里。</p></div>
-              <ul v-else class="record-list">
+            <div class="mst-subsection">
+              <div class="mst-section-head"><div><h4>文件记录</h4><p>最多显示最近 100 条记录；统计包含全部记录。</p></div><button class="mst-text-button mst-danger-text" type="button" :disabled="!items.length || status?.running || !!busy" @click="clearConfirmation = true">清空记录</button></div>
+              <div v-if="clearConfirmation" class="mst-confirmation"><b>清空文件处理记录？</b><p>文件不会删除。清空后会重新检测、可能重复云端入库。</p><div class="mst-action-row"><button class="mst-secondary" type="button" @click="clearConfirmation = false">取消</button><button class="mst-secondary mst-danger-text" type="button" :disabled="!!busy" @click="clearRecords">{{ busy === 'clear' ? '正在清空…' : '确认清空记录' }}</button></div></div>
+              <div v-if="!status && statusError" class="mst-empty"><b>运行记录暂不可用</b><p>请点击刷新状态重新读取。</p></div>
+              <div v-else-if="!items.length" class="mst-empty"><b>尚无文件处理记录</b><p>连接账号并执行检测后，结果将显示在这里。</p></div>
+              <ul v-else class="mst-record-list">
                 <li v-for="(item, index) in items" :key="item.path || index">
-                  <div class="record-main"><b class="file-path">{{ item.path || item.name }}</b><span :class="['record-state', {failed: attentionState(item.state)}]">{{ stateLabel(item.state) }}</span></div>
-                  <div class="record-meta"><span>{{ formatBytes(item.size) }}</span><span>检查 {{ item.checks ?? 0 }} 次</span><time>{{ formatTime(item.updated) }}</time></div>
-                  <p v-if="item.message" class="hint" :class="{'danger-text': attentionState(item.state)}">{{ item.message }}</p>
+                  <div class="mst-record-main"><b class="mst-file-path">{{ item.path || item.name }}</b><span :class="['mst-record-state', {failed: attentionState(item.state)}]">{{ stateLabel(item.state) }}</span></div>
+                  <div class="mst-record-meta"><span>{{ formatBytes(item.size) }}</span><span>检查 {{ item.checks ?? 0 }} 次</span><time>{{ formatTime(item.updated) }}</time></div>
+                  <p v-if="item.message" class="mst-hint" :class="{'mst-danger-text': attentionState(item.state)}">{{ item.message }}</p>
                 </li>
               </ul>
             </div>
@@ -400,15 +402,125 @@ onBeforeUnmount(() => { alive = false; clearTimeout(pollTimer); cookieReveal.val
       </section>
     </div>
 
-    <footer v-if="!loading" class="save-bar"><span>{{ loadError ? '配置读取失败，暂不可保存' : dirty ? '修改尚未保存' : '当前配置已保存' }}</span><button class="primary" type="button" :disabled="locked || !dirty" @click="save()">{{ saving ? '正在保存…' : '保存配置' }}</button></footer>
+    <footer v-if="!loading" class="mst-save-bar"><span>{{ loadError ? '配置读取失败，暂不可保存' : dirty ? '修改尚未保存' : '当前配置已保存' }}</span><button class="mst-primary" type="button" :disabled="locked || !dirty" @click="save()">{{ saving ? '正在保存…' : '保存配置' }}</button></footer>
   </main>
+  </IosSettings>
 </template>
 
 <style scoped>
-.mst-shell{--mst-bg:var(--bg-base,var(--bg-primary,#0c141f));--mst-surface:var(--bg-card,#111c2a);--mst-input:var(--bg-elevated,var(--bg-input,#0a1420));--mst-line:var(--border-light,var(--border,#29394e));--mst-text:var(--text-primary,#edf3fb);--mst-muted:var(--text-secondary,var(--text-muted,#9eacbd));--mst-accent:var(--accent,#178bd4);--mst-button:color-mix(in srgb,var(--mst-accent) 82%,#000);--mst-button-hover:color-mix(in srgb,var(--mst-accent) 86%,#000);--mst-danger:var(--danger,#d85060);min-width:0;min-height:620px;padding:22px 22px max(18px,env(safe-area-inset-bottom));color:var(--mst-text);background:var(--mst-bg);font-family:inherit;font-size:14px;line-height:1.5;scrollbar-color:var(--mst-line) var(--mst-bg);accent-color:var(--mst-accent);caret-color:var(--mst-accent)}
-.mst-shell *{box-sizing:border-box}.mst-shell ::selection{color:#fff;background:var(--mst-accent)}h2,h3,h4,p{margin:0}h2{font-size:22px;line-height:1.25}h3{font-size:19px;line-height:1.3}h4{font-size:15px}button,input,textarea,select{font:inherit}.page-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 2px 18px;border-bottom:1px solid var(--mst-line)}.page-head p,.panel-head p,.section-head p{margin-top:4px;color:var(--mst-muted);font-size:12px}.save-state{flex:0 0 auto;padding:6px 10px;border:1px solid var(--mst-line);border-radius:999px;color:var(--mst-muted);font-size:12px}.save-state.changed{color:var(--mst-accent);border-color:var(--mst-accent)}.workspace{display:grid;grid-template-columns:188px minmax(0,1fr);gap:20px;margin-top:20px}.section-nav{display:flex;flex-direction:column;gap:6px;align-self:start;position:sticky;top:16px}.section-nav button{display:grid;grid-template-columns:1fr 8px;align-items:center;gap:12px;width:100%;min-height:44px;padding:0 12px;border:1px solid transparent;border-radius:8px;color:var(--mst-muted);background:transparent;text-align:left;cursor:pointer}.section-nav button:hover{color:var(--mst-text);background:var(--mst-surface)}.section-nav button.active{border-color:var(--mst-accent);color:var(--mst-text);background:color-mix(in srgb,var(--mst-accent) 13%,var(--mst-bg))}.section-nav i{width:7px;height:7px;border-radius:50%;background:var(--mst-line)}.section-nav i.on{background:var(--mst-accent)}.panel{min-width:0;border:1px solid var(--mst-line);border-radius:8px;background:var(--mst-surface);overflow:hidden}.fields{margin:0;padding:0;border:0;min-width:0}.panel-head{padding:20px 22px;border-bottom:1px solid var(--mst-line)}.subsection{padding:20px 22px}.subsection+.subsection{border-top:1px solid var(--mst-line)}.section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.form-grid label{min-width:0}.form-grid label>span{display:block;margin-bottom:6px;color:var(--mst-muted);font-size:12px}.form-grid small,.hint{display:block;margin-top:6px;color:var(--mst-muted);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.wide{grid-column:1/-1}input:not([type=checkbox]),textarea,select{width:100%;min-height:42px;padding:9px 11px;border:1px solid var(--mst-line);border-radius:7px;color:var(--mst-text);background:var(--mst-input);outline:none}input:not([type=checkbox]),select{height:42px}textarea{resize:vertical;line-height:1.6}input::placeholder,textarea::placeholder{color:var(--mst-muted);opacity:1}.secret-field{position:relative}.secret-field input{padding-inline-end:46px}.secret-field button{position:absolute;inset-inline-end:4px;top:4px;display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:6px;color:var(--mst-muted);background:transparent;cursor:pointer}.secret-field button:hover{color:var(--mst-accent)}.secret-field svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}.secondary,.primary{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border:1px solid var(--mst-line);border-radius:8px;color:var(--mst-text);background:var(--mst-input);font-weight:650;cursor:pointer}.secondary:hover:not(:disabled){border-color:var(--mst-accent)}.primary{min-width:112px;border-color:var(--mst-button);color:#fff;background:var(--mst-button)}.primary:hover:not(:disabled){border-color:var(--mst-button-hover);background:var(--mst-button-hover)}button:disabled{opacity:.5;cursor:not-allowed}.action-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px}.login-result{color:var(--mst-accent);font-size:13px}.qr-controls{align-items:end}.qr-controls>button{justify-self:start}.qr-area{display:flex;align-items:center;gap:22px;margin-top:20px}.qr-area img{display:block;flex:0 0 192px;max-width:100%;object-fit:contain;border:8px solid #fff;border-radius:8px;background:#fff}.qr-area b{font-size:15px}.qr-area p{margin-top:6px;color:var(--mst-muted);font-size:13px}.qr-area small{display:block;margin-top:10px;color:var(--mst-muted);font-size:12px}.switch-list{display:grid;gap:12px}.following{margin-top:16px}.alert{margin-top:16px;padding:12px 14px;border:1px solid var(--mst-line);border-radius:8px;overflow-wrap:anywhere;font-size:13px}.alert.error{border-color:var(--mst-danger);color:var(--mst-danger);background:color-mix(in srgb,var(--mst-danger) 5%,var(--mst-bg))}.alert.success{border-color:var(--mst-accent);color:var(--mst-text);background:color-mix(in srgb,var(--mst-accent) 8%,var(--mst-bg))}.alert>button{margin-top:10px}.loading{padding:56px 20px;color:var(--mst-muted);text-align:center}.records-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.run-actions{gap:9px}.danger-text{color:var(--mst-danger)}.status-error{margin:0 22px 16px}.status-line{display:flex;align-items:center;justify-content:space-between;gap:12px}.status-line span{color:var(--mst-muted);font-size:12px}.current-file{margin-top:10px;color:var(--mst-muted);overflow-wrap:anywhere}progress{display:block;width:100%;height:7px;margin-top:12px;accent-color:var(--mst-accent)}.counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:16px 0 0}.counts dt{color:var(--mst-muted);font-size:12px}.counts dd{margin:3px 0 0;font-size:16px;font-weight:650;font-variant-numeric:tabular-nums}.text-button{min-height:36px;padding:6px 0;border:0;background:transparent;font-size:12px;cursor:pointer}.confirmation{padding:14px;margin-bottom:14px;border:1px solid var(--mst-danger);border-radius:8px}.confirmation p{margin-top:5px;color:var(--mst-muted);font-size:13px}.confirmation .action-row{margin-top:12px}.empty{padding:28px 12px;border:1px dashed var(--mst-line);border-radius:8px;text-align:center}.empty b{font-size:13px}.empty p{margin-top:6px;color:var(--mst-muted);font-size:12px}.record-list{margin:0;padding:0;list-style:none}.record-list li{padding:14px 0;border-top:1px solid var(--mst-line)}.record-list li:first-child{border-top:0;padding-top:0}.record-main{display:flex;justify-content:space-between;align-items:start;gap:16px}.file-path{min-width:0;font-size:13px;font-weight:550;overflow-wrap:anywhere}.record-state{flex:0 0 auto;color:var(--mst-accent);font-size:12px}.record-state.failed,.record-error{color:var(--mst-danger)}.record-meta{display:flex;flex-wrap:wrap;gap:5px 16px;margin-top:6px;color:var(--mst-muted);font-size:12px;font-variant-numeric:tabular-nums}.record-error{margin-top:8px;font-size:12px;overflow-wrap:anywhere}.save-bar{position:sticky;z-index:3;bottom:0;display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-top:18px;padding:12px 0 max(4px,env(safe-area-inset-bottom));border-top:1px solid var(--mst-line);background:var(--mst-bg)}.save-bar>span{color:var(--mst-muted);font-size:12px}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--mst-accent);outline-offset:2px}
-@media(max-width:900px){.workspace{grid-template-columns:1fr}.section-nav{position:static;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.section-nav button{gap:6px;padding-inline:9px;text-align:center;grid-template-columns:1fr}.section-nav i{display:none}}
-@media(max-width:620px){.mst-shell{min-height:0;padding:16px 12px max(14px,env(safe-area-inset-bottom))}.page-head{align-items:flex-start;gap:12px}.save-state{max-width:120px;text-align:center}.workspace{gap:14px;margin-top:14px}.section-nav button{font-size:12px;white-space:nowrap}.panel-head,.subsection{padding-inline:14px}.form-grid{grid-template-columns:1fr}.wide{grid-column:auto}.qr-area{align-items:flex-start;flex-direction:column;gap:14px}.qr-controls>button{width:100%}.records-heading{align-items:flex-start}.records-heading .secondary{padding-inline:10px;font-size:12px}.counts{grid-template-columns:repeat(2,minmax(0,1fr))}.status-line{align-items:flex-start}.status-error{margin-inline:14px}.record-main{gap:10px}.save-bar{justify-content:space-between}.save-bar .primary{min-width:124px}.run-actions>.primary,.run-actions>.secondary{flex:1 1 140px}}
-@media(pointer:coarse){button,input:not([type=checkbox]),select{min-height:44px}.secret-field button{top:0;height:44px}}
-@media(forced-colors:active){.panel,input,textarea,select,button,.confirmation{border:1px solid CanvasText}.section-nav button.active{outline:1px solid Highlight}.section-nav i.on{background:Highlight}}
+.mst-shell { min-width:0; color:var(--ios-text); padding:4px 0 0; }
+h2,h3,h4,p { margin:0; }
+h2 { font-size:27px; line-height:1.2; letter-spacing:-.025em; font-weight:720; }
+h3 { font-size:18px; line-height:1.4; font-weight:680; }
+h4 { font-size:15px; font-weight:650; }
+.mst-page-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 2px 24px; }
+.mst-page-head p,.mst-panel-head p,.mst-section-head p { color:var(--ios-secondary); font-size:13px; margin-top:5px; }
+.mst-save-state { flex:none; padding:5px 10px; border-radius:9px; background:var(--ios-inset); color:var(--ios-secondary); font-size:12px; }
+.mst-save-state.changed { color:var(--ios-accent-text); background:var(--accent-dim,var(--ios-inset)); }
+.mst-workspace { display:grid; gap:24px; }
+.mst-section-nav { position:relative; isolation:isolate; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:3px; padding:4px; border-radius:15px; background:var(--ios-inset); }
+.mst-section-nav::before { content:""; position:absolute; z-index:-1; inset:4px auto 4px 4px; width:calc((100% - 11px)/4); border-radius:11px; background:var(--ios-control); box-shadow:0 2px 6px var(--shadow-sm,rgba(0,0,0,.09)); transform:translateX(calc(var(--mst-tab-index,0)*100% + var(--mst-tab-index,0)*3px)); transition:transform var(--ios-duration) var(--ios-ease); }
+.mst-section-nav button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:40px; padding:8px; border:0; border-radius:11px; color:var(--ios-secondary); background:transparent; cursor:pointer; }
+.mst-section-nav button.active { color:var(--ios-text); font-weight:650; }
+.mst-section-nav button:hover:not(.active) { color:var(--ios-text); background:var(--hover-bg,var(--ios-surface)); }
+.mst-section-nav i { width:5px; height:5px; border-radius:50%; background:var(--ios-line); }
+.mst-section-nav i.on { background:var(--success,#178a45); }
+.mst-panel,.mst-fields { min-width:0; }
+.mst-fields { margin:0; padding:0; border:0; display:grid; gap:16px; }
+.mst-panel-head { padding:0 4px 2px; }
+.mst-subsection { min-width:0; padding:20px; border-radius:16px; background:var(--ios-surface); }
+.mst-section-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:16px; }
+.mst-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 20px; }
+.mst-form-grid label { min-width:0; }
+.mst-form-grid label>span { display:block; font-size:13px; font-weight:600; margin-bottom:8px; }
+.mst-form-grid small,.mst-hint { display:block; margin-top:7px; color:var(--ios-secondary); font-size:12px; line-height:1.65; overflow-wrap:anywhere; }
+.mst-wide { grid-column:1/-1; }
+input:not([type=checkbox]),textarea,select { display:block; width:100%; min-height:44px; padding:11px 12px; color:var(--ios-text); border:1px solid transparent; border-radius:11px; background:var(--ios-inset); outline:none; transition:background-color var(--ios-fast),border-color var(--ios-fast); }
+input:not([type=checkbox]):hover,textarea:hover,select:hover { background:var(--hover-bg,var(--ios-inset)); }
+input:not([type=checkbox]):focus,textarea:focus,select:focus { border-color:var(--ios-accent-text); background:var(--ios-control); }
+textarea { min-height:90px; resize:vertical; line-height:1.6; }
+.mst-secret-field { position:relative; }
+.mst-secret-field input { padding-inline-end:48px; }
+.mst-secret-field button { position:absolute; inset-inline-end:0; top:0; display:grid; place-items:center; width:44px; height:44px; padding:0; border:0; border-radius:11px; color:var(--ios-secondary); background:transparent; cursor:pointer; }
+.mst-secret-field button:hover { color:var(--ios-accent-text); }
+.mst-secret-field svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; }
+.mst-primary,.mst-secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 17px; border:0; border-radius:12px; color:var(--ios-accent-text); background:var(--accent-dim,var(--ios-inset)); font-weight:620; cursor:pointer; }
+.mst-primary { color:var(--btn-primary-text,#fff); background:var(--ios-accent); min-width:112px; }
+.mst-primary:hover:not(:disabled) { filter:brightness(1.08); }
+.mst-secondary:hover:not(:disabled) { background:var(--hover-bg,var(--ios-inset)); }
+button:disabled { opacity:.48; cursor:not-allowed; }
+.mst-action-row { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:16px; }
+.mst-login-result { color:var(--success,#178a45); font-size:13px; }
+.mst-qr-controls { align-items:end; }
+.mst-qr-controls>button { justify-self:start; }
+.mst-qr-area { display:flex; align-items:center; gap:22px; margin-top:20px; }
+.mst-qr-area img { display:block; flex:0 0 192px; max-width:100%; object-fit:contain; border:8px solid #fff; border-radius:14px; background:#fff; }
+.mst-qr-area b { font-size:15px; }
+.mst-qr-area p { margin-top:6px; color:var(--ios-secondary); font-size:13px; overflow-wrap:anywhere; }
+.mst-qr-area small { display:block; margin-top:10px; color:var(--ios-secondary); font-size:12px; }
+.mst-switch-list { display:grid; gap:0; }
+.mst-switch-list :deep(.mst-switch-field+.mst-switch-field) { border-top:1px solid var(--ios-line); }
+.mst-switch-list :deep(.mst-switch-field) { padding-block:15px; }
+.mst-switch-list :deep(.mst-switch-field:first-child) { padding-top:0; }
+.mst-switch-list :deep(.mst-switch-field:last-child) { padding-bottom:0; }
+.mst-following { margin-top:18px; padding-top:17px; border-top:1px solid var(--ios-line); }
+.mst-alert { margin:0 0 16px; padding:14px 16px; border-radius:13px; overflow-wrap:anywhere; font-size:13px; background:var(--ios-inset); }
+.mst-alert.mst-error { color:var(--danger,#c73036); background:var(--danger-bg,var(--ios-inset)); }
+.mst-alert.mst-success { color:var(--success,#178a45); background:var(--success-bg,var(--ios-inset)); }
+.mst-alert>button { margin-top:10px; }
+.mst-loading { padding:52px 16px; color:var(--ios-secondary); text-align:center; }
+.mst-records-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.mst-run-actions { gap:9px; }
+.mst-danger-text { color:var(--danger,#c73036); }
+.mst-status-error { margin:0; }
+.mst-status-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.mst-status-line span { color:var(--ios-secondary); font-size:12px; }
+.mst-current-file { margin-top:10px; color:var(--ios-secondary); overflow-wrap:anywhere; }
+progress { display:block; width:100%; height:6px; margin-top:16px; overflow:hidden; border:0; border-radius:3px; accent-color:var(--ios-accent); }
+progress::-webkit-progress-bar { background:var(--ios-inset); border-radius:3px; }
+progress::-webkit-progress-value { background:var(--ios-accent); border-radius:3px; transition:width var(--ios-duration) var(--ios-ease); }
+.mst-counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; padding-top:17px; margin:18px 0 0; border-top:1px solid var(--ios-line); }
+.mst-counts dt { color:var(--ios-secondary); font-size:12px; }
+.mst-counts dd { margin:3px 0 0; font-size:18px; font-weight:650; font-variant-numeric:tabular-nums; }
+.mst-text-button { min-height:44px; padding:8px 0; border:0; background:transparent; font-size:13px; cursor:pointer; }
+.mst-confirmation { padding:16px; margin-bottom:16px; border-radius:12px; color:var(--danger,#c73036); background:var(--danger-bg,var(--ios-inset)); }
+.mst-confirmation p { margin-top:5px; color:var(--ios-secondary); font-size:13px; }
+.mst-confirmation .mst-action-row { margin-top:12px; }
+.mst-empty { padding:32px 12px; text-align:center; }
+.mst-empty b { font-size:14px; font-weight:600; }
+.mst-empty p { margin-top:6px; color:var(--ios-secondary); font-size:13px; }
+.mst-record-list { margin:0; padding:0; list-style:none; }
+.mst-record-list li { padding:17px 0; border-top:1px solid var(--ios-line); }
+.mst-record-list li:first-child { border-top:0; padding-top:0; }
+.mst-record-list li:last-child { padding-bottom:0; }
+.mst-record-main { display:flex; justify-content:space-between; align-items:start; gap:16px; }
+.mst-file-path { min-width:0; font-size:13px; font-weight:550; overflow-wrap:anywhere; }
+.mst-record-state { flex:none; padding:2px 7px; border-radius:6px; color:var(--success,#178a45); background:var(--success-bg,var(--ios-inset)); font-size:12px; }
+.mst-record-state.failed { color:var(--danger,#c73036); background:var(--danger-bg,var(--ios-inset)); }
+.mst-record-meta { display:flex; flex-wrap:wrap; gap:5px 16px; margin-top:7px; color:var(--ios-secondary); font-size:12px; font-variant-numeric:tabular-nums; }
+.mst-save-bar { position:sticky; z-index:3; bottom:0; display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:24px; padding:13px 16px max(13px,env(safe-area-inset-bottom)); border-radius:16px; background:var(--glass-surface,var(--ios-surface)); backdrop-filter:blur(var(--glass-custom-blur,18px)); -webkit-backdrop-filter:blur(var(--glass-custom-blur,18px)); box-shadow:0 6px 20px var(--shadow-sm,rgba(0,0,0,.08)); }
+.mst-save-bar>span { color:var(--ios-secondary); font-size:12px; }
+@container(max-width:600px) {
+  h2 { font-size:24px; }
+  .mst-page-head { align-items:flex-start; gap:12px; margin-bottom:20px; }
+  .mst-save-state { max-width:110px; text-align:center; }
+  .mst-workspace { gap:20px; }
+  .mst-section-nav button { font-size:12px; white-space:nowrap; padding-inline:4px; gap:4px; }
+  .mst-subsection { padding:16px; }
+  .mst-form-grid { grid-template-columns:1fr; gap:16px; }
+  .mst-wide { grid-column:auto; }
+  .mst-qr-area { align-items:flex-start; flex-direction:column; gap:14px; }
+  .mst-qr-controls>button { width:100%; }
+  .mst-records-heading { align-items:flex-start; }
+  .mst-records-heading .mst-secondary { padding-inline:10px; font-size:12px; }
+  .mst-counts { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .mst-status-line { align-items:flex-start; }
+  .mst-record-main { gap:10px; }
+  .mst-run-actions>.mst-primary,.mst-run-actions>.mst-secondary { flex:1 1 140px; }
+}
+@media(forced-colors:active) {
+  .mst-subsection,.mst-save-bar,input,textarea,select,button,.mst-confirmation { border:1px solid CanvasText; }
+  .mst-section-nav::before { border:1px solid Highlight; }
+  .mst-section-nav i.on { background:Highlight; }
+}
 </style>

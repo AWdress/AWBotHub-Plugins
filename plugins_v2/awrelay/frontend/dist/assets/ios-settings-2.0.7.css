@@ -1,0 +1,72 @@
+/* awrelay only. Source: style-BoR9taii.css; retained Vue root awrelay-config / data-v-02643790. */
+.awrelay-config[data-v-02643790] {
+  --ios-surface: var(--bg-card, #fff); --ios-inset: var(--surface-inset, #f0f2f6); --ios-control: var(--bg-elevated, #fff);
+  --ios-text: var(--text-primary, #1c1c1e); --ios-secondary: var(--text-secondary, #53555b); --ios-line: var(--border-card, #d5d7dd); --ios-accent: var(--accent-solid, #0063dc);
+  --ios-fast: calc(160ms * var(--glass-custom-motion, 1)); --ios-duration: calc(260ms * var(--glass-custom-motion, 1)); --ios-ease: var(--glass-decelerate, cubic-bezier(.22, 1, .36, 1));
+  min-width: 0; color: var(--ios-text); background: transparent; font: 14px/1.65 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei UI', sans-serif; container-type: inline-size;
+}
+.awrelay-config[data-v-02643790] *, .awrelay-config[data-v-02643790] *::before, .awrelay-config[data-v-02643790] *::after { box-sizing: border-box; }
+.awrelay-config[data-v-02643790] :is(button,input,textarea,select,summary,a):focus-visible { outline: 3px solid var(--accent, #0063dc); outline-offset: 3px; }
+.awrelay-config[data-v-02643790] :is(button,input,textarea,select) { font: inherit; }
+.awrelay-config[data-v-02643790] :is(input,textarea) { caret-color: var(--accent, #0063dc); }
+.awrelay-config[data-v-02643790] :is(input,textarea)::placeholder { color: var(--text-placeholder, #62656d); opacity: 1; }
+.awrelay-config[data-v-02643790] ::selection { background: var(--accent-dim, #cbdfff); color: var(--ios-text); }
+.awrelay-config[data-v-02643790] :is(textarea,pre,table) { scrollbar-width: thin; scrollbar-color: var(--border-light, #b9bec9) transparent; }
+.awrelay-config[data-v-02643790] select option { color: var(--ios-text); background: var(--select-option-bg, var(--ios-control)); }
+.awrelay-config[data-v-02643790] :is(button,summary,a) { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.awrelay-config[data-v-02643790] :is(button,input,textarea,select):disabled { opacity: .5; cursor: not-allowed; }
+.awrelay-config[data-v-02643790] :is(table,time,input[type=number],output) { font-variant-numeric: tabular-nums; }
+html[data-theme=transparent] .awrelay-config[data-v-02643790] { --ios-surface: var(--glass-surface, var(--bg-card)); --ios-inset: var(--glass-inset, var(--surface-inset)); --ios-control: var(--glass-control, var(--bg-elevated)); }
+html[data-glass-motion=off] .awrelay-config[data-v-02643790] *, html[data-glass-motion=off] .awrelay-config[data-v-02643790] *::before, html[data-glass-motion=off] .awrelay-config[data-v-02643790] *::after { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .awrelay-config[data-v-02643790] *, .awrelay-config[data-v-02643790] *::before, .awrelay-config[data-v-02643790] *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+.awrelay-config[data-v-02643790] { gap: 24px; }
+.awrelay-config[data-v-02643790] .tabs { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; padding: 4px; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-inset); }
+.awrelay-config[data-v-02643790] .tabs::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 16px)/3); border-radius: 11px; background: var(--ios-control); box-shadow: 0 2px 5px rgb(0 0 0 / .08); transition: transform var(--ios-duration) var(--ios-ease); z-index: -1; }
+.awrelay-config[data-v-02643790] .tabs:has(button:nth-child(2).active)::before { transform: translateX(calc(100% + 4px)); }
+.awrelay-config[data-v-02643790] .tabs:has(button:nth-child(3).active)::before { transform: translateX(calc(200% + 8px)); }
+.awrelay-config[data-v-02643790] .tabs button { min-height: 44px; min-width: 0; padding: 9px 12px; border: 0; border-radius: 11px; background: transparent; color: var(--ios-secondary); transition: color var(--ios-fast); }
+.awrelay-config[data-v-02643790] .tabs button.active { color: var(--ios-text); border-bottom-color: transparent; font-weight: 650; }
+.awrelay-config[data-v-02643790] .tab-content { min-width: 0; padding: 0; }
+.awrelay-config[data-v-02643790] .settings { display: flex; flex-direction: column; gap: 20px; }
+.awrelay-config[data-v-02643790] .section, .awrelay-config[data-v-02643790] .card { min-width: 0; margin: 0; padding: 4px 20px; border: 1px solid var(--ios-line); border-radius: 20px; background: var(--ios-surface); }
+.awrelay-config[data-v-02643790] .section h3, .awrelay-config[data-v-02643790] .card h3 { margin: 0; padding: 14px 0 16px; font-size: 16px; color: var(--ios-text); font-weight: 650; }
+.awrelay-config[data-v-02643790] .row { min-height: 74px; gap: 16px; margin: 0; padding: 16px 0; border-top: 1px solid var(--ios-line); }
+.awrelay-config[data-v-02643790] .row > span:first-child { flex: 0 0 150px; min-width: 0; font-size: 14px; color: var(--ios-text); }
+.awrelay-config[data-v-02643790] .row.switch { flex-direction: row-reverse; justify-content: space-between; gap: 20px; cursor: pointer; }
+.awrelay-config[data-v-02643790] .row.switch span { flex: 1; min-width: 0; line-height: 1.7; }
+.awrelay-config[data-v-02643790] .row.switch input { appearance: none; -webkit-appearance: none; position: relative; flex: 0 0 50px; width: 50px; height: 30px; margin: 0; border: 1px solid var(--ios-line); border-radius: 999px; background: var(--ios-inset); cursor: pointer; transition: background var(--ios-fast); }
+.awrelay-config[data-v-02643790] .row.switch input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / .18); transition: transform var(--ios-duration) var(--ios-ease); }
+.awrelay-config[data-v-02643790] .row.switch input:checked { background: var(--ios-accent); border-color: transparent; }
+.awrelay-config[data-v-02643790] .row.switch input:checked::before { transform: translateX(20px); }
+.awrelay-config[data-v-02643790] .inp, .awrelay-config[data-v-02643790] textarea.inp { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--ios-line); border-radius: 12px; color: var(--ios-text); background: var(--ios-inset); }
+.awrelay-config[data-v-02643790] .chat-names { margin: 0 0 16px 166px; color: var(--ios-secondary); overflow-wrap: anywhere; }
+.awrelay-config[data-v-02643790] .btn, .awrelay-config[data-v-02643790] .btn-primary, .awrelay-config[data-v-02643790] .btn-sm { min-height: 44px; padding: 10px 18px; border: 1px solid var(--ios-line); border-radius: 14px; background: var(--ios-control); color: var(--ios-text); cursor: pointer; transition: border-color var(--ios-fast); }
+.awrelay-config[data-v-02643790] .settings > .btn-primary { align-self: flex-end; min-width: 132px; }
+.awrelay-config[data-v-02643790] .btn-primary { border-color: transparent; background: var(--ios-accent); color: #fff; font-weight: 600; }
+.awrelay-config[data-v-02643790] .btn:hover:not(:disabled), .awrelay-config[data-v-02643790] .btn-sm:hover:not(:disabled) { border-color: var(--accent, #0063dc); }
+.awrelay-config[data-v-02643790] .status { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+.awrelay-config[data-v-02643790] .status > .card { align-self: stretch; }
+.awrelay-config[data-v-02643790] .kv { min-height: 60px; gap: 20px; padding: 14px 0; border-color: var(--ios-line); }
+.awrelay-config[data-v-02643790] .kv span { color: var(--ios-secondary); }
+.awrelay-config[data-v-02643790] .kv b { min-width: 0; color: var(--ios-text); font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.awrelay-config[data-v-02643790] .kv b.ok, .awrelay-config[data-v-02643790] .status-正常 { color: var(--success, #087758); }
+.awrelay-config[data-v-02643790] .kv b.err, .awrelay-config[data-v-02643790] .status-已封禁 { color: var(--danger, #bd2733); }
+.awrelay-config[data-v-02643790] .toolbar { flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.awrelay-config[data-v-02643790] .muted { color: var(--ios-secondary); font-size: 12px; }
+.awrelay-config[data-v-02643790] .tbl { display: block; max-width: 100%; overflow: auto; border: 1px solid var(--ios-line); border-radius: 16px; background: var(--ios-surface); }
+.awrelay-config[data-v-02643790] .tbl th, .awrelay-config[data-v-02643790] .tbl td { padding: 13px 14px; border-color: var(--ios-line); color: var(--ios-text); white-space: nowrap; }
+.awrelay-config[data-v-02643790] .tbl th { color: var(--ios-secondary); background: var(--ios-inset); }
+.awrelay-config[data-v-02643790] .tbl td.muted, .awrelay-config[data-v-02643790] .tbl td.empty { color: var(--ios-secondary); }
+.awrelay-config[data-v-02643790] .tbl td.empty { width: 100%; padding: 40px 20px; }
+html[data-theme=transparent] .awrelay-config[data-v-02643790] .section, html[data-theme=transparent] .awrelay-config[data-v-02643790] .card { backdrop-filter: blur(var(--glass-blur, 16px)) saturate(var(--glass-saturation, 155%)); }
+@container (max-width: 600px) {
+  .awrelay-config[data-v-02643790] .tabs button { padding-inline: 5px; font-size: 13px; }
+  .awrelay-config[data-v-02643790] .section, .awrelay-config[data-v-02643790] .card { padding-inline: 16px; }
+  .awrelay-config[data-v-02643790] .row:not(.switch) { flex-direction: column; align-items: stretch; gap: 8px; }
+  .awrelay-config[data-v-02643790] .row:not(.switch) > span:first-child { flex: none; }
+  .awrelay-config[data-v-02643790] .chat-names { margin-left: 0; }
+  .awrelay-config[data-v-02643790] .inp { font-size: 16px; }
+  .awrelay-config[data-v-02643790] .settings > .btn-primary { width: 100%; }
+}
+@media (forced-colors: active) { .awrelay-config[data-v-02643790] .row.switch input { appearance: auto; } .awrelay-config[data-v-02643790] .row.switch input::before { display: none; } }
