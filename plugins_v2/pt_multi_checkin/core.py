@@ -9,6 +9,7 @@ import importlib
 import importlib.metadata
 from io import BytesIO
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -164,7 +165,7 @@ _CHANGELOG_V2_0_12 = (
 __plugin__ = {
     "name": "PT站自动签到",
     "id": "pt_multi_checkin",
-    "version": "2.7.17",
+    "version": "2.8.0",
     "author": "AWdress",
     "description": "多 PT 站自动签到中心，统一使用平台 Cookie 与 CloakBrowser，提供 Vue 管理界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/pt_checkin_v2.svg",
@@ -236,6 +237,16 @@ __plugin__["changelog"] = (
     "- 登录后遇站点规则阅读页，仅对已识别的原生“确认已阅读”按钮点击一次，再继续进入日历\n"
     "- 确认前核对站点、账号、提示与按钮，控件禁用或页面未加载时等待，不误点其他协议\n"
     "- 阅读确认不等于签到成功，仍严格核对日历与当天签到记录\n\n"
+    + __plugin__["changelog"]
+)
+
+__plugin__["changelog"] = (
+    "v2.8.0 适配猪猪新版阿里云拼图验证\n"
+    "- 加载后立即识别当前可见题图，原生按住、连续移动、松开；失败换题后重新识别，本轮最多 3 次\n"
+    "- 本地识别不调用外部 AI；同题不重复，题图不明确、换图、超时或配置变更时安全停止\n"
+    "- 区分阿里云与 Cloudflare；断线重连不丢验证请求记录，换题不延长原生时限，不追加签到请求\n"
+    "- 保留官网验证与请求重放，只以当天可见签到标记确认成功\n"
+    "- 修复登录验证遮罩、阅读确认和账号变更时的状态判定\n\n"
     + __plugin__["changelog"]
 )
 
@@ -772,7 +783,8 @@ def _piggo_confirm_wiki_reading(page, ctx, guard, username, reading, deadline) -
         return ""
     # 选择器与文案来自官网当前 Wiki 组件；不对其他 Wiki、邀请规则或通用弹窗猜测点击。
     section = page.locator("article.wiki-main .wiki-ack")
-    if not section.count():
+    section_count = section.count()
+    if not section_count or (reading.get("attempted") and section_count == 1 and not section.is_visible()):
         if reading.get("attempted") and not reading.get("completed"):
             reading["completed"] = True
             _runtime_log(ctx, "官网规则阅读确认区域已关闭，继续核对日历登录状态", site="猪猪")
@@ -861,6 +873,7 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
     if not username or not password:
         raise RuntimeError("猪猪尚未填写完整的用户名和密码，请在插件配置中填写并保存")
     submitted = False
+    login_verification_seen = False
     calendar_navigated = False
     reading = {}
     expected = (username, password)
@@ -878,6 +891,14 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
             raise RuntimeError("猪猪登录跳转到了非预期地址，未发送账号密码，本轮跳过")
         return parsed
 
+    def calendar_ready() -> bool:
+        if (guard().path or "/").rstrip("/").lower() != "/calendar":
+            return False
+        controls = page.locator(".cal-page .cal-att")
+        visible = sum(controls.nth(index).is_visible() for index in range(controls.count()))
+        # 可见性查询会分发官网跳转事件；返回前同时复核地址与配置。
+        return (guard().path or "/").rstrip("/").lower() == "/calendar" and visible == 1
+
     # 猪猪使用全新上下文，只以官网原生账号密码登录；不恢复旧 Token 或空闲锁定状态。
     deadline = time.monotonic() + 40
     navigation_logged = False
@@ -889,8 +910,7 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
             if time.monotonic() >= deadline:
                 break
             path = (parsed.path or "/").rstrip("/").lower()
-            calendar = page.locator(".cal-page .cal-att")
-            if path == "/calendar" and calendar.count() and calendar.first.is_visible():
+            if path == "/calendar" and calendar_ready():
                 actual = page.evaluate("""() => {
                     try { return JSON.parse(localStorage.getItem('pig_user') || '{}').username || ''; }
                     catch (_) { return ''; }
@@ -904,7 +924,11 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
                 token = page.evaluate("() => localStorage.getItem('pig_token') || ''")
                 if not isinstance(token, str) or not token.strip() or token == "********":
                     raise RuntimeError("猪猪登录后未建立有效会话，本轮跳过")
-                guard()
+                if not calendar_ready():
+                    # 用户资料与会话读取期间可能重新进入强制阅读页或替换
+                    # 日历节点。继续原路由观察，不用旧快照宣布成功或重登。
+                    page.wait_for_timeout(500)
+                    continue
                 _runtime_log(ctx, "官网账号密码登录成功，仅使用本轮浏览器会话", site="猪猪")
                 return expected
             if path == "/wiki/rules-general":
@@ -916,6 +940,13 @@ def _piggo_ensure_login_flow(page, ctx, loop, observation) -> tuple[str, str] | 
                     page.wait_for_timeout(500)
                     continue
             if path in {"/login", "/login.php", "/takelogin.php"}:
+                if _piggo_captcha_visible(page):
+                    if not login_verification_seen:
+                        login_verification_seen = True
+                        deadline = max(deadline, time.monotonic() + 120)
+                        _runtime_log(ctx, "官网登录出现人机验证，请在浏览器窗口手动完成；不在验证遮罩下填写或重复提交登录", level="warning", site="猪猪")
+                    page.wait_for_timeout(500)
+                    continue
                 captcha = page.locator(".captcha-row, .site-captcha, input[name='otp'], input[name='totp']")
                 if any(captcha.nth(index).is_visible() for index in range(captcha.count())):
                     raise RuntimeError("猪猪登录需要验证码或二次验证，本轮未继续提交；请先在官网确认验证要求")
@@ -2687,6 +2718,9 @@ class _PiggoRealtime:
         self.captcha_pending = False
         self.captcha_public_received = False
         self.captcha_revision = 0
+        # 本浏览器会话中官网主动请求验证的单调计数。连接重建、重新鉴权或
+        # close 都不能抹去该事实，签到轮用它阻止重连后误判为可重新提交。
+        self.captcha_request_count = 0
         self._current = None
         self._authenticated = False
         self._closed = False
@@ -2788,12 +2822,17 @@ class _PiggoRealtime:
                         self.captcha_public_received = False
                     elif event == "captcha.ask":
                         self.captcha_revision += 1
+                        self.captcha_request_count += 1
                         self.captcha_requested = True
                         self.captcha_pending = True
                 elif event not in {"ws.hello", "ws.ready", "auth.session", "captcha.public"}:
                     return
-                elif event in {"ws.ready", "auth.session"} and self._authenticated:
-                    self.ready = True
+                elif event == "ws.ready" and self._authenticated:
+                    # 官网仅在用户通道 ready 后放开验证配置请求；auth.session
+                    # 只更新资料，非 user 的 ready 也不撤销已有用户通道状态。
+                    data = message.get("data")
+                    if isinstance(data, dict) and data.get("kind") == "user":
+                        self.ready = True
                 elif event == "captcha.public":
                     self.captcha_revision += 1
                     self.captcha_pending = False
@@ -2969,8 +3008,13 @@ def _site_cloak_checkin(ctx, key: str, site: dict, cookie: str, headless: bool, 
 
 
 def _piggo_calendar_guard(page) -> None:
-    parsed = urlparse(page.url)
-    if parsed.scheme != "https" or parsed.hostname not in {"piggo.me", "www.piggo.me"}:
+    try:
+        parsed = urlparse(page.url)
+        trusted = parsed.scheme == "https" and parsed.hostname in {"piggo.me", "www.piggo.me"} \
+            and parsed.port in {None, 443} and parsed.username is None and parsed.password is None
+    except ValueError:
+        trusted = False
+    if not trusted:
         raise RuntimeError("猪猪跳转到了非预期域名，未执行签到")
     if (parsed.path or "/").rstrip("/").lower() in {"/login", "/login.php", "/takelogin.php"}:
         raise RuntimeError("猪猪官网登录尚未完成或已退出，本轮未执行签到；请检查账号密码及官网验证提示")
@@ -2999,11 +3043,338 @@ def _piggo_captcha_widget(page):
     """只取原生验证窗口内唯一可见的控件，跳过遗留的隐藏节点。"""
     candidates = page.locator(
         '.site-cap-root .ts-box, '
-        '.site-cap[role="dialog"][aria-label="人机验证"] .ts-box'
+        '.site-cap[role="dialog"][aria-label="人机验证"] .ts-box, '
+        '.site-cap-root .ali-box, '
+        '.site-cap[role="dialog"][aria-label="人机验证"] .ali-box'
     )
     visible = [candidates.nth(index) for index in range(candidates.count())
                if candidates.nth(index).is_visible()]
     return visible[0] if len(visible) == 1 else None
+
+
+def _piggo_captcha_kind(widget) -> str:
+    """只按当前原生控件分类，不将阿里云验证交给 Cloudflare 点击逻辑。"""
+    try:
+        value = widget.get_attribute("class")
+        classes = set(value.split() if isinstance(value, str) else value or ())
+        turnstile, aliyun = "ts-box" in classes, "ali-box" in classes
+        if turnstile != aliyun:
+            return "turnstile" if turnstile else "aliyun"
+    except Exception:
+        pass
+    return ""
+
+
+def _piggo_puzzle_offset(image: bytes, piece_css_width: float, board_css_width: float) -> float | None:
+    """只用当前可见截图匹配唯一拼图缺口，返回 CSS 位移；不明确时不猜测。"""
+    from io import BytesIO
+
+    try:
+        from PIL import Image, ImageFilter
+
+        if not isinstance(image, bytes) or not 0 < len(image) <= 8_000_000:
+            return None
+        if not all(math.isfinite(v) and v > 0 for v in (piece_css_width, board_css_width)):
+            return None
+        ratio = piece_css_width / board_css_width
+        if not 0.14 <= ratio <= 0.20:
+            return None
+        with Image.open(BytesIO(image)) as opened:
+            width, height = opened.size
+            if not 200 <= width <= 4096 or not 100 <= height <= 3000:
+                return None
+            if not 1.45 <= width / height <= 1.55:
+                return None
+            # 统一截图像素，返回前换算 CSS 位移，兼容 DPR 与页面缩放。
+            board = opened.convert("RGB").resize((300, 200), Image.Resampling.LANCZOS)
+        piece_width = round(300 * ratio)
+        pixels = board.load()
+
+        # 只支持已观察到的蓝灰源轮廓与白色缺口；样式变化时保守退出。
+        pending = set()
+        for y in range(200):
+            for x in range(piece_width):
+                r, g, b = pixels[x, y]
+                if 75 <= r <= 150 and 5 <= g - r <= 25 and 5 <= b - g <= 25:
+                    pending.add((x, y))
+        outlines = []
+        while pending:
+            stack = [pending.pop()]
+            component = []
+            while stack:
+                x, y = stack.pop()
+                component.append((x, y))
+                for neighbour in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                    if neighbour in pending:
+                        pending.remove(neighbour)
+                        stack.append(neighbour)
+            if not 0.10 * piece_width**2 <= len(component) <= 0.30 * piece_width**2:
+                continue
+            xs = [p[0] for p in component]
+            ys = [p[1] for p in component]
+            if not (min(xs) <= 4 and max(xs) >= piece_width - 5):
+                continue
+            if not 0.78 * piece_width <= max(ys) - min(ys) <= 1.10 * piece_width:
+                continue
+            if not 8 <= min(ys) < max(ys) <= 191:
+                continue
+            outlines.append(component)
+        if len(outlines) != 1:
+            return None
+
+        rows = {}
+        for x, y in outlines[0]:
+            rows.setdefault(y, []).append(x)
+        if max(rows) - min(rows) + 1 != len(rows):
+            return None
+        spans = [max(xs) - min(xs) for xs in rows.values()]
+        if max(spans) - min(spans) < 15:
+            return None  # 矩形和直线不是拼图轮廓。
+        silhouette = Image.new("L", (300, 200))
+        mask = silhouette.load()
+        for y, xs in rows.items():
+            for x in range(min(xs), max(xs) + 1):
+                mask[x, y] = 255
+        silhouette = silhouette.filter(ImageFilter.MinFilter(3))
+        mask = silhouette.load()
+
+        def inside(x, y):
+            return 0 <= x < 300 and 0 <= y < 200 and mask[x, y] != 0
+
+        pairs, interior = [], []
+        for y in range(min(rows), max(rows) + 1):
+            for x in range(piece_width):
+                if not inside(x, y):
+                    continue
+                if x % 3 == 0 and y % 3 == 0:
+                    interior.append((x, y))
+                for ax, ay in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    if not inside(x + ax, y + ay) and inside(x - ax, y - ay):
+                        pairs.append((x - ax, y - ay, x + ax, y + ay, ax, ay))
+        if len(pairs) < 125 or len(interior) < 70:
+            return None
+        luminance = board.convert("L").load()
+        first = piece_width + 6
+        last = 298 - max(max(p[0], p[2]) for p in pairs)
+        scores = []
+        for shift in range(first, last + 1):
+            values = [
+                max(-160, min(160, luminance[ix + shift, iy] - luminance[ox + shift, oy]))
+                for ix, iy, ox, oy, _ax, _ay in pairs
+            ]
+            scores.append((sum(values) / len(values), shift))
+        if not scores:
+            return None
+        best_score, best_shift = max(scores)
+        others = [score for score, shift in scores if abs(shift - best_shift) > 8]
+        if not others:
+            return None
+        second_score = max(others)
+        if best_score < 55 or best_score - second_score < 25 or best_score < 1.8 * max(1, second_score):
+            return None
+        near_peak = [shift for score, shift in scores if score >= best_score * 0.85]
+        if max(near_peak) - min(near_peak) > 4:
+            return None  # 宽峰或多峰不能确定释放位置。
+        if sum(luminance[x + best_shift, y] >= 145 for x, y in interior) < 0.78 * len(interior):
+            return None
+        strong_axes = 0
+        for axis in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            values = [
+                luminance[ix + best_shift, iy] - luminance[ox + best_shift, oy]
+                for ix, iy, ox, oy, ax, ay in pairs if (ax, ay) == axis
+            ]
+            if len(values) < 15 or sum(values) / len(values) < 5:
+                return None
+            strong_axes += sum(values) / len(values) >= 20
+        if strong_axes < 3:
+            return None
+        lookup = {shift: score for score, shift in scores}
+        refined = float(best_shift)
+        if best_shift - 1 in lookup and best_shift + 1 in lookup:
+            left, center, right = lookup[best_shift - 1], best_score, lookup[best_shift + 1]
+            curve = left - 2 * center + right
+            if curve < -0.001:
+                refined += max(-0.5, min(0.5, 0.5 * (left - right) / curve))
+        return round(refined * board_css_width / 300, 3)
+    except (ImportError, OSError, ValueError, TypeError, OverflowError, ZeroDivisionError):
+        return None
+
+
+def _piggo_puzzle_identity(page):
+    """只读取当前可见题图的来源，防止刷新后使用旧题的位移。"""
+    background = page.locator('#aliyunCaptcha-img')
+    piece = page.locator('#aliyunCaptcha-puzzle')
+    if background.count() != 1 or piece.count() != 1 or not background.is_visible() or not piece.is_visible():
+        return None
+    return (background.get_attribute('src', timeout=250), piece.get_attribute('src', timeout=250))
+
+
+def _piggo_puzzle_box_valid(box):
+    return isinstance(box, dict) and all(isinstance(box.get(key), (int, float))
+        and not isinstance(box[key], bool) and math.isfinite(box[key]) for key in ('x', 'y', 'width', 'height')) \
+        and box['width'] > 0 and box['height'] > 0
+
+
+def _piggo_aliyun_current(page):
+    _piggo_calendar_guard(page)
+    if (urlparse(page.url).path or '/').rstrip('/').lower() != '/calendar':
+        return False
+    kind = _piggo_captcha_kind(_piggo_captcha_widget(page))
+    _piggo_calendar_guard(page)
+    return kind == 'aliyun' and (urlparse(page.url).path or '/').rstrip('/').lower() == '/calendar'
+
+
+def _piggo_drag_puzzle(page, guard, *, identity, initial_box, thumb_box, delta, deadline, board_box=None):
+    """对当前题图执行一次按住、连续移动、松开；不调用验证接口。"""
+    if not _piggo_puzzle_box_valid(initial_box) or not _piggo_puzzle_box_valid(thumb_box) \
+            or not isinstance(delta, (int, float)) or isinstance(delta, bool) or not math.isfinite(delta) \
+            or not 1 <= delta <= 300 or not isinstance(deadline, (int, float)) or not math.isfinite(deadline):
+        return False
+    guard()
+    if not _piggo_aliyun_current(page):
+        return False
+    piece = page.locator('#aliyunCaptcha-puzzle')
+    x1 = thumb_box['x'] + thumb_box['width'] / 2
+    y1 = thumb_box['y'] + thumb_box['height'] / 2
+    viewport = page.evaluate('({width:innerWidth,height:innerHeight})')
+    if not isinstance(viewport, dict) or not all(isinstance(viewport.get(key), (int, float))
+            and not isinstance(viewport[key], bool) and math.isfinite(viewport[key]) and viewport[key] > 0
+            for key in ('width', 'height')) or not (0 <= x1 < viewport['width'] and 0 <= y1 < viewport['height']):
+        return False
+    guard()
+    current_thumb = page.locator('#aliyunCaptcha-sliding-slider').bounding_box(timeout=250)
+    if not _piggo_puzzle_box_valid(current_thumb) or any(abs(current_thumb[key] - thumb_box[key]) > 1 for key in ('x', 'y', 'width', 'height')):
+        return False
+    if time.monotonic() + 3 >= deadline or _piggo_puzzle_identity(page) != identity:
+        return False
+    # CloakBrowser 会在实例上再次包装 move；每个插值点不能再展开成
+    # 一条独立的长轨迹。这里使用同一公开 Mouse.move 方法的类绑定。
+    mouse_move = type(page.mouse).move.__get__(page.mouse, type(page.mouse))
+    mouse_move(x1, y1)
+    target_x = initial_box['x'] + delta
+    pointer_x, gain, settled = x1, 1.0, 0
+    move_deadline = min(time.monotonic() + 4, deadline)
+    try:
+        guard()
+        if not _piggo_aliyun_current(page) or _piggo_puzzle_identity(page) != identity:
+            return False
+        guard()
+        if time.monotonic() + 2 >= move_deadline:
+            return False
+        page.mouse.down()
+        page.wait_for_timeout(120)
+        for _ in range(65):
+            guard()
+            if time.monotonic() >= move_deadline or not _piggo_captcha_visible(page) \
+                    or not _piggo_aliyun_current(page) or _piggo_puzzle_identity(page) != identity:
+                return False
+            if board_box is not None:
+                current_board = page.locator('#aliyunCaptcha-img-box').bounding_box(timeout=250)
+                if not _piggo_puzzle_box_valid(current_board) or any(abs(current_board[key]-board_box[key]) > 1 for key in ('x', 'y', 'width', 'height')):
+                    return False
+            box = piece.bounding_box(timeout=250)
+            if not _piggo_puzzle_box_valid(box):
+                return False
+            # DOM 查询会分发换题、跳转与配置事件，移动前再次核对。
+            if not _piggo_aliyun_current(page) or _piggo_puzzle_identity(page) != identity:
+                return False
+            guard()
+            if time.monotonic() >= move_deadline:
+                return False
+            error = target_x - box['x']
+            if abs(error) <= 0.75:
+                settled += 1
+                if settled >= 2:
+                    page.wait_for_timeout(150)
+                    if not _piggo_aliyun_current(page) or _piggo_puzzle_identity(page) != identity:
+                        return False
+                    guard()
+                    if time.monotonic() >= move_deadline:
+                        return False
+                    return True
+                page.wait_for_timeout(65)
+                continue
+            settled = 0
+            distance = max(-16.0, min(16.0, error / gain))
+            next_x = pointer_x + distance
+            if not 0 <= next_x < viewport['width'] or time.monotonic() >= move_deadline:
+                return False
+            mouse_move(next_x, y1)
+            page.wait_for_timeout(40)
+            current = piece.bounding_box(timeout=250)
+            if not _piggo_puzzle_box_valid(current):
+                return False
+            observed_gain = (current['x'] - box['x']) / distance
+            if 0.2 <= observed_gain <= 3:
+                gain = observed_gain
+            pointer_x = next_x
+        return False
+    finally:
+        page.mouse.up()
+
+
+def _piggo_aliyun_step(page, ctx, guard, state, *, deadline):
+    """处理已打开的唯一阿里云窗口；本轮最多三次，不追加签到。"""
+    if state.get('attempts', 0) >= 3 or time.monotonic() + 3 >= deadline:
+        return False
+    guard()
+    if not _piggo_aliyun_current(page):
+        return False
+    start = page.get_by_text('点击开始验证', exact=True)
+    if not state.get('started') and start.count() == 1 and start.is_visible():
+        state['started'] = True  # 点击异常也不重复触发同一验证。
+        start.click(timeout=1000)
+        return True
+    identity = _piggo_puzzle_identity(page)
+    if not identity or not all(identity) or identity == state.get('image'):
+        return False
+    board = page.locator('#aliyunCaptcha-img-box')
+    thumb = page.locator('#aliyunCaptcha-sliding-slider')
+    piece = page.locator('#aliyunCaptcha-puzzle')
+    if board.count() != 1 or thumb.count() != 1 or not board.is_visible() or not thumb.is_visible():
+        return False
+    # src 先于图片解码/淡入完成，不能把空白截图永久记为已处理的题目。
+    if page.evaluate("""() => {
+        const ids = ['aliyunCaptcha-img', 'aliyunCaptcha-puzzle'];
+        return ids.every(id => {
+            const images = document.querySelectorAll('#' + id);
+            if (images.length !== 1) return false;
+            const img = images[0];
+            if (!img.complete || img.naturalWidth <= 0 || img.naturalHeight <= 0) return false;
+            for (let node = img; node; node = node.parentElement) {
+                const style = getComputedStyle(node);
+                if (style.display === 'none' || style.visibility !== 'visible' || Number(style.opacity) < 0.99) return false;
+                if (node.classList.contains('ali-box')) return true;
+            }
+            return false;
+        });
+    }""") is not True:
+        return False
+    board_box = board.bounding_box(timeout=250)
+    thumb_box = thumb.bounding_box(timeout=250)
+    piece_box = piece.bounding_box(timeout=250)
+    if not all(_piggo_puzzle_box_valid(box) for box in (board_box, thumb_box, piece_box)) \
+            or abs(thumb_box['x'] - board_box['x']) > 2 \
+            or abs(piece_box['x'] - board_box['x']) > 2:
+        return False  # 等待官网将上一题的滑块复位。
+    image = board.screenshot(timeout=500)
+    if _piggo_puzzle_identity(page) != identity:
+        return False
+    latest_board = board.bounding_box(timeout=250)
+    if not _piggo_puzzle_box_valid(latest_board) or any(abs(latest_board[key]-board_box[key]) > 1 for key in ('x', 'y', 'width', 'height')):
+        return False
+    state['image'] = identity  # 同一题只识别、拖动一次，刷新后才有新机会。
+    delta = _piggo_puzzle_offset(image, piece_box['width'], board_box['width'])
+    if delta is None or time.monotonic() + 3 >= deadline:
+        _runtime_log(ctx, '阿里云题图不明确或剩余时间不足，未猜测拖动，等待官网结果', level='warning', site='猪猪')
+        return False
+    guard()
+    if _piggo_puzzle_identity(page) != identity:
+        return False
+    state['attempts'] = state.get('attempts', 0) + 1
+    _runtime_log(ctx, f"阿里云验证：第 {state['attempts']}/3 次拖动，失败换题后重新识别", site='猪猪')
+    return _piggo_drag_puzzle(page, guard, identity=identity, initial_box=piece_box,
+                              thumb_box=thumb_box, delta=delta, deadline=deadline, board_box=board_box)
 
 
 def _piggo_frame_in_widget(frame, widget) -> bool:
@@ -3192,6 +3563,10 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
     expected = expected_session
     if expected is None and ctx is not None:
         expected = _piggo_account(ctx)
+    captcha_request_baseline = getattr(realtime, "captcha_request_count", 0)
+
+    def captcha_requested_in_round() -> bool:
+        return getattr(realtime, "captcha_request_count", 0) > captcha_request_baseline
 
     def guard() -> None:
         _piggo_calendar_guard(page)
@@ -3199,13 +3574,22 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 _piggo_account(ctx) != expected):
             raise RuntimeError("猪猪配置已变更或插件已停用，本轮跳过")
 
+    def calendar_signed() -> bool:
+        # 徽标查询会分发页面事件；最终证明返回后再核对配置，不能确认旧会话。
+        guard()
+        before = (urlparse(page.url).path or "/").rstrip("/")
+        signed = before == "/calendar" and _piggo_calendar_signed(page)
+        guard()
+        after = (urlparse(page.url).path or "/").rstrip("/")
+        return signed and after == "/calendar"
+
     guard()
     if (urlparse(page.url).path or "/").rstrip("/") != "/calendar":
         page.goto("https://piggo.me/calendar", wait_until="domcontentloaded", timeout=60_000)
     submit = None
     for _ in range(40):
         guard()
-        if _piggo_calendar_signed(page):
+        if calendar_signed():
             return {"status": "already", "message": "今天已经签到"}
         buttons = page.locator(".cal-page .cal-att button.cal-att-pill.act")
         for index in range(buttons.count()):
@@ -3230,7 +3614,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
             _runtime_log(ctx, "等待官网实时验证通道就绪，最多 20 秒；就绪前不提交签到", site="猪猪")
         for _ in range(40):
             guard()
-            if _piggo_calendar_signed(page):
+            if calendar_signed():
                 return {"status": "already", "message": "今天已经签到"}
             if realtime.ready or time.monotonic() >= deadline:
                 break
@@ -3241,7 +3625,9 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
 
     submit = _piggo_wait_calendar_ready(page, guard, ctx)
     if submit is None:
-        return {"status": "already", "message": "今天已经签到"}
+        if calendar_signed():
+            return {"status": "already", "message": "今天已经签到"}
+        raise RuntimeError("猪猪当天签到记录无法再次确认，本轮跳过，未提交签到")
 
     sent = False
     request_pending = False
@@ -3250,6 +3636,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
     needs_captcha = False
     failure_hint = ""
     attendance_requests = 0
+    attendance_started_at = None
     rejected_request = None
     retry_not_before = 0.0
     retry_attempted = False
@@ -3275,6 +3662,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
         nonlocal sent, request_pending, latest_request
         nonlocal needs_captcha, failure_hint
         nonlocal attendance_requests, rejected_request
+        nonlocal attendance_started_at
         nonlocal captcha_failure_request, finished_captcha_failure
         nonlocal captcha_failure_activity
         try:
@@ -3283,6 +3671,8 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 request_pending = True
                 latest_request = request
                 attendance_requests += 1
+                if attendance_started_at is None:
+                    attendance_started_at = time.monotonic()
                 rejected_request = None
                 needs_captcha = False
                 failure_hint = ""
@@ -3414,11 +3804,15 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
         recovery_quiet_since = None
         recovery_revision = None
         captcha_click_attempted = False
+        aliyun_seen = False
+        aliyun_state = {}
+        aliyun_error_logged = False
+        legacy_turnstile_disabled = False
         next_captcha_probe = 0.0
         deadline = time.monotonic() + 120
         for tick in range(240):
             guard()
-            if _piggo_calendar_signed(page):
+            if calendar_signed():
                 return {"status": "success", "message": "签到成功"}
             parse_finished()
             parse_captcha_failure()
@@ -3428,10 +3822,32 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 # 官网可自行验证、刷新配置并重放请求。先完整保留 30 秒
                 # 原生处理窗口，避免其自动验证尚在进行时抢先操作复选框。
                 captcha_native_until = time.monotonic() + 30
-                _runtime_log(ctx, "官网人机验证窗口已打开，先等待原生验证 30 秒；提交后最多等待 120 秒", site="猪猪")
+                _runtime_log(ctx, "官网人机验证窗口已打开，等待原生控件加载；提交后最多等待 120 秒", site="猪猪")
             captcha_was_visible = visible_now
+            # 阿里云只走当前题图识别与原生拖动，不能套用 Cloudflare 逻辑。
+            widget = _piggo_captcha_widget(page) if visible_now else None
+            kind = _piggo_captcha_kind(widget)
+            if visible_now and kind != "turnstile":
+                # 未知/加载中/多个控件都不能当成旧 Turnstile。该轮一旦
+                # 见过非唯一 TS 控件，后续切换或旧失败回执也不能恢复交互。
+                legacy_turnstile_disabled = True
+            if kind == "aliyun" and not aliyun_seen:
+                aliyun_seen = True
+                _runtime_log(ctx, "官网要求阿里云验证，加载后立即识别当前题图并拖动，本轮最多 3 次；不追加签到请求", site="猪猪")
+            if kind == 'aliyun' and attendance_started_at is not None:
+                # 换题不重置官网整轮 30 秒窗口，留出服务端接收结果的余量。
+                ali_deadline = min(deadline, captcha_native_until - 1, attendance_started_at + 29)
+                try:
+                    _piggo_aliyun_step(page, ctx, guard, aliyun_state, deadline=ali_deadline)
+                except Exception as exc:
+                    guard()  # 停用/换号/跳转不能被控件异常处理吞掉。
+                    if not aliyun_error_logged:
+                        aliyun_error_logged = True
+                        _runtime_log(ctx, f"阿里云控件操作未确认（{type(exc).__name__}），继续核对官网结果，不重复操作旧题", level='warning', site='猪猪')
             revision = (captcha_failures, captcha_failure_activity, getattr(realtime, "captcha_revision", 0))
             recoverable_exit = captcha_opened and captcha_failures > 0 and not visible_now \
+                and not legacy_turnstile_disabled \
+                and not captcha_requested_in_round() \
                 and captcha_failure_request is confirmed_captcha_failure \
                 and realtime is not None and realtime.ready and not getattr(realtime, "captcha_pending", False)
             if recoverable_exit:
@@ -3446,7 +3862,8 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
             # 至少 30 秒原生结果等待，不延长整轮 120 秒预算。
             recovery_ready = recoverable_exit and recovery_quiet_since is not None \
                 and time.monotonic() - recovery_quiet_since >= 35 and time.monotonic() + 45 <= deadline
-            if first_click_confirmed and not retry_attempted and attendance_requests == 1 and needs_captcha \
+            if not legacy_turnstile_disabled and first_click_confirmed and not retry_attempted and attendance_requests == 1 and needs_captcha \
+                    and not captcha_requested_in_round() \
                     and rejected_request is latest_request and not request_pending and not visible_now \
                     and (not captcha_opened or recovery_ready) \
                     and realtime is not None and realtime.ready \
@@ -3458,11 +3875,21 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 recovering = captcha_opened
                 quiet_revision = recovery_revision
                 def retry_eligible():
+                    nonlocal aliyun_seen, legacy_turnstile_disabled
                     # DOM 查询可能分发原生重放事件，查询结束后才核对最新请求身份。
-                    return not captcha_visible() and attendance_requests == 1 and latest_request is rejected \
+                    visible = captcha_visible()
+                    if visible:
+                        current_kind = _piggo_captcha_kind(_piggo_captcha_widget(page))
+                        if current_kind != "turnstile":
+                            legacy_turnstile_disabled = True
+                        if current_kind == "aliyun":
+                            aliyun_seen = True
+                    return not legacy_turnstile_disabled and not visible and attendance_requests == 1 and latest_request is rejected \
+                        and not captcha_requested_in_round() \
                         and rejected_request is rejected and needs_captcha and not request_pending \
                         and (not captcha_opened or (
                             recovering and captcha_failures > 0 and recovery_quiet_since is not None
+                            and not legacy_turnstile_disabled
                             and captcha_failure_request is confirmed_captcha_failure
                             and time.monotonic() - recovery_quiet_since >= 35
                             and quiet_revision == (captcha_failures, captcha_failure_activity, getattr(realtime, "captcha_revision", 0))
@@ -3477,7 +3904,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                 retry_button = _piggo_wait_calendar_ready(page, guard, ctx, deadline=deadline - 40 if recovering else deadline,
                                                           still_eligible=retry_eligible)
                 guard()
-                if _piggo_calendar_signed(page):
+                if calendar_signed():
                     return {"status": "success", "message": "签到成功"}
                 if retry_button is not None and retry_eligible():
                     # 等待被原生事件打断不消耗机会；真正操作前才锁定一次，
@@ -3488,8 +3915,8 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                         retry_button.click(timeout=max(1, min(10_000, int((deadline - time.monotonic()) * 1000))))
                     except Exception as exc:
                         _runtime_log(ctx, f"第二次签到按钮操作未确认（{type(exc).__name__}），只回查结果，不再点击", level="warning", site="猪猪")
-            widget = _piggo_captcha_widget(page) if visible_now and time.monotonic() >= captcha_native_until else None
-            if captcha_opened and not captcha_click_attempted and time.monotonic() < deadline \
+            if not legacy_turnstile_disabled and captcha_opened and not captcha_click_attempted and _piggo_captcha_kind(widget) == "turnstile" \
+                    and captcha_native_until <= time.monotonic() < deadline \
                     and captcha_visible() and widget is not None:
                 # 只操作官网已打开控件内的真实复选框；令牌与重放仍由官网生成。
                 for frame in getattr(page, "frames", []):
@@ -3507,7 +3934,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                                 or checkbox.is_checked():
                             continue
                         guard()
-                        if _piggo_calendar_signed(page):
+                        if calendar_signed():
                             return {"status": "success", "message": "签到成功"}
                         if not captcha_visible():
                             break
@@ -3546,7 +3973,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                     if box:
                         _runtime_log(ctx, f"官网验证空复选框已出现，本次检查耗时 {int((time.monotonic() - probe_started) * 1000)}ms", site="猪猪")
                         guard()
-                        if _piggo_calendar_signed(page):
+                        if calendar_signed():
                             return {"status": "success", "message": "签到成功"}
                         if not captcha_visible():
                             continue
@@ -3558,7 +3985,7 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                                                  for key in ("x", "y", "width", "height")):
                             continue  # 居中弹窗仍在移动/重排时，不点击截图中的旧位置。
                         guard()
-                        if _piggo_calendar_signed(page):
+                        if calendar_signed():
                             return {"status": "success", "message": "签到成功"}
                         if not captcha_visible():
                             continue
@@ -3582,6 +4009,8 @@ def _piggo_calendar_checkin(page, ctx=None, *, expected_session=None, realtime=N
                     page.reload(wait_until="domcontentloaded", timeout=60_000)
         if needs_captcha:
             if captcha_opened:
+                if aliyun_seen:
+                    raise RuntimeError(f"猪猪官网阿里云验证未完成（本轮拖动 {aliyun_state.get('attempts', 0)}/3 次），今天未确认签到，本轮跳过，不再追加点击")
                 raise RuntimeError("猪猪官网人机验证尚未完成，今天未确认签到，本轮跳过，不再追加点击")
             if realtime is not None and getattr(realtime, "captcha_pending", False):
                 raise RuntimeError("猪猪官网验证配置尚未返回，今天未确认签到，本轮跳过，请检查官网实时通道")
