@@ -37,7 +37,7 @@ __plugin__ = {
         "failure_threshold": 5,
         "recovery_seconds": 60,
     },
-    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12", "lxml>=5.0"],
+    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12"],
     "config_schema": {
         "enabled": {
             "type": "boolean", "default": True, "label": "启用赠豆命令",
@@ -168,7 +168,7 @@ def _feedback(resp: httpx.Response, *, redirected: bool) -> tuple[bool, str]:
     )):
         return False, "站点触发了 Cloudflare 安全验证，请重新同步 Cookie"
 
-    soup = BeautifulSoup(resp.text or "", "lxml")
+    soup = BeautifulSoup(resp.text or "", "html.parser")
     tips = soup.select_one(".tips")
     detail = " ".join(tips.get_text(" ", strip=True).split()) if tips else ""
     error_markers = ("错误", "对不起", "不存在", "不足", "失败", "不能", "至少")
@@ -200,7 +200,7 @@ async def _check_login(ctx) -> tuple[bool, str]:
             return False, f"网站返回 HTTP {resp.status_code}"
         if _looks_like_login(resp):
             return False, "Cookie 已失效，网站返回登录页"
-        soup = BeautifulSoup(resp.text or "", "lxml")
+        soup = BeautifulSoup(resp.text or "", "html.parser")
         form = soup.find("input", attrs={"name": "bonusgift"})
         if not form:
             return False, "登录成功，但未找到赠豆表单，网站页面可能已更新"

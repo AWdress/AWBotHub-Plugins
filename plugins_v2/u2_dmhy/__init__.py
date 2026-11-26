@@ -5,13 +5,17 @@ from .core import setup as _native_setup, teardown as _native_teardown
 
 __plugin__ = {'name': 'U2送糖',
  'id': 'u2_dmhy',
- 'version': '2.0.0',
+ 'version': '2.0.1',
  'plugin_api_version': 2,
  'requirements': ['httpx>=0.27', 'beautifulsoup4>=4.12'],
  'author': 'AWdress',
  'description': '用 /u2 或 /u2s 带 cookie 给 u2.dmhy.org 用户赠送 UCoin。单人/批量，自带站点限频冷却。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/u2_dmhy.png',
- 'changelog': 'v1.0.15 适配新版异步存储接口\n'
+ 'changelog': 'v2.0.1 修复赠送回执的解析器依赖\n'
+              '- HTML 回执改用 Python 内置解析器，无需安装 lxml\n'
+              '- 保留赠送、跳转检查和冷却逻辑，不自动重发赠送请求\n'
+              '\n'
+              'v1.0.15 适配新版异步存储接口\n'
               '- 兼容新版平台异步 KV 与原有同步 KV\n'
               '- 启用时预载数据，按顺序托管写入并在停用时等待完成\n'
               '\n'

@@ -37,7 +37,7 @@ __plugin__ = {
         "failure_threshold": 5,
         "recovery_seconds": 60,
     },
-    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12", "lxml>=5.0"],
+    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12"],
     "config_schema": {
         "enabled": {
             "type": "boolean", "default": True, "label": "启用憨憨转盘",
@@ -209,7 +209,7 @@ async def _page_info(ctx) -> tuple[bool, str, int, int]:
             return False, "Cookie 已失效，网站返回登录页", 0, 0
         if _has_challenge(resp.text):
             return False, "站点触发了 Cloudflare 安全验证，请重新同步 Cookie", 0, 0
-        soup = BeautifulSoup(resp.text or "", "lxml")
+        soup = BeautifulSoup(resp.text or "", "html.parser")
         balance_el = soup.select_one(".bean-number")
         cost_el = soup.select_one(".use-bean")
         balance_match = re.search(r"([\d,]+(?:\.\d+)?)", balance_el.get_text(" ", strip=True)) if balance_el else None
@@ -308,7 +308,7 @@ async def _clean_lottery_mail(ctx, *, max_rounds: int = 20) -> int:
                 raise RuntimeError(redirect_error)
             if resp.status_code != 200 or _looks_like_login(resp):
                 raise RuntimeError("读取转盘通知失败，Cookie 已失效或网站返回异常")
-            soup = BeautifulSoup(resp.text or "", "lxml")
+            soup = BeautifulSoup(resp.text or "", "html.parser")
             targets = []
             box = soup.select_one("#mail-table-display")
             for checkbox in soup.select('#mail-table-display input[name="messages[]"]'):

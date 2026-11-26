@@ -17,11 +17,11 @@ import httpx
 __plugin__ = {
     "name": "U2送糖",
     "id": "u2_dmhy",
-    "version": "1.0.7",
+    "version": "2.0.1",
     "author": "AWdress",
     "description": "用 /u2 或 /u2s 带 cookie 给 u2.dmhy.org 用户赠送 UCoin。单人/批量，自带站点限频冷却。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/u2_dmhy.png",
-    "changelog": "v1.0.7 修复 U2 站内跳转\n- 正确处理赠送后的 HTTP 302 站内跳转，不再直接判定失败\n- 识别 Cookie 失效登录页、Cloudflare 验证和异常跨站跳转\n- 记录跳转目标日志，便于区分正常提交与登录失效\n\nv1.0.6 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\n\nv1.0.5 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
+    "changelog": "v2.0.1 修复赠送回执的解析器依赖\n- HTML 回执改用 Python 内置解析器，无需安装 lxml\n- 保留赠送、跳转检查和冷却逻辑，不自动重发赠送请求\n\nv1.0.7 修复 U2 站内跳转\n- 正确处理赠送后的 HTTP 302 站内跳转，不再直接判定失败\n- 识别 Cookie 失效登录页、Cloudflare 验证和异常跨站跳转\n- 记录跳转目标日志，便于区分正常提交与登录失效\n\nv1.0.6 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\n\nv1.0.5 更新插件 Logo\n- 增加与插件功能匹配的酷炫专属图标，并同步插件卡片与市场展示",
     "scope": "user",
     "default_enabled": False,
     "config_schema": {
@@ -132,7 +132,7 @@ async def _gift(cookie: str, recv_id: str, amount: str, note: str, log):
             return False, "Cookie 已失效，最终响应为登录页"
         try:
             from bs4 import BeautifulSoup
-            soup = BeautifulSoup(resp.text, "lxml")
+            soup = BeautifulSoup(resp.text, "html.parser")
             h2 = soup.select_one("h2")
             if h2:
                 tables = soup.select("table")

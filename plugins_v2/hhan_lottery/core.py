@@ -19,11 +19,11 @@ from ._auth import cookie_header
 __plugin__ = {
     "name": "憨憨小助手",
     "id": "hhan_lottery",
-    "version": "2.0.5",
+    "version": "2.0.6",
     "author": "AWdress",
     "description": "HHanClub 综合助手：赠豆、官方红包与抽奖自动参与、幸运转盘及消息管理。",
     "icon": "https://hhanclub.net/favicon.ico",
-    "changelog": "v2.0.5 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.4 新增官方抽奖自动参与并完善红包识别\n- 自动提取进行中抽奖的参与口令并发送\n- 普通红包兼容“每份金额”文案，不再要求正文包含总额\n- 同时支持官方机器人直接消息和 Telegram 原生转发消息\n- 抢红包与抽奖独立为配置分类，两个开关默认关闭",
+    "changelog": "v2.0.6 修复 HHCLUB 缺少解析器导致访问失败\n- 转盘余额、赠豆回执及消息管理统一使用 Python 内置 HTML 解析器，不再依赖 lxml\n- 保留原有 Cookie 检查、站内跳转限制与操作次数，不自动重发赠豆或抽奖请求\n\nv2.0.5 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.0.4 新增官方抽奖自动参与并完善红包识别\n- 自动提取进行中抽奖的参与口令并发送\n- 普通红包兼容“每份金额”文案，不再要求正文包含总额\n- 同时支持官方机器人直接消息和 Telegram 原生转发消息\n- 抢红包与抽奖独立为配置分类，两个开关默认关闭",
     "scope": "user",
     "min_platform_version": "1.1.4.0",
     "plugin_api_version": 1,
@@ -37,7 +37,7 @@ __plugin__ = {
         "failure_threshold": 5,
         "recovery_seconds": 60,
     },
-    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12", "lxml>=5.0"],
+    "requirements": ["httpx>=0.27", "beautifulsoup4>=4.12"],
 }
 
 
@@ -289,7 +289,7 @@ async def _check_cookie(ctx) -> dict:
         error = redirect_error or _validate_page(resp)
         if error:
             return {"ok": False, "message": error}
-        soup = BeautifulSoup(resp.text or "", "lxml")
+        soup = BeautifulSoup(resp.text or "", "html.parser")
         if not soup.select_one("#mail-table-display"):
             return {"ok": False, "message": "登录成功，但未识别到消息列表，页面结构可能已更新"}
         unread, _, _ = _page_form(soup, str(resp.url))
@@ -320,7 +320,7 @@ async def _run(ctx):
             error = redirect_error or _validate_page(first)
             if error:
                 raise RuntimeError(error)
-            first_soup = BeautifulSoup(first.text or "", "lxml")
+            first_soup = BeautifulSoup(first.text or "", "html.parser")
             if not first_soup.select_one("#mail-table-display"):
                 raise RuntimeError("未识别到消息列表，网站页面可能已更新")
             urls = _pagination_urls(first_soup, str(first.url))[:max_pages]
@@ -345,7 +345,7 @@ async def _run(ctx):
                     error = redirect_error or _validate_page(resp)
                     if error:
                         raise RuntimeError(f"第 {index} 页读取失败：{error}")
-                    soup = BeautifulSoup(resp.text or "", "lxml")
+                    soup = BeautifulSoup(resp.text or "", "html.parser")
                 pages_checked += 1
                 unread_ids, action, fields = _page_form(soup, str(resp.url))
                 if not unread_ids:
@@ -432,7 +432,7 @@ async def _run_delete(ctx):
                 error = redirect_error or _validate_page(resp)
                 if error:
                     raise RuntimeError(error)
-                soup = BeautifulSoup(resp.text or "", "lxml")
+                soup = BeautifulSoup(resp.text or "", "html.parser")
                 if not soup.select_one("#mail-table-display"):
                     raise RuntimeError("未识别到消息列表，网站页面可能已更新")
                 message_ids, action, fields = _delete_form(soup, str(resp.url))

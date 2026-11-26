@@ -213,7 +213,7 @@ class PlaywrightForumMessageService:
         try:
             from bs4 import BeautifulSoup
             
-            soup = BeautifulSoup(html, 'lxml')
+            soup = BeautifulSoup(html, 'html.parser')
             
             # 查找所有消息元素（通常在 dl 标签中）
             message_elements = soup.find_all('dl', class_='cl', limit=max_count)

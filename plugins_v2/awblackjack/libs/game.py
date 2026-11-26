@@ -145,7 +145,7 @@ async def game(data):
                     if response.status != 200:
                         raise Exception(response.status)
                     html = await response.text()
-                    soup = BeautifulSoup(html, 'lxml')
+                    soup = BeautifulSoup(html, 'html.parser')
                     _opp_match = re.search(r'你的对手是\s*(.+?)，', soup.get_text(' '))
                     opponent_name = _opp_match.group(1).strip() if _opp_match else None
                     forms = extract_form_params(soup)
@@ -279,7 +279,7 @@ async def game_state():
                         logger.error(f'网络状态错误 {response.status}')
                         raise Exception(response.status)
                     html = await response.text()
-                    soup = BeautifulSoup(html, 'lxml')
+                    soup = BeautifulSoup(html, 'html.parser')
                     game_table = soup.find('table', {'id': 'game_available'})
                     if game_table:
                         rows = game_table.find_all('tr')[1:]
@@ -342,7 +342,7 @@ async def get_page_state() -> dict:
                         logger.error(f'网络状态错误 {response.status}')
                         raise Exception(response.status)
                     html = await response.text()
-                    soup = BeautifulSoup(html, 'lxml')
+                    soup = BeautifulSoup(html, 'html.parser')
                     waiting = bool(soup.select("input[value='刷新']"))
                     forms = extract_form_params(soup)
                     current_gameid = _extract_gameid_from_forms(forms)
@@ -378,7 +378,7 @@ async def get_joinable_games_by_amount(allowed_amounts=None) -> dict[str, list[d
                     if response.status != 200:
                         logger.error(f'网络状态错误 {response.status}')
                         raise Exception(response.status)
-                    soup = BeautifulSoup(await response.text(), 'lxml')
+                    soup = BeautifulSoup(await response.text(), 'html.parser')
                     return extract_joinable_games_by_amount(soup, normalized_amounts)
             except Exception as e:
                 error += 1
@@ -411,7 +411,7 @@ async def has_waiting_game() -> bool:
                     if response.status != 200:
                         logger.error(f'网络状态错误 {response.status}')
                         raise Exception(response.status)
-                    soup = BeautifulSoup(await response.text(), 'lxml')
+                    soup = BeautifulSoup(await response.text(), 'html.parser')
                     # 等待对手加入（刷新按钮）
                     if soup.select("input[value='刷新']"):
                         return True
