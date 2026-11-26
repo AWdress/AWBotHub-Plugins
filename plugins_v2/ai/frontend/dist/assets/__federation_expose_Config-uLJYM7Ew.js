@@ -509,7 +509,7 @@ return (_ctx, _cache) => {
                             ]),
                             _cache[24] || (_cache[24] = _createElementVNode("span", null, "启用 AI 生图命令", -1))
                           ]),
-                          _cache[30] || (_cache[30] = _createElementVNode("p", { class: "ai-ios-tip" }, "发送 /生图 画面描述 或 /draw prompt，生成后会直接把图片发到当前会话（使用平台统一 AI 服务）。", -1)),
+                          _cache[30] || (_cache[30] = _createElementVNode("p", { class: "ai-ios-tip" }, "发送 /生图 画面描述。需要参考图时，回复图片发送 /生图 修改要求，或把命令写在图片说明中。", -1)),
                           (cfg.enable_image_generation)
                             ? (_openBlock(), _createElementBlock(_Fragment, { key: 0 }, [
                                 _createElementVNode("div", _hoisted_14, [
@@ -545,7 +545,7 @@ return (_ctx, _cache) => {
                                     ])
                                   ])
                                 ]),
-                                _cache[29] || (_cache[29] = _createElementVNode("p", { class: "ai-ios-tip" }, "不同模型支持的尺寸和质量可能不同；不确定时质量选“自动”、尺寸选 1024 × 1024。", -1))
+                                _cache[29] || (_cache[29] = _createElementVNode("p", { class: "ai-ios-tip" }, "复用平台 AI 设置；参考图需模型支持图片编辑。图片不超过 12MB，GIF 使用第一帧。不确定时质量选“自动”、尺寸选 1024 × 1024。", -1))
                               ], 64))
                             : _createCommentVNode("", true)
                         ])
@@ -982,6 +982,6 @@ return (_ctx, _cache) => {
 }
 
 };
-const Config = /*#__PURE__*/_export_sfc(_sfc_main, [['__scopeId',"data-v-2d3bc544"]]);
+const Config = /*#__PURE__*/_export_sfc(_sfc_main, [['__scopeId',"data-v-13f4994f"]]);
 
 export { Config as default };

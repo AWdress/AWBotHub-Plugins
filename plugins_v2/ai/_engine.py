@@ -6,9 +6,14 @@ import asyncio
 import json
 from pathlib import Path
 
+from ._images import ImageInputError, normalize_generated_image
+from ._image_edit import ImageEditError, edit_image
+
 
 def classify_error(err: Exception) -> str:
     """把上游/SDK 异常转成可展示的中文提示（脱敏 + 截断）。"""
+    if isinstance(err, (ImageInputError, ImageEditError)):
+        return str(err)
     msg = str(err) or err.__class__.__name__
     lower = msg.lower()
     if isinstance(err, json.JSONDecodeError) or "expecting value" in lower or "非 json" in lower:
@@ -78,9 +83,15 @@ async def generate_image(
     prompt: str,
     size: str = "1024x1024",
     quality: str = "auto",
+    *,
+    reference_image: bytes | None = None,
 ) -> bytes:
-    """调用平台统一 AI 生图。"""
-    path = await ctx.ai.generate_image(
-        prompt=prompt, size=size, quality=quality if quality != "auto" else None
-    )
-    return path.read_bytes()
+    """纯文字沿用平台生图；参考图通过绑定的平台路由执行图像编辑。"""
+    if reference_image is not None:
+        image = await edit_image(ctx, prompt, reference_image, size=size, quality=quality)
+    else:
+        path = await ctx.ai.generate_image(
+            prompt=prompt, size=size, quality=quality if quality != "auto" else None
+        )
+        image = await asyncio.to_thread(path.read_bytes)
+    return await asyncio.to_thread(normalize_generated_image, image)

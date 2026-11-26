@@ -20,6 +20,7 @@ from collections import deque
 from io import BytesIO
 
 from ._engine import generate, generate_image, classify_error
+from ._images import extract_reference_image
 from ._reply import (
     DEFAULT_EXPLAIN_REPLY_TEMPLATE, DEFAULT_REPLY_TEMPLATE, build_reply, send_reply,
 )
@@ -27,12 +28,13 @@ from ._reply import (
 __plugin__ = {
     "name": "AI 助手",
     "id": "ai",
-    "version": "2.1.1",
+    "version": "2.2.0",
     "author": "AWdress",
-    "description": "私聊/群@你时 AI 人形对话，支持主动搭话、/ai 图文解释和平台 AI 生图；默认原生富文本回复，非会员自动降级，支持引用、代码块、表格、完整链接与自定义回复模板。自带 Vue 配置界面。",
+    "description": "私聊/群@你时 AI 人形对话，支持主动搭话、/ai 图文解释、文字及参考图生图；复用平台 AI 配置，默认原生富文本回复，非会员自动降级，支持引用、代码块、表格、完整链接与自定义回复模板。自带 Vue 配置界面。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/ai.png",
-    "changelog": "v2.1.1 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.1.0 富文本回复与模板\n- 默认原生富文本，非会员或原生能力不可用时自动降级\n- 引用、代码块、表格、完整链接与自定义回复模板；长回答安全分段\n- 保留原有设置和平台 AI 路由，不新增搜索接口\n\nv1.3.6 修复 /ai 解释格式显示\n- 编辑解释消息时显式启用 Telegram HTML 解析\n- 问题与回答继续进行 HTML 转义，避免内容注入标签\n- HTML 编辑失败时使用不解析格式的纯文本降级\n\nv1.3.5 修复 /ai 空响应解析失败\n- 上游偶发返回空正文或非 JSON 时退避重试一次\n- 连续异常时返回接口地址、模型兼容性和上游状态提示\n\nv1.3.3 修复平台 AI 调用\n- 清理遗留的插件 API Key 校验，不再误报未配置 API Key\n- 对话、解释、主动搭话和生图均按平台统一 AI 能力判断\n- 清理前端与后端遗留的旧接口配置字段\n\nv1.3.2 修复插件解析失败\n- 修复版本日志中的未转义引号导致 __init__.py 语法错误\n- 插件更新后可正常重新加载\n\nv1.3.1 前端移除自带 API 配置字段\n- 删除接口分组，移除 api_key/base_url/model 配置界面\n- 移除生图模型字段和测试连接功能\n- 配置界面仅保留功能开关和业务参数\n\nv1.3.0 改为仅使用平台统一 AI\n- 移除插件自带 OpenAI 配置的回退逻辑，仅调用平台统一 AI\n- 不再需要配置 api_key/base_url/model，统一由平台管理\n- 代码精简，去除 openai 库直接依赖\n\nv1.2.0 接入平台统一 AI 能力\n- 优先使用平台统一配置的 AI 服务（管理员在「系统设置→AI 服务」配置一次，所有插件共享）\n- 平台 AI 不可用时自动回退到插件自带的 OpenAI 配置\n- 无需为每个插件重复填写服务地址和密钥\n\nv1.1.0 新增 AI 生图\n- 新增独立生图模型、尺寸与质量配置，支持任意 OpenAI 兼容生图模型\n- 新增 /生图、.生图、/draw、.draw 命令，生成后直接发送图片到当前会话\n- 兼容接口返回 base64、data URL 或普通图片 URL\n\nv1.0.7 修复异常捕获\n- 修复解析回复时未捕获 ValueError 导致偶发报错中断\n\nv1.0.6 更新插件 Logo\n- 使用 AI 助手专属图片作为插件卡片与市场图标\n\nv1.0.5 修复主动搭话定时任务\n- 未启用主动搭话时不再注册每分钟检查任务",
+    "changelog": "v2.2.0 参考图生图\n- 回复图片发送生图命令，或在图片说明中填写命令，保留原图并关联生成结果\n- 复用平台生图权限、模型、代理及统计，无需额外配置接口和密钥；服务需支持图片编辑\n- 参考图限额下载、方向校正、等比缩小并移除元数据；失败不忽略参考图、不自动重复生成\n\nv2.1.1 iOS 风格配置页\n- 更新分组、控件与交互反馈，兼容平台透明主题与减少动态效果\n- 保留已有配置、默认值与业务接口\n\nv2.1.0 富文本回复与模板\n- 默认原生富文本，非会员或原生能力不可用时自动降级\n- 引用、代码块、表格、完整链接与自定义回复模板；长回答安全分段\n- 保留原有设置和平台 AI 路由，不新增搜索接口\n\nv1.3.6 修复 /ai 解释格式显示\n- 编辑解释消息时显式启用 Telegram HTML 解析\n- 问题与回答继续进行 HTML 转义，避免内容注入标签\n- HTML 编辑失败时使用不解析格式的纯文本降级\n\nv1.3.5 修复 /ai 空响应解析失败\n- 上游偶发返回空正文或非 JSON 时退避重试一次\n- 连续异常时返回接口地址、模型兼容性和上游状态提示\n\nv1.3.3 修复平台 AI 调用\n- 清理遗留的插件 API Key 校验，不再误报未配置 API Key\n- 对话、解释、主动搭话和生图均按平台统一 AI 能力判断\n- 清理前端与后端遗留的旧接口配置字段\n\nv1.3.2 修复插件解析失败\n- 修复版本日志中的未转义引号导致 __init__.py 语法错误\n- 插件更新后可正常重新加载\n\nv1.3.1 前端移除自带 API 配置字段\n- 删除接口分组，移除 api_key/base_url/model 配置界面\n- 移除生图模型字段和测试连接功能\n- 配置界面仅保留功能开关和业务参数\n\nv1.3.0 改为仅使用平台统一 AI\n- 移除插件自带 OpenAI 配置的回退逻辑，仅调用平台统一 AI\n- 不再需要配置 api_key/base_url/model，统一由平台管理\n- 代码精简，去除 openai 库直接依赖\n\nv1.2.0 接入平台统一 AI 能力\n- 优先使用平台统一配置的 AI 服务（管理员在「系统设置→AI 服务」配置一次，所有插件共享）\n- 平台 AI 不可用时自动回退到插件自带的 OpenAI 配置\n- 无需为每个插件重复填写服务地址和密钥\n\nv1.1.0 新增 AI 生图\n- 新增独立生图模型、尺寸与质量配置，支持任意 OpenAI 兼容生图模型\n- 新增 /生图、.生图、/draw、.draw 命令，生成后直接发送图片到当前会话\n- 兼容接口返回 base64、data URL 或普通图片 URL\n\nv1.0.7 修复异常捕获\n- 修复解析回复时未捕获 ValueError 导致偶发报错中断\n\nv1.0.6 更新插件 Logo\n- 使用 AI 助手专属图片作为插件卡片与市场图标\n\nv1.0.5 修复主动搭话定时任务\n- 未启用主动搭话时不再注册每分钟检查任务",
     "scope": "user",
+    "requirements": ["Pillow>=10.0"],
     "default_enabled": False,
     "render_mode": "vue",
 }
@@ -212,39 +214,76 @@ async def setup(ctx):
     @ctx.on_message(outgoing=True, incoming=False)
     async def ai_image(event):
         client, message = event.client, event.message
-        text = (message.text or "").strip()
+        text = (message.text or getattr(message, "caption", None) or "").strip()
         matched = re.match(r"^[/\.](?:生图|draw)(?:\s+(.+))?$", text, re.IGNORECASE | re.DOTALL)
         if not matched:
             return
+        own_media = bool(getattr(message, "photo", None) or getattr(message, "document", None))
+
+        async def feedback(text):
+            if not own_media:
+                return await _edit_autodel(message, text, 60)
+            # 带图命令无论成功或失败，都不能通过状态清理删掉原图。
+            notice = await client.send_message(event.chat_id, text, reply_to=message.id, parse_mode=None)
+            ctx.create_task(_auto_del(notice, 60), name="ai-image-notice")
+
         cfg = ctx.config
         if not cfg.get("enable_image_generation", True):
-            return await _edit_autodel(message, "AI 生图功能未启用")
+            return await feedback("AI 生图功能未启用")
         if not _ai_available(ctx, "image"):
-            return await _edit_autodel(message, "平台未配置可用的 AI 生图模型")
+            return await feedback("平台未配置可用的 AI 生图模型")
         prompt = (matched.group(1) or "").strip()
         if not prompt:
-            return await _edit_autodel(message, "请在 /生图 后填写画面描述")
+            return await feedback("用法：/生图 画面描述。参考图：回复图片发送 /生图 修改要求，或在图片说明中填写命令")
+        # 必须在编辑状态前读取回复与原始媒体，不能丢失图片说明中的参考图。
         try:
-            status = await message.edit("正在生成图片...")
+            reply = await event.get_reply_message() if event.is_reply else None
         except Exception:
-            status = message
+            return await feedback("无法读取被回复的消息，本次未调用生图，请重新回复图片发送命令")
+        source = message if own_media else reply if reply and (
+            getattr(reply, "photo", None) or getattr(reply, "document", None)) else None
+        status = None if own_media else message
         try:
-            image = await generate_image(ctx, prompt, str(cfg.get("image_size") or "1024x1024"), str(cfg.get("image_quality") or "auto"))
+            notice = "正在根据参考图生成图片…" if source is not None else "正在生成图片…"
+            if own_media:
+                status = await client.send_message(event.chat_id, notice, reply_to=message.id, parse_mode=None)
+            else:
+                status = await message.edit(notice)
+        except Exception:
+            pass  # 状态投递不明时不重发；也不能把参考图原消息当作可删除状态。
+        try:
+            reference = await extract_reference_image(client, source) if source is not None else None
+            image = await generate_image(
+                ctx, prompt, str(cfg.get("image_size") or "1024x1024"),
+                str(cfg.get("image_quality") or "auto"), reference_image=reference,
+            )
             output = BytesIO(image)
             output.name = "ai-generated.png"
-            reply = await event.get_reply_message() if event.is_reply else None
-            await client.send_file(
-                event.chat_id, output,
-                caption=f"🎨 {prompt[:900]}",
-                reply_to=getattr(reply, "id", None),
-            )
             try:
-                await status.delete()
+                await client.send_file(
+                    event.chat_id, output,
+                    caption="🎨 " + prompt.encode("utf-16-le")[:1800].decode("utf-16-le", errors="ignore"),
+                    reply_to=message.id if own_media else getattr(reply, "id", None), parse_mode=None,
+                )
+            finally:
+                output.close()
+            try:
+                if status is not None:
+                    await status.delete()
             except Exception:
                 pass
         except Exception as exc:  # noqa: BLE001
-            ctx.log.warning("[AI] 平台生图失败: %r", exc)
-            await _edit_autodel(status, classify_error(exc), 60)
+            ctx.log.warning("[AI] 生图未完成（未自动重试）: %s", type(exc).__name__)
+            if status is not None:
+                await _edit_autodel(status, classify_error(exc), 60)
+            else:
+                try:
+                    notice = await client.send_message(
+                        event.chat_id, classify_error(exc), reply_to=message.id, parse_mode=None,
+                    )
+                    ctx.create_task(_auto_del(notice, 60), name="ai-image-error")
+                except Exception:
+                    pass
 
     # ── 功能 1：人形回复（监听收到的私聊/群消息）──
     @ctx.on_message()

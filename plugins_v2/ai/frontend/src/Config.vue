@@ -244,7 +244,7 @@ function switchTab(value) {
             <h3 class="ai-ios-title">AI 生图</h3>
             <section class="ai-ios-group">
               <label class="ai-ios-row ai-ios-switch"><span class="ai-ios-toggle"><input v-model="cfg.enable_image_generation" type="checkbox" role="switch" /><span class="ai-ios-toggle-track" aria-hidden="true"></span></span><span>启用 AI 生图命令</span></label>
-              <p class="ai-ios-tip">发送 /生图 画面描述 或 /draw prompt，生成后会直接把图片发到当前会话（使用平台统一 AI 服务）。</p>
+              <p class="ai-ios-tip">发送 /生图 画面描述。需要参考图时，回复图片发送 /生图 修改要求，或把命令写在图片说明中。</p>
               <template v-if="cfg.enable_image_generation">
                 <div class="ai-ios-grid">
                   <label class="ai-ios-row"><span>图片尺寸</span><select v-model="cfg.image_size" class="ai-ios-input">
@@ -254,7 +254,7 @@ function switchTab(value) {
                     <option value="auto">自动</option><option value="low">低</option><option value="medium">中</option><option value="high">高</option><option value="standard">标准（DALL·E）</option><option value="hd">高清（DALL·E）</option>
                   </select></label>
                 </div>
-                <p class="ai-ios-tip">不同模型支持的尺寸和质量可能不同；不确定时质量选“自动”、尺寸选 1024 × 1024。</p>
+                <p class="ai-ios-tip">复用平台 AI 设置；参考图需模型支持图片编辑。图片不超过 12MB，GIF 使用第一帧。不确定时质量选“自动”、尺寸选 1024 × 1024。</p>
               </template>
             </section>
           </template>
