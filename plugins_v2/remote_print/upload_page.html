@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <title>上传打印文件</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f2f2f7; --surface: #fff; --text: #1c1c1e; --muted: #62626a; --line: #d2d2d7; --accent: #0063dc; --error: #b4232d; --success: #16723c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding: max(32px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom)); background: var(--bg); color: var(--text); font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    main { max-width: 480px; margin: 7vh auto 0; }
+    h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.3; font-weight: 700; text-wrap: balance; }
+    p { margin: 0; }
+    .intro { margin-bottom: 28px; color: var(--muted); }
+    .panel { padding: 24px; border-radius: 16px; background: var(--surface); }
+    .loading, .hint, .privacy { color: var(--muted); font-size: 14px; }
+    .hint { margin-top: 8px; }
+    .privacy { margin-top: 24px; }
+    #file-label { font-weight: 600; }
+    input, button { font: inherit; }
+    .picker { position: relative; margin-top: 12px; }
+    input[type=file] { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+    .choose { display: inline-block; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 10px; color: var(--accent); cursor: pointer; }
+    .choose:hover { background: var(--bg); }
+    .picker:focus-within .choose { outline: 3px solid var(--accent); outline-offset: 4px; }
+    input:disabled + .choose { opacity: .5; cursor: not-allowed; }
+    .selection { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+    .filename { font-weight: 600; }
+    .details { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    button { width: 100%; min-height: 50px; margin-top: 24px; padding: 11px 16px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; transition: filter .15s ease; }
+    button:hover:not(:disabled) { filter: brightness(.9); }
+    button:active:not(:disabled) { filter: brightness(.83); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+    ::selection { background: var(--accent); color: #fff; }
+    .status { margin-top: 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .status.error { color: var(--error); }
+    .status.success { color: var(--success); }
+    progress { display: block; width: 100%; height: 8px; margin-top: 16px; accent-color: var(--accent); }
+    [hidden] { display: none !important; }
+    footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 380px) { body { padding-inline: 16px; } main { margin-top: 4vh; } .panel { padding: 20px; } }
+    @media (prefers-color-scheme: dark) { :root { --bg: #111113; --surface: #232326; --text: #f5f5f7; --muted: #b0b0b8; --line: #505058; --accent: #0a64d9; --error: #ff8c94; --success: #80d99e; } .choose { color: var(--text); } }
+    @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+  </style>
+</head>
+<body>
+  <!-- THESIS: 把企微文档收件变成一次选择和一次上传，不另建管理界面。
+  OWN-WORLD: 延续远程打印的 iOS 分组语言、系统字体、中性色与蓝色操作，跟随设备明暗。
+  STORY: 选择文件，明确上传是否自动打印，返回原会话继续确认。
+  FIRST VIEWPORT: 单列480px，标题与说明在上；文件选择、上限和上传主按钮集中同一分组，结果紧随按钮。
+  FORM: 已批准的窄范围操作流扩展；无新视觉世界或概念抽签。标识 remote-print-upload-1。
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance -->
+  <main>
+    <h1>上传打印文件</h1>
+    <p class="intro">选好文档，上传后回到聊天继续操作。</p>
+    <section class="panel" aria-label="打印文件上传">
+      <p id="loading" class="loading" role="status">正在检查上传链接…</p>
+      <form id="form" hidden>
+        <p id="file-label">选择 PDF 或图片</p>
+        <div class="picker">
+          <input id="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.bmp,application/pdf,image/jpeg,image/png,image/webp,image/bmp" required aria-labelledby="file-label" aria-describedby="limits format">
+          <label for="file" class="choose" id="choose">选择文件</label>
+        </div>
+        <p id="limits" class="hint"></p>
+        <p id="format" class="hint">Word、Excel 请先另存为 PDF。</p>
+        <div id="selection" class="selection" hidden>
+          <p id="filename" class="filename"></p>
+          <p id="filesize" class="details"></p>
+        </div>
+        <button id="submit" type="submit" disabled>上传文件</button>
+        <p id="confirmation" class="hint"></p>
+      </form>
+      <progress id="progress" max="100" value="0" aria-label="文件上传进度" hidden></progress>
+      <p id="status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+    </section>
+    <p class="privacy">链接仅供本人使用，请勿转发。每个链接接收一个文件，发出后10分钟内有效。</p>
+    <footer>远程打印 · AWBotHub</footer>
+    <noscript>请启用浏览器的 JavaScript 后重新打开链接。</noscript>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+      const el = (id) => document.getElementById(id);
+      const token = location.hash.slice(1);
+      const endpoint = (name) => location.pathname.replace(/\/upload\/?$/, '/' + name);
+      let limits = null;
+      let busy = false;
+      let consumed = false;
+      let polling = false;
+      const maxPolls = 120;
+      function status(text, kind = '') {
+        el('status').textContent = text;
+        el('status').className = 'status' + (kind ? ' ' + kind : '');
+      }
+      function lockFile() {
+        consumed = true;
+        el('file').disabled = true;
+        el('submit').disabled = true;
+      }
+      function stop(text, kind = 'error') {
+        lockFile();
+        el('loading').hidden = true;
+        el('progress').hidden = true;
+        status(text, kind);
+      }
+      async function readInfo() {
+        const abort = new AbortController();
+        const timer = setTimeout(() => abort.abort(), 15000);
+        try {
+          const response = await fetch(endpoint('upload_info'), {
+            method: 'POST', headers: { Authorization: 'Bearer ' + token },
+            cache: 'no-store', credentials: 'omit', signal: abort.signal,
+          });
+          let result;
+          try { result = await response.json(); }
+          catch (_) { throw new Error('打印服务响应异常，请稍后重新打开链接。'); }
+          if (!response.ok || (result.ok !== true && result.state !== 'failed')) {
+            const error = new Error(result.message || '上传链接不可用，请返回聊天重新发送“打印文件”。');
+            error.terminal = response.status === 401 || response.status === 403;
+            throw error;
+          }
+          return result;
+        } finally { clearTimeout(timer); }
+      }
+      function showInfo(info) {
+        el('loading').hidden = true;
+        if (info.state === 'complete') {
+          stop(info.message || '文件已收到。请返回聊天查看收件提示并确认打印。', 'success');
+          return true;
+        }
+        if (info.state === 'failed') {
+          stop((info.message || '文件未收取成功。') + '\n请先回到聊天回复“任务”核对；需要重新上传时，发送“打印文件”获取新链接。');
+          return true;
+        }
+        if (info.state === 'processing') {
+          lockFile();
+          el('progress').hidden = true;
+          status('文件已上传，正在检查。\n请稍等，不要重复发送。');
+          return false;
+        }
+        return false;
+      }
+      async function poll() {
+        if (polling) return;
+        polling = true;
+        let failures = 0;
+        for (let count = 0; count < maxPolls; count++) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          try {
+            const info = await readInfo();
+            failures = 0;
+            if (showInfo(info)) { polling = false; return; }
+          } catch (error) {
+            if (error.terminal) { stop(error.message); polling = false; return; }
+            if (++failures >= 3) break;
+          }
+        }
+        polling = false;
+        stop('暂时无法确认收件结果。请返回聊天回复“任务”核对，不要立即重复上传。若链接仍有效，也可刷新本页核对。');
+      }
+      function selected() {
+        const file = el('file').files[0];
+        el('selection').hidden = !file;
+        el('choose').textContent = file ? '更换文件' : '选择文件';
+        el('submit').disabled = !file || busy || consumed;
+        if (!file) return;
+        el('filename').textContent = file.name;
+        el('filesize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        if (!file.size || file.size > limits.max_bytes) {
+          el('submit').disabled = true;
+          status('文件为空或超过大小上限，请重新选择。', 'error');
+        } else { status(''); }
+      }
+      function sendFile(file) {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', endpoint('upload_file'));
+          xhr.timeout = 120000;
+          xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+          xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+          xhr.setRequestHeader('X-Print-Filename', encodeURIComponent(file.name));
+          xhr.setRequestHeader('X-Print-Auto-Print', limits.auto_print ? 'true' : 'false');
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) el('progress').value = Math.round(event.loaded / event.total * 100);
+          };
+          xhr.onload = () => {
+            let result;
+            try { result = JSON.parse(xhr.responseText); } catch (_) { reject(new Error('连接异常')); return; }
+            resolve({ accepted: xhr.status >= 200 && xhr.status < 300, result });
+          };
+          xhr.onerror = () => reject(new Error('连接异常'));
+          xhr.ontimeout = () => reject(new Error('上传超时'));
+          xhr.send(file);
+        });
+      }
+      el('file').addEventListener('change', selected);
+      el('form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const file = el('file').files[0];
+        if (!file || busy || consumed || !limits || file.size <= 0 || file.size > limits.max_bytes) return;
+        busy = true;
+        el('file').disabled = true;
+        el('submit').disabled = true;
+        el('progress').hidden = false;
+        el('progress').value = 0;
+        status('正在上传，请不要关闭页面…');
+        try {
+          const { accepted, result } = await sendFile(file);
+          if (accepted) {
+            lockFile();
+            if (!showInfo(result)) await poll();
+          } else {
+            // A rejection or lost reply is never permission to resend blindly.
+            const info = await readInfo();
+            if (info.state !== 'ready') {
+              lockFile();
+              if (!showInfo(info)) await poll();
+            } else {
+              status(result.message || '文件未接收，请检查文件后重新选择。', 'error');
+              el('file').disabled = false;
+              el('submit').disabled = false;
+            }
+          }
+        } catch (_) {
+          lockFile();
+          status('连接中断，正在核对收件结果，请勿重复上传…');
+          await poll();
+        } finally {
+          busy = false;
+          el('progress').hidden = true;
+        }
+      });
+      async function start() {
+        if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+          stop('上传链接不完整。请返回原聊天发送“打印文件”，再打开新链接。');
+          return;
+        }
+        try {
+          limits = await readInfo();
+          if (limits.state !== 'ready') {
+            if (!showInfo(limits)) await poll();
+            return;
+          }
+          el('loading').hidden = true;
+          el('form').hidden = false;
+          el('limits').textContent = '每个链接上传一个文件，最多 ' + Math.floor(limits.max_bytes / 1024 / 1024) + ' MB、' + limits.max_pages + ' 页。';
+          el('submit').textContent = limits.auto_print ? '上传并自动打印' : '上传文件';
+          el('confirmation').textContent = limits.auto_print ? '注意：已开启自动打印。上传成功后直接进入打印队列。' : '上传不会立即打印，收到提示后回到聊天回复“打印”。';
+        } catch (error) { stop(error.message || '无法连接打印服务。请稍后重新打开链接。'); }
+      }
+      start();
+    })();
+  </script>
+</body>
+</html>

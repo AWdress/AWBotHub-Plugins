@@ -530,7 +530,7 @@ class PrintQueue:
             await self._commit(snapshot)
             return self._copy_job(snapshot["jobs"][job_id])
 
-    async def finish(self, job_id, metadata, *, permission_check=None):
+    async def finish(self, job_id, metadata, *, permission_check=None, allow_auto_print=True):
         async with self.lock:
             self._permission(permission_check)
             self._check()
@@ -544,7 +544,7 @@ class PrintQueue:
             if any(key in metadata and metadata[key] != job.get(key) for key in ("id", "owner", "source_channel")):
                 raise ValueError("打印任务所属用户、渠道或 ID 不能更改")
             job.update(metadata)
-            job.update(status="queued" if self.config()["auto_print"] else "pending", updated=time.time())
+            job.update(status="queued" if allow_auto_print and self.config()["auto_print"] else "pending", updated=time.time())
             await self._commit(snapshot)
             return self._copy_job(job)
 

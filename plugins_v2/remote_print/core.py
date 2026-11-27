@@ -21,6 +21,7 @@ from .files import inspect_file, safe_name
 from .ipp import IPPPrinter, IPPRejected, IPPSubmissionUnknown
 from .queue import LABELS, PrintQueue
 from .wecom import WeCom
+from .uploads import PrintUploads
 
 
 def members(value):
@@ -47,6 +48,7 @@ class RemotePrint:
         self.queue = PrintQueue(ctx, self.config)
         self.channels = PlatformChannels(ctx)
         self.wecom = WeCom(ctx, self.wecom_config)
+        self.uploads = PrintUploads(self)
         self.ipp = IPPPrinter(ctx, self.config)
         self.ipp_status = {}
         self.dispatch_lock = asyncio.Lock()
@@ -121,7 +123,7 @@ class RemotePrint:
                 + "\n\n填写位置：企业微信管理后台 → 应用管理 → 此自建应用 → 接收消息 → 设置 API 接收。"
                 + "\n使用平台统一回调，已设置正确地址时不用更换；Token 和 EncodingAESKey 仍在平台通知渠道设置。"
                 + "\n请在平台插件通知设置中为“远程打印”关联此应用，仅设置默认应用不能接收打印文件。"
-                + "\n图片、PDF 和操作指令由平台交给本插件；/插件、/运行 等平台指令仍可使用，旧卡片可继续操作原任务。"
+                + "\n照片和操作指令沿用平台回调；PDF 请在应用会话回复“打印文件”，打开临时链接上传。企微 App 与微信微工作台通用。"
                 + "\n若旧版填了 /api/plugin/remote_print/wecom，请换回上面的平台统一回调地址，旧打印专用入口已移除。"
                 + "\n设置好后开启插件的“接收打印文件”，并确保成员账号在平台回调名单和插件打印名单中均已授权。")}
         except ValueError as exc:
@@ -141,6 +143,9 @@ class RemotePrint:
             raise ValueError("平台企业微信消息处理器未注册，无法启用远程打印")
         self.ctx.on_webhook("agent", self.agent)
         self.ctx.on_webhook("agent_file", self.agent_file)
+        self.ctx.on_webhook("upload", self.uploads.page)
+        self.ctx.on_webhook("upload_info", self.uploads.info)
+        self.ctx.on_webhook("upload_file", self.uploads.upload)
         self.ctx.on_api("status", self.admin_status)
         self.ctx.on_api("tools", self.admin_tools)
         self.ctx.action("show_connection", self.show_connection)
@@ -653,9 +658,23 @@ class RemotePrint:
                 if self.config()["print_mode"] == "ipp":
                     await self.refresh_ipp()
                 return self.device_text()
+            if owner.startswith("wecom:"):
+                if command != "/print_help":
+                    return self.wecom_help()
+                return self.help(advanced=True).replace("先发送 PDF 或图片。", "照片直接发送；PDF 回复“打印文件”并通过临时网页上传。", 1)
             return self.help(advanced=command == "/print_help")
         except ValueError as exc:
             return str(exc) if str(exc) != "invalid literal for int() with base 10" and not str(exc).startswith("invalid literal") else "份数必须是整数。"
+
+    @staticmethod
+    def wecom_help():
+        return ("打印照片：直接发送图片。\n"
+                "打印 PDF：回复“打印文件”，打开链接选择文档。企微 App 和微信微工作台都可以使用。\n\n"
+                "收到收件提示后，回复“打印”或“双面打印”；多个文件都收齐后回复“全部打印”。\n"
+                "只选一份：打印文件1 / 取消文件1 / 查看文件1；需要两份：打印文件1两份。\n"
+                "全部不要：全部取消。查看最近文件：任务。\n"
+                "上传链接10分钟内有效，每个链接接收一个文件，仅供本人使用，请勿转发。\n"
+                "Word、Excel 请先另存为 PDF。微信微工作台请在设置中保留文字确认。")
 
     def help(self, *, advanced=False):
         if not advanced:
@@ -730,7 +749,7 @@ class RemotePrint:
             return "图片" if message.message_type == "image" else safe_name(message.file_name or media.filename or job["filename"])
         await self.receive(job, download, wecom_message=message)
 
-    async def receive(self, job, downloader, *, wecom_message=None):
+    async def receive(self, job, downloader, *, wecom_message=None, allow_auto_print=True):
         path = self.queue.file(job["id"])
         temporary = path.with_suffix(".part")
         try:
@@ -742,7 +761,8 @@ class RemotePrint:
                 permission_check = None
                 if job["source"] == "wecom":
                     permission_check = lambda: self.wecom_owner_allowed(job["owner"], job.get("source_channel", ""))
-                job = await self.queue.finish(job["id"], metadata, permission_check=permission_check)
+                job = await self.queue.finish(job["id"], metadata, permission_check=permission_check,
+                                              allow_auto_print=allow_auto_print)
             self.request_dispatch()
             await self.notify(job["source"], job["owner"], received_text(job), job.get("source_channel", ""),
                               job=job if job["status"] == "pending" else None, message=wecom_message)
@@ -810,7 +830,7 @@ class RemotePrint:
                 await self.wecom_command(owner, content, message=message)
             elif message.message_type == "event":
                 if message.event == "enter_agent":
-                    await self.notify("wecom", owner, welcome_text(), identity, message=message)
+                    await self.notify("wecom", owner, self.wecom_help(), identity, message=message)
                 elif message.event == "template_card_event":
                     action, job_id, _ = parse_action(message.event_key)
                     if message.fields.get("CardType") != "button_interaction" or message.fields.get("TaskId") != "rp-" + job_id:
@@ -834,7 +854,19 @@ class RemotePrint:
             self.wecom_owner_allowed(owner, channel)
         except ValueError:
             return
-        text = await self.command(owner, content, channel)
+        if re.sub(r"\s+", "", str(content or "")).rstrip("。！!") in {
+                "打印文件", "打印文档", "上传文件", "上传文档", "/print_upload"}:
+            try:
+                link = await self.uploads.issue(owner, channel)
+                text = ("上传打印文件\n\n点击链接，选择一个 PDF 或图片：\n" + link
+                        + "\n\n10分钟内有效，每个链接接收一个文件，仅供本人使用，请勿转发。"
+                        + "\n多份文件请再次回复“打印文件”，全部收齐后可回复“全部打印”。"
+                        + ("\n当前已开启自动打印，上传成功会直接排队。" if self.config()["auto_print"]
+                           else "\n上传成功后返回聊天，回复“打印”确认。"))
+            except ValueError as exc:
+                text = str(exc)
+        else:
+            text = await self.command(owner, content, channel)
         self.wecom_owner_allowed(owner, channel)
         await self.notify("wecom", owner, text, channel, message=message)
 

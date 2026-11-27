@@ -31,7 +31,7 @@ const tabs = [
   { id: 'print', label: '打印设置', title: '连接打印机', note: '先设置连接，再保存并检查。打印机地址不是管理网页地址。' },
   { id: 'family', label: '家人权限', title: '允许谁打印', note: '机器人与企业微信应用从平台读取，这里只设置允许使用的家人。' },
   { id: 'tools', label: '任务与工具', title: '任务与连接', note: '点击后才查询，不会自动打印。工具使用已保存的设置。' },
-  { id: 'help', label: '使用帮助', title: '怎么开始使用', note: '日常只需要发送文件，再回复“打印”。详细说明按需展开。' },
+  { id: 'help', label: '使用帮助', title: '怎么开始使用', note: 'Telegram 直接发文件；企微／微信发照片，文档先回复“打印文件”。详细说明按需展开。' },
 ]
 const activeTab = ref('print')
 const formElement = ref(null)
@@ -104,7 +104,7 @@ const shortHints = {
   device_id: '与电脑端 device_id 一致。', device_token: '留空时先生成密钥，再点眼睛查看，复制到电脑端。',
   printer_name: '留空使用电脑端默认打印机。', telegram_users: '数字 ID，每行一个；留空不允许任何人。',
   wecom_users: '通讯录 UserID，每行一个；同一成员也须在平台回调名单中授权。',
-  public_base_url: '填写平台 HTTPS 地址，用于查看回调或连接电脑端；不是打印机地址。',
+  public_base_url: '企微／微信上传 PDF 必填。填写手机能访问的平台 HTTPS 地址，有部署子路径也要带上；不是打印机地址。',
   enabled: '默认关闭。连接和家人名单设置完成后再开启。',
   auto_print: '默认关闭。保持关闭时，家人回复“打印”后才开始，避免误打。',
   ipp_printer_uri: '通常留空，由打印机自动提供。', ipp_timeout_seconds: '默认 30 秒，范围 5–120 秒。',
