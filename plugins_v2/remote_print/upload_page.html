@@ -19,7 +19,7 @@
     .hint { margin-top: 8px; }
     .privacy { margin-top: 24px; }
     #file-label { font-weight: 600; }
-    input, button { font: inherit; }
+    input, button, select { font: inherit; }
     .picker { position: relative; margin-top: 12px; }
     input[type=file] { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
     .choose { display: inline-block; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 10px; color: var(--accent); cursor: pointer; }
@@ -39,23 +39,35 @@
     .status.error { color: var(--error); }
     .status.success { color: var(--success); }
     progress { display: block; width: 100%; height: 8px; margin-top: 16px; accent-color: var(--accent); }
+    .result { overflow-wrap: anywhere; }
+    .result h2 { margin: 0 0 8px; font-size: 20px; line-height: 1.4; }
+    .print-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .print-buttons button { margin-top: 20px; }
+    .secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); margin-top: 12px; }
+    .utility { display: flex; gap: 12px; }
+    .utility button { min-height: 44px; font-size: 14px; }
+    details { margin-top: 20px; }
+    summary { min-height: 44px; padding-block: 8px; cursor: pointer; color: var(--accent); }
+    .settings { display: grid; gap: 12px; padding-block: 8px; }
+    .settings label { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 12px; }
+    select { min-width: 0; width: 100%; min-height: 44px; padding: 8px; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
     [hidden] { display: none !important; }
     footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
     @media (max-width: 380px) { body { padding-inline: 16px; } main { margin-top: 4vh; } .panel { padding: 20px; } }
-    @media (prefers-color-scheme: dark) { :root { --bg: #111113; --surface: #232326; --text: #f5f5f7; --muted: #b0b0b8; --line: #505058; --accent: #0a64d9; --error: #ff8c94; --success: #80d99e; } .choose { color: var(--text); } }
+    @media (prefers-color-scheme: dark) { :root { --bg: #111113; --surface: #232326; --text: #f5f5f7; --muted: #b0b0b8; --line: #505058; --accent: #0a64d9; --error: #ff8c94; --success: #80d99e; } .choose, .secondary, summary { color: var(--text); } }
     @media (prefers-reduced-motion: reduce) { button { transition: none; } }
   </style>
 </head>
 <body>
   <!-- THESIS: 把企微文档收件变成一次选择和一次上传，不另建管理界面。
   OWN-WORLD: 延续远程打印的 iOS 分组语言、系统字体、中性色与蓝色操作，跟随设备明暗。
-  STORY: 选择文件，明确上传是否自动打印，返回原会话继续确认。
+  STORY: 选择文件，看到真实收件状态，在同一页选择单面或双面打印，原聊天操作保留。
   FIRST VIEWPORT: 单列480px，标题与说明在上；文件选择、上限和上传主按钮集中同一分组，结果紧随按钮。
   FORM: 已批准的窄范围操作流扩展；无新视觉世界或概念抽签。标识 remote-print-upload-1。
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance -->
   <main>
     <h1>上传打印文件</h1>
-    <p class="intro">选好文档，上传后回到聊天继续操作。</p>
+    <p class="intro">选择文档，上传后在这里确认打印。</p>
     <section class="panel" aria-label="打印文件上传">
       <p id="loading" class="loading" role="status">正在检查上传链接…</p>
       <form id="form" hidden>
@@ -73,10 +85,30 @@
         <button id="submit" type="submit" disabled>上传文件</button>
         <p id="confirmation" class="hint"></p>
       </form>
+      <section id="result" class="result" aria-label="此文件的打印操作" hidden>
+        <h2 id="result-name"></h2>
+        <p id="result-meta" class="details"></p>
+        <div id="print-options" hidden>
+          <div class="print-buttons">
+            <button id="simplex" type="button">单面打印</button>
+            <button id="duplex" type="button">双面打印</button>
+          </div>
+          <details>
+            <summary>份数与双面方向</summary>
+            <div class="settings">
+              <label for="copies">打印份数<select id="copies"></select></label>
+              <label for="sides">双面翻页<select id="sides"><option value="two-sided-auto">自动判断（推荐）</option><option value="two-sided-long-edge">长边翻页</option><option value="two-sided-short-edge">短边翻页</option></select></label>
+            </div>
+          </details>
+          <p class="hint">只打印当前这个文件，不会打印其他待办文件。</p>
+        </div>
+        <button id="cancel" class="secondary" type="button" hidden>取消此文件</button>
+      </section>
       <progress id="progress" max="100" value="0" aria-label="文件上传进度" hidden></progress>
       <p id="status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+      <div class="utility"><button id="refresh" class="secondary" type="button" hidden>刷新状态</button></div>
     </section>
-    <p class="privacy">链接仅供本人使用，请勿转发。每个链接接收一个文件，发出后10分钟内有效。</p>
+    <p class="privacy">链接可上传和操作此文件，仅供本人使用，请勿转发。发出后10分钟内有效，过期请回聊天操作已有任务。</p>
     <footer>远程打印 · AWBotHub</footer>
     <noscript>请启用浏览器的 JavaScript 后重新打开链接。</noscript>
   </main>
@@ -90,7 +122,10 @@
       let busy = false;
       let consumed = false;
       let polling = false;
-      const maxPolls = 120;
+      let printBusy = false;
+      let currentInfo = null;
+      let optionsJob = '';
+      const maxPolls = 40;
       function status(text, kind = '') {
         el('status').textContent = text;
         el('status').className = 'status' + (kind ? ' ' + kind : '');
@@ -106,39 +141,93 @@
         el('progress').hidden = true;
         status(text, kind);
       }
-      async function readInfo() {
+      function disableActions(value) {
+        for (const id of ['simplex', 'duplex', 'cancel', 'refresh', 'copies', 'sides']) el(id).disabled = value;
+      }
+      function terminal(error) {
+        stop(error.message);
+        el('print-options').hidden = true;
+        el('cancel').hidden = true;
+        el('refresh').hidden = true;
+      }
+      async function request(name, data) {
         const abort = new AbortController();
-        const timer = setTimeout(() => abort.abort(), 15000);
+        const timer = setTimeout(() => abort.abort(), data ? 45000 : 12000);
         try {
-          const response = await fetch(endpoint('upload_info'), {
-            method: 'POST', headers: { Authorization: 'Bearer ' + token },
+          const headers = { Authorization: 'Bearer ' + token };
+          if (data) headers['Content-Type'] = 'application/json';
+          const response = await fetch(endpoint(name), {
+            method: 'POST', headers, body: data ? JSON.stringify(data) : undefined,
             cache: 'no-store', credentials: 'omit', signal: abort.signal,
           });
           let result;
           try { result = await response.json(); }
-          catch (_) { throw new Error('打印服务响应异常，请稍后重新打开链接。'); }
-          if (!response.ok || (result.ok !== true && result.state !== 'failed')) {
-            const error = new Error(result.message || '上传链接不可用，请返回聊天重新发送“打印文件”。');
+          catch (_) { throw new Error('打印服务响应异常（HTTP ' + response.status + '），请点击“刷新状态”核对。'); }
+          if ((!response.ok || result.ok !== true) && !(result.state === 'failed' || result.action_message)) {
+            const error = new Error(result.message || result.detail || '打印服务暂不可用，请点击“刷新状态”核对。');
             error.terminal = response.status === 401 || response.status === 403;
             throw error;
           }
           return result;
         } finally { clearTimeout(timer); }
       }
+      const readInfo = () => request('upload_info');
+      function ready(info) {
+        limits = info;
+        currentInfo = info;
+        consumed = false;
+        el('loading').hidden = true;
+        el('form').hidden = false;
+        el('result').hidden = true;
+        el('file').disabled = false;
+        el('limits').textContent = '每个链接上传一个文件，最多 ' + Math.floor(info.max_bytes / 1024 / 1024) + ' MB、' + info.max_pages + ' 页。';
+        el('submit').textContent = info.auto_print ? '上传并自动打印' : '上传文件';
+        el('confirmation').textContent = info.auto_print ? '注意：已开启自动打印。上传成功后直接进入打印队列。' : '上传不会立即打印。完成后可在本页选择单面或双面打印。';
+        selected();
+      }
+      function renderJob(info) {
+        el('form').hidden = true;
+        el('result').hidden = false;
+        el('result-name').textContent = info.filename || '打印文件';
+        el('result-meta').textContent = [info.pages ? info.pages + ' 页' : '', info.copies ? info.copies + ' 份' : '', info.color_label || '', info.status_label || info.status || ''].filter(Boolean).join(' · ');
+        const pending = info.status === 'pending';
+        el('print-options').hidden = !pending;
+        el('cancel').hidden = !['pending', 'queued', 'leased'].includes(info.status);
+        el('refresh').hidden = false;
+        if (pending && (optionsJob !== info.job_id || el('copies').options.length !== info.max_copies)) {
+          const preferred = optionsJob === info.job_id ? Number(el('copies').value) : info.copies;
+          const maximum = Number(info.max_copies) || 1;
+          el('copies').replaceChildren();
+          for (let count = 1; count <= maximum; count++) {
+            const option = document.createElement('option');
+            option.value = count; option.textContent = count + ' 份'; el('copies').append(option);
+          }
+          if (preferred > maximum) {
+            const option = document.createElement('option');
+            option.value = preferred; option.textContent = preferred + ' 份（超出上限，请重新选择）'; option.disabled = true; el('copies').append(option);
+          }
+          el('copies').value = preferred || 1;
+          optionsJob = info.job_id;
+        }
+      }
       function showInfo(info) {
+        currentInfo = info;
         el('loading').hidden = true;
         if (info.state === 'complete') {
-          stop(info.message || '文件已收到。请返回聊天查看收件提示并确认打印。', 'success');
+          renderJob(info);
+          stop(info.message || '上传完成，请选择打印方式。', ['failed', 'unknown'].includes(info.status) ? 'error' : 'success');
           return true;
         }
         if (info.state === 'failed') {
           stop((info.message || '文件未收取成功。') + '\n请先回到聊天回复“任务”核对；需要重新上传时，发送“打印文件”获取新链接。');
+          el('refresh').hidden = false;
           return true;
         }
         if (info.state === 'processing') {
           lockFile();
           el('progress').hidden = true;
           status('文件已上传，正在检查。\n请稍等，不要重复发送。');
+          el('refresh').hidden = false;
           return false;
         }
         return false;
@@ -154,12 +243,13 @@
             failures = 0;
             if (showInfo(info)) { polling = false; return; }
           } catch (error) {
-            if (error.terminal) { stop(error.message); polling = false; return; }
+            if (error.terminal) { terminal(error); polling = false; return; }
             if (++failures >= 3) break;
           }
         }
         polling = false;
-        stop('暂时无法确认收件结果。请返回聊天回复“任务”核对，不要立即重复上传。若链接仍有效，也可刷新本页核对。');
+        stop('暂时无法确认收件结果。请点击“刷新状态”核对，或返回聊天回复“任务”。不要重复上传。');
+        el('refresh').hidden = false;
       }
       function selected() {
         const file = el('file').files[0];
@@ -184,17 +274,43 @@
           xhr.setRequestHeader('X-Print-Filename', encodeURIComponent(file.name));
           xhr.setRequestHeader('X-Print-Auto-Print', limits.auto_print ? 'true' : 'false');
           xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) el('progress').value = Math.round(event.loaded / event.total * 100);
+            if (event.lengthComputable) {
+              const percent = Math.round(event.loaded / event.total * 100);
+              el('progress').value = percent;
+              status(percent === 100 ? '文件已发送，等待服务器确认收件…' : '正在上传（' + percent + '%），请不要关闭页面…');
+            }
           };
+          xhr.upload.onload = () => status('文件已发送，等待服务器确认收件…');
           xhr.onload = () => {
             let result;
-            try { result = JSON.parse(xhr.responseText); } catch (_) { reject(new Error('连接异常')); return; }
+            try { result = JSON.parse(xhr.responseText); } catch (_) {
+              reject(new Error(xhr.status === 413 ? '服务器拒绝了文件大小（HTTP 413），请联系管理员调整反向代理上传上限。' : '上传响应异常（HTTP ' + xhr.status + '）。')); return;
+            }
             resolve({ accepted: xhr.status >= 200 && xhr.status < 300, result });
           };
-          xhr.onerror = () => reject(new Error('连接异常'));
-          xhr.ontimeout = () => reject(new Error('上传超时'));
+          xhr.onerror = () => reject(new Error('上传连接中断。'));
+          xhr.ontimeout = () => reject(new Error('上传等待超时。'));
           xhr.send(file);
         });
+      }
+      async function reconcileUpload(error) {
+        lockFile();
+        status((error.message || '上传连接中断。') + '\n正在核对是否已收件，请勿重复上传…');
+        el('refresh').hidden = false;
+        try {
+          const info = await readInfo();
+          if (info.state === 'ready') {
+            currentInfo = info;
+            consumed = false;
+            el('file').disabled = false;
+            el('submit').disabled = false;
+            el('submit').textContent = limits.auto_print ? '重新上传并自动打印' : '重新上传';
+            status((error.message || '上传未完成。') + '\n服务器尚未收取此文件。检查网络或文件大小后，可手动重新上传。', 'error');
+          } else if (!showInfo(info)) await poll();
+        } catch (failure) {
+          if (failure.terminal) terminal(failure);
+          else status('无法确认收件结果，请点击“刷新状态”，或回聊天回复“任务”核对。不要立即重新上传。', 'error');
+        }
       }
       el('file').addEventListener('change', selected);
       el('form').addEventListener('submit', async (event) => {
@@ -212,26 +328,49 @@
           if (accepted) {
             lockFile();
             if (!showInfo(result)) await poll();
-          } else {
-            // A rejection or lost reply is never permission to resend blindly.
-            const info = await readInfo();
-            if (info.state !== 'ready') {
-              lockFile();
-              if (!showInfo(info)) await poll();
-            } else {
-              status(result.message || '文件未接收，请检查文件后重新选择。', 'error');
-              el('file').disabled = false;
-              el('submit').disabled = false;
-            }
-          }
-        } catch (_) {
-          lockFile();
-          status('连接中断，正在核对收件结果，请勿重复上传…');
-          await poll();
+          } else await reconcileUpload(new Error(result.message || result.detail || '服务器未接受上传。'));
+        } catch (error) {
+          await reconcileUpload(error);
         } finally {
           busy = false;
           el('progress').hidden = true;
         }
+      });
+      async function printAction(action, sides) {
+        if (printBusy || !currentInfo || currentInfo.state !== 'complete') return;
+        printBusy = true;
+        disableActions(true);
+        status(action === 'cancel' ? '正在取消此文件…' : '正在确认打印，请勿重复点击…');
+        try {
+          const data = action === 'cancel' ? { action } : { action, sides, copies: Number(el('copies').value) };
+          const info = await request('upload_action', data);
+          showInfo(info);
+          if (info.action_message) status(info.action_message + '\n' + (info.message || ''), info.ok === false ? 'error' : 'success');
+        } catch (error) {
+          if (error.terminal) terminal(error);
+          else {
+            try { showInfo(await readInfo()); } catch (failure) { if (failure.terminal) { terminal(failure); return; } }
+            status('操作响应中断，请点击“刷新状态”核对是否已排队。不会自动重复打印。', 'error');
+            el('refresh').hidden = false;
+          }
+        } finally { printBusy = false; disableActions(false); }
+      }
+      el('simplex').addEventListener('click', () => printAction('print', 'one-sided'));
+      el('duplex').addEventListener('click', () => printAction('print', el('sides').value));
+      el('cancel').addEventListener('click', () => printAction('cancel'));
+      el('refresh').addEventListener('click', async () => {
+        if (printBusy) return;
+        el('refresh').disabled = true;
+        try {
+          const info = await readInfo();
+          if (!showInfo(info) && info.state === 'ready') {
+            if (!busy && !polling && el('form').hidden) {
+              ready(info);
+              status('连接已恢复，请选择文件上传。');
+            } else status('服务器尚未收取此文件。上传未完成时请先等待；连接已中断可刷新本页后重新选择文件。');
+          }
+        } catch (error) { if (error.terminal) terminal(error); else status(error.message, 'error'); }
+        finally { el('refresh').disabled = false; }
       });
       async function start() {
         if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
@@ -244,12 +383,8 @@
             if (!showInfo(limits)) await poll();
             return;
           }
-          el('loading').hidden = true;
-          el('form').hidden = false;
-          el('limits').textContent = '每个链接上传一个文件，最多 ' + Math.floor(limits.max_bytes / 1024 / 1024) + ' MB、' + limits.max_pages + ' 页。';
-          el('submit').textContent = limits.auto_print ? '上传并自动打印' : '上传文件';
-          el('confirmation').textContent = limits.auto_print ? '注意：已开启自动打印。上传成功后直接进入打印队列。' : '上传不会立即打印，收到提示后回到聊天回复“打印”。';
-        } catch (error) { stop(error.message || '无法连接打印服务。请稍后重新打开链接。'); }
+          ready(limits);
+        } catch (error) { stop(error.message || '无法连接打印服务。请稍后重新打开链接。'); el('refresh').hidden = false; }
       }
       start();
     })();

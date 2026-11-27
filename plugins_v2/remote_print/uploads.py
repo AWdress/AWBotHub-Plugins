@@ -9,6 +9,7 @@ import asyncio
 import base64
 import hashlib
 import ipaddress
+import json
 import math
 import re
 import secrets
@@ -18,7 +19,7 @@ from urllib.parse import unquote, urlsplit
 
 from starlette.responses import HTMLResponse, JSONResponse
 
-from .chat import failure_reason
+from .chat import COLOR_LABELS, SIDE_LABELS, failure_reason
 from .files import safe_name
 from .queue import LABELS
 
@@ -181,23 +182,112 @@ class PrintUploads:
             "expires_in": max(0, math.ceil(session["expires"] - time.monotonic())),
             "max_bytes": min(cfg["max_file_mb"] * 1024 * 1024, WEBHOOK_MAX_BYTES),
             "max_pages": cfg["max_pages"], "auto_print": cfg["auto_print"], "job_id": session["job_id"],
+            "max_copies": cfg["max_copies"],
         }
         if session["job_id"]:
             job = await self.service.queue.get_job(
                 session["job_id"], session["owner"], source_channel=session["identity"],
                 permission_check=lambda: self._allowed(session),
             )
-            payload.update({key: job.get(key) for key in ("filename", "pages", "status", "number", "number_batch")})
+            # File reception is durable before the chat receipt is sent. A slow
+            # WeCom API must not leave an already received PDF "uploading".
+            if session["state"] == "processing" and job["status"] != "receiving":
+                if job.get("pages"):
+                    session.update(state="complete", message="文件已收到。")
+                elif job["status"] in {"failed", "cancelled"}:
+                    session.update(state="failed", message=failure_reason(job.get("message"))
+                                   if job.get("message") else "文件未收取或已取消，请返回聊天查看任务。")
+                payload.update(state=session["state"], ok=session["state"] != "failed", message=session["message"])
+            payload.update({key: job.get(key) for key in ("filename", "pages", "status", "number", "number_batch", "copies")})
+            payload.update(status_label=LABELS.get(job["status"], "待核查"),
+                           sides_label=SIDE_LABELS.get(job.get("sides", "default"), "打印机默认"),
+                           color_label=COLOR_LABELS.get(job.get("color_mode", "auto"), "打印机默认"))
             if session["state"] == "complete":
                 status = job["status"]
                 if status == "pending":
-                    payload["message"] = "文件已收到，请回到聊天选择单面、双面或发送“打印”。"
+                    payload["message"] = "上传完成，请在下方选择单面或双面打印，也可返回聊天操作。"
                 elif status in {"failed", "unknown"}:
                     payload["message"] = "文件已收到，打印状态：" + LABELS[status] + "。" + failure_reason(job.get("message"))
                 else:
                     payload["message"] = "文件已收到，当前状态：" + LABELS.get(status, "请回到聊天查看进度") + "。"
         self._allowed(session)
         return payload
+
+    async def action(self, request):
+        """Operate only the fixed job attached to this unexpired capability."""
+        if request.method != "POST":
+            return self._error("请使用页面上的打印按钮。", 405)
+        if not self._origin_allowed(request):
+            return self._error("请使用聊天中的原始上传链接。", 403)
+        async with self.lock:
+            found = self._lookup(request)
+            if found is None:
+                return self._error("链接已失效或权限已变更，请返回聊天查看任务。", 403)
+            digest, session = found
+
+        def permission():
+            if self.sessions.get(digest) is not session or session["expires"] <= time.monotonic():
+                raise ValueError("链接已失效，请返回聊天查看任务。")
+            self._allowed(session)
+
+        try:
+            permission()
+            if not request.body or len(request.body) > 1024:
+                return self._error("打印操作参数无效。", 400)
+            try:
+                data = json.loads(request.body)
+            except (ValueError, UnicodeError):
+                return self._error("打印操作参数无效。", 400)
+            if not isinstance(data, dict) or set(data) - {"action", "sides", "copies"}:
+                return self._error("打印操作参数无效。", 400)
+            operation = data.get("action")
+            if not isinstance(operation, str) or operation not in {"print", "cancel"} or (operation == "cancel" and set(data) != {"action"}):
+                return self._error("请选择单面、双面打印或取消。", 400)
+            sides = data.get("sides", "one-sided")
+            copies = data.get("copies")
+            if operation == "print" and (not isinstance(sides, str) or sides not in {
+                    "one-sided", "two-sided-auto", "two-sided-long-edge", "two-sided-short-edge"}
+                    or (copies is not None and (type(copies) is not int or not 1 <= copies <= self.service.config()["max_copies"]))):
+                return self._error("打印方式或份数无效，请刷新状态后重新选择。", 400)
+            if session["state"] != "complete" or not session["job_id"]:
+                return self._error("文件尚未收取完成，请先刷新状态。", 409, state=session["state"])
+            job = await self.service.queue.get_job(session["job_id"], session["owner"],
+                source_channel=session["identity"], permission_check=permission)
+            message = "任务已处理，不会重复打印。"
+            try:
+                if operation == "print" and job["status"] == "pending":
+                    # Never hold the upload registry lock across printer I/O:
+                    # status queries and other family uploads must stay usable.
+                    mode = await self.service.check_sides(sides)
+                    option_check = await self.service.automatic_option_check(mode)
+                    await self.service.queue.confirm(session["job_id"], session["owner"], copies,
+                        sides=mode, source_channel=session["identity"], permission_check=permission,
+                        option_check=option_check)
+                    self.service.request_dispatch()
+                    self.service.ctx.log.info("网页已确认打印：任务 %s", session["job_id"])
+                    message = "已确认打印。进入队列不代表已经出纸，请勿重复发送。"
+                elif operation == "cancel" and job["status"] in {"pending", "queued", "leased"}:
+                    await self.service.queue.cancel(session["job_id"], session["owner"],
+                        source_channel=session["identity"], permission_check=permission)
+                    message = "已取消此文件。"
+                elif operation == "cancel":
+                    message = "此任务已结束或已开始提交，不能保证远程取消，请查看打印机队列。"
+            except ValueError as exc:
+                permission()
+                latest = await self.service.queue.get_job(session["job_id"], session["owner"],
+                    source_channel=session["identity"], permission_check=permission)
+                if latest["status"] == job["status"]:
+                    result = await self._snapshot(session)
+                    result.update(ok=False, action_message=failure_reason(str(exc)))
+                    return self._response(result, 409)
+                # Another browser tab or chat may have won the confirmation.
+                message = "任务状态已更新，不会重复提交。"
+            permission()
+            result = await self._snapshot(session)
+            result["action_message"] = message
+            return self._response(result)
+        except ValueError:
+            return self._error("链接已失效或权限已变更，请返回聊天查看任务。", 403)
 
     async def info(self, request):
         if request.method != "POST":
@@ -303,6 +393,7 @@ class PrintUploads:
             if job is None:
                 raise ValueError("此链接已处理，不会重复收取；请回到聊天查看进度。")
             session["job_id"] = job["id"]
+            self.service.ctx.log.info("网页打印文件已接收：任务 %s，%s 字节", job["id"], len(content))
             self._allowed(session)
 
             async def download(path, maximum):

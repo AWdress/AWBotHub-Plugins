@@ -146,6 +146,7 @@ class RemotePrint:
         self.ctx.on_webhook("upload", self.uploads.page)
         self.ctx.on_webhook("upload_info", self.uploads.info)
         self.ctx.on_webhook("upload_file", self.uploads.upload)
+        self.ctx.on_webhook("upload_action", self.uploads.action)
         self.ctx.on_api("status", self.admin_status)
         self.ctx.on_api("tools", self.admin_tools)
         self.ctx.action("show_connection", self.show_connection)
@@ -670,7 +671,7 @@ class RemotePrint:
     def wecom_help():
         return ("打印照片：直接发送图片。\n"
                 "打印 PDF：回复“打印文件”，打开链接选择文档。企微 App 和微信微工作台都可以使用。\n\n"
-                "收到收件提示后，回复“打印”或“双面打印”；多个文件都收齐后回复“全部打印”。\n"
+                "网页上传完成可直接点单面／双面打印，也可回复“打印”或“双面打印”；多个文件都收齐后回复“全部打印”。\n"
                 "只选一份：打印文件1 / 取消文件1 / 查看文件1；需要两份：打印文件1两份。\n"
                 "全部不要：全部取消。查看最近文件：任务。\n"
                 "上传链接10分钟内有效，每个链接接收一个文件，仅供本人使用，请勿转发。\n"
@@ -764,9 +765,9 @@ class RemotePrint:
                 job = await self.queue.finish(job["id"], metadata, permission_check=permission_check,
                                               allow_auto_print=allow_auto_print)
             self.request_dispatch()
+            self.ctx.log.info("打印文件已收取：任务 %s，%s 页，状态=%s", job["id"], job["pages"], LABELS[job["status"]])
             await self.notify(job["source"], job["owner"], received_text(job), job.get("source_channel", ""),
                               job=job if job["status"] == "pending" else None, message=wecom_message)
-            self.ctx.log.info("打印文件已收取：任务 %s，%s 页，状态=%s", job["id"], job["pages"], LABELS[job["status"]])
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -778,9 +779,9 @@ class RemotePrint:
                     return
             except Exception:
                 self.ctx.log.error("打印任务保存失败，请重载插件后检查队列")
+            self.ctx.log.warning("打印文件未入队：任务 %s，原因：%s", job["id"], reason)
             await self.notify(job["source"], job["owner"], f"{file_heading(job)}未进入打印队列：{reason}", job.get("source_channel", ""),
                               message=wecom_message)
-            self.ctx.log.warning("打印文件未入队：任务 %s，原因：%s", job["id"], reason)
         finally:
             self.receiving -= 1
             # 平台停用时不会继续处理业务，未完成收件由下次启用恢复为失败。
@@ -862,7 +863,7 @@ class RemotePrint:
                         + "\n\n10分钟内有效，每个链接接收一个文件，仅供本人使用，请勿转发。"
                         + "\n多份文件请再次回复“打印文件”，全部收齐后可回复“全部打印”。"
                         + ("\n当前已开启自动打印，上传成功会直接排队。" if self.config()["auto_print"]
-                           else "\n上传成功后返回聊天，回复“打印”确认。"))
+                           else "\n上传成功后可直接在网页点单面／双面打印，也可回聊天回复“打印”。"))
             except ValueError as exc:
                 text = str(exc)
         else:
