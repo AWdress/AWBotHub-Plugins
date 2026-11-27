@@ -13,15 +13,16 @@ import re
 import time as _time
 from random import randint
 from telethon import functions
+from ._http402_runtime import Http402Lottery
 
 __plugin__ = {
     "name": "通用抽奖",
     "id": "common_lottery",
-    "version": "1.0.7",
+    "version": "2.0.4",
     "author": "AWdress",
-    "description": "自动参与 @Lottery8Bot 等通用抽奖：解析口令、按需自动加群、随机等待后发口令。任意群可用。",
+    "description": "自动参与 @Lottery8Bot 及色花堂关键词抽奖：识别可信公告、解析完整口令、随机等待并按需加群。",
     "icon": "https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/common_lottery.jpg",
-    "changelog": "v1.0.7 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.0.6 更新插件 Logo\n- 使用通用抽奖专属图片作为插件卡片与市场图标",
+    "changelog": "v2.0.4 支持色花堂关键词抽奖\n- 识别 @http_code_402_bot、@sehuatang 及官方频道公告，向指定群发送完整关键词\n- 不将领奖联系人及宣传频道误当作加群要求，等待结束后复核活动状态\n- 新格式发送前持久防重，编辑、群频道副本及重启不重复参与，异常不自动补发\n\nv1.0.7 优化配置界面布局\n- 开关字段统一置顶，采用推荐的栅格布局\n- 参数字段添加 order 排序，提升扫描性\n- 符合 AWBotHub 插件开发规范\nv1.0.6 更新插件 Logo\n- 使用通用抽奖专属图片作为插件卡片与市场图标",
     "scope": "user",
     "default_enabled": False,
     "config_schema": {
@@ -37,7 +38,7 @@ __plugin__ = {
         "groups": {
             "type": "chat", "default": [], "label": "监听群组", "multi": True,
             "chat_types": ["group", "channel"], "order": 10, "section": "参与范围",
-            "help": "勾选要参与抽奖的群/频道；留空 = 所有群都参与。",
+            "help": "选择抽奖来源群/频道，留空监听全部。色花堂也可只选择参与群，收到官方频道公告后会向参与群发口令。",
         },
         "wait_min": {
             "type": "slider", "default": 25, "label": "参与前最短等待(秒)",
@@ -203,6 +204,13 @@ def _parse_lottery(message) -> dict:
 
 
 async def setup(ctx):
+    http402 = Http402Lottery(ctx, group_allowed=_group_allowed, wait_range=_wait_range,
+                             check_joined=_check_joined, ensure_joined=_ensure_joined)
+    await http402.initialize()
+    ctx.add_cleanup(http402.stop)
+    ctx.on_message(incoming=True)(http402.handle)
+    ctx.on_edited_message()(http402.handle)
+
     @ctx.on_message(incoming=True)
     async def common_new_lottery(event):
         client, message = event.client, event.message
@@ -335,7 +343,7 @@ async def setup(ctx):
 
     groups = _parse_groups(ctx.config.get("groups"))
     ctx.log.info(
-        "[通用抽奖] 已启用：来源 Bot=%s，监听群组=%s，自动加群=%s，等待=%s~%s 秒",
+        "[通用抽奖] 已启用：来源=Lottery8Bot/%s、http_code_402_bot、sehuatang 官方公告，监听群组=%s，自动加群=%s，等待=%s~%s 秒",
         _BOT_ID,
         "全部" if not groups else len(groups),
         "开启" if ctx.config.get("auto_join", False) else "关闭",

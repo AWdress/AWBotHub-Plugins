@@ -5,12 +5,16 @@ from .core import setup as _native_setup, teardown as _native_teardown
 
 __plugin__ = {'name': '通用抽奖',
  'id': 'common_lottery',
- 'version': '2.0.3',
+ 'version': '2.0.4',
  'plugin_api_version': 2,
  'author': 'AWdress',
- 'description': '自动参与 @Lottery8Bot 等通用抽奖：解析口令、按需自动加群、随机等待后发口令。任意群可用。',
+ 'description': '自动参与 @Lottery8Bot 及色花堂关键词抽奖：识别可信公告、解析完整口令、随机等待并按需加群。',
  'icon': 'https://raw.githubusercontent.com/AWdress/AWBotHub-Plugins/main/plugins_v2/_assets/icons/common_lottery.jpg',
- 'changelog': 'v2.0.3 增强抽奖条件与运行诊断\n'
+ 'changelog': 'v2.0.4 支持色花堂关键词抽奖\n'
+              '- 识别 @http_code_402_bot、@sehuatang 及官方频道公告，向指定群发送完整关键词\n'
+              '- 不将领奖联系人及宣传频道误当作加群要求，等待结束后复核活动状态\n'
+              '- 新格式发送前持久防重，编辑、群频道副本及重启不重复参与，异常不自动补发\n\n'
+              'v2.0.3 增强抽奖条件与运行诊断\n'
               '- 私有邀请链接可识别已加入状态，不再误判后跳过抽奖\n'
               '- 兼容 Telethon 异常类名并补充启动状态、范围过滤日志\n\n'
               'v2.0.2 统一富文本表格通知\n- 加群、参与和失败通知改为结构化表格\n\n'
@@ -52,7 +56,7 @@ __plugin__ = {'name': '通用抽奖',
                               'chat_types': ['group', 'channel'],
                               'order': 10,
                               'section': '参与范围',
-                              'help': '勾选要参与抽奖的群/频道；留空 = 所有群都参与。'},
+                              'help': '选择抽奖来源群/频道，留空监听全部。色花堂也可只选择参与群，收到官方频道公告后会向参与群发口令。'},
                    'wait_min': {'type': 'number',
                                 'default': 25,
                                 'label': '参与前最短等待(秒)',
@@ -69,7 +73,7 @@ __plugin__ = {'name': '通用抽奖',
                                 'step': 5,
                                 'order': 21,
                                 'section': '等待策略'}},
- 'tags': ['通用抽奖', 'Lottery8Bot', '群组管理']}
+ 'tags': ['通用抽奖', 'Lottery8Bot', '色花堂', '关键词抽奖', '群组管理']}
 async def setup(ctx):
     await _native_setup(ctx)
 
